@@ -29,7 +29,7 @@ const admin = await actor(fixture.accounts.admin),
   coach = await actor(fixture.accounts.coach);
 const signup = JSON.parse(readFileSync(".local/signup-test.json"));
 assert.equal(signup.email, env.EMAIL_TEST_RECIPIENT);
-await actor(signup); // Real confirmed password sign-in; no administrative confirmation bypass.
+const testCoach = await actor(signup); // Real confirmed password sign-in; no administrative confirmation bypass.
 const baseline = await publicFingerprint();
 const save = () => writeFileSync(file, JSON.stringify(report, null, 2));
 const core = (league, action, payload = {}) =>
@@ -39,26 +39,61 @@ if (process.argv.includes("--prepare-retry")) {
     !report.notification,
     "Existing notification test found; use --retry rather than duplicate sends",
   );
-  const league = (await admin.api("/api/demo", {})).id;
+  const existing = (await admin.api("/api/league")).filter(
+    (l) => l.is_demo && l.id !== fixture.operations.league,
+  );
+  assert.ok(
+    existing.length <= 1,
+    "Ambiguous email test workspace; inspect private fixtures",
+  );
+  const league =
+    report.notificationSetup?.league ??
+    existing[0]?.id ??
+    (await admin.api("/api/demo", {})).id;
   let s = await assertPrivate(admin, league);
   await core(league, "invite_member", { email: signup.email, role: "coach" });
   const team = s.teams.find((t) => t.name === "Eastside Eagles");
-  await core(league, "assign_coach", { team_id: team.id, email: signup.email });
-  const draft = await admin.api("/api/schedule", {
-    league,
-    round: 0,
-    useMeta: false,
-  });
-  // Use the real authorized database command to queue before the app's after-response dispatcher.
-  const published = await admin.client.rpc("league_command", {
-    p_league: league,
-    p_action: "publish_schedule",
-    p_payload: { version_id: draft.id },
-  });
-  assert.equal(published.error, null);
+  if (team.coach_id !== testCoach.id)
+    await core(league, "assign_coach", {
+      team_id: team.id,
+      email: signup.email,
+    });
+  s = await assertPrivate(admin, league);
+  assert.equal(s.teams.find((t) => t.id === team.id).coach_id, testCoach.id);
+  let draft = s.versions.find((v) => v.status === "published" && v.number > 1);
+  if (
+    draft &&
+    s.notifications.some(
+      (n) =>
+        n.channel === "email" &&
+        n.team_id === team.id &&
+        n.status === "suppressed" &&
+        n.idempotency_key.includes(draft.id),
+    )
+  )
+    draft = null;
+  if (!draft) {
+    draft = await admin.api("/api/schedule", {
+      league,
+      round: 0,
+      useMeta: false,
+    });
+    // Use the real authorized database command to queue before the app's after-response dispatcher.
+    const published = await admin.client.rpc("league_command", {
+      p_league: league,
+      p_action: "publish_schedule",
+      p_payload: { version_id: draft.id },
+    });
+    assert.equal(published.error, null);
+  }
+  report.notificationSetup = { league, team: team.id, version: draft.id };
+  save();
   s = await assertPrivate(admin, league);
   const target = s.notifications.find(
-    (n) => n.channel === "email" && n.destination === env.EMAIL_TEST_RECIPIENT,
+    (n) =>
+      n.channel === "email" &&
+      n.team_id === team.id &&
+      n.idempotency_key.includes(draft.id),
   );
   assert.ok(target);
   // Controlled network fault, NOT a claim of an observed Resend outage. No provider request yet.
@@ -128,11 +163,21 @@ if (process.argv.includes("--retry")) {
     "Actual Resend acceptance followed the durable retry; repeated dispatch did not duplicate it. Verify the schedule message in Gmail.",
   );
 }
-if (process.argv.includes("--guardian-invitation")) {
-  assert.ok(
-    !report.guardianInvitation,
-    "Existing invitation email found; inspect it instead of resending",
-  );
+if (
+  process.argv.includes("--guardian-invitation") ||
+  process.argv.includes("--renew-invitation")
+) {
+  if (report.guardianInvitation) {
+    assert.ok(
+      process.argv.includes("--renew-invitation") &&
+        report.guardianInvitation.exposedSyntheticCapabilityRevoked,
+      "Existing invitation email found; inspect it instead of resending",
+    );
+    report.priorInvitations = [
+      ...(report.priorInvitations ?? []),
+      report.guardianInvitation,
+    ];
+  }
   await assertPrivate(admin, fixture.preseason.league);
   const result = await coach.api("/api/preseason", {
     league: fixture.preseason.league,

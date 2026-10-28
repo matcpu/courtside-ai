@@ -2,6 +2,8 @@
 
 **Current state:** Meta is paused. The prepared integrations, manual workflow and contract tests must not be presented as actual model vision or autonomous model decisions. The final submission recording waits for owner-confirmed credits and real verification. See [META_HACKATHON.md](META_HACKATHON.md).
 
+Private fixtures and complete rehearsal are reproducible through [READINESS.md](READINESS.md). The timed spoken script is [DEMO_NARRATION.md](DEMO_NARRATION.md); form-matched answers are in [SUBMISSION.md](SUBMISSION.md). Private judge credentials/invitations are generated only into ignored `.local/judge-access.md`.
+
 ## Prerequisites
 
 - Use only visibly synthetic teams/players/proofs. Keep credentials, unrelated tabs and real recipients off-screen.

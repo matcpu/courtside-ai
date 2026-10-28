@@ -60,7 +60,7 @@ async function request(
   );
   return { value, response };
 }
-await step("Live Meta and paid-provider flags remain off", async () => {
+await step("Meta inference remains off and the live database is available", async () => {
   const { value } = await request(null, "/api/health", { method: "GET" });
   assert.equal(value.meta, false);
   assert.equal(value.database, true);

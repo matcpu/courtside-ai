@@ -1,6 +1,6 @@
 # Verification
 
-The expanded October 28 audit includes TypeScript, production build, 58 Vitest tests, 97 real PostgreSQL assertions (65 league + 32 preseason) and 16 public/authenticated desktop/mobile browser tests. Deployment-specific results are in STATUS.md. Meta contracts are explicitly mocked and cannot establish live provider effectiveness. Real Git index tests reject force-staged `.env.local` and `.local/` files.
+The expanded October 28 audit includes TypeScript, cloud production build, 62 Vitest tests, 97 real PostgreSQL assertions (65 league + 32 preseason) and 18 public/authenticated desktop/mobile browser tests. Deployment-specific results are in STATUS.md. Meta contracts are explicitly mocked and cannot establish live provider effectiveness. Real Git index tests reject force-staged `.env.local` and `.local/` files.
 
 ## Commands
 
@@ -46,11 +46,13 @@ Preparation creates only fictional `.invalid` accounts using the supported Auth 
 
 `scripts/live-audit.mjs` passed 23 checks against the actual Vercel APIs with normal issued JWTs, genuine private PNG bytes, role denial and rebalancing/publication/inbox behavior. It also asserts new ordinary seasons enforce preseason registration and cannot bypass questionnaire/readiness checks using basic registration. The positive ordinary-season guardian/document/opening-weekend journey is covered by the separate 21-check preseason audit. Both scripts assert Meta is disabled before starting; the operations audit checks the disabled agent response. Private JSON reports contain outcomes rather than credentials.
 
-The browser suite signs in through visible forms; it does not inject a fake session or mock backend responses. Separate production fixtures force the first upload through Vercel. Reruns identify the original image's game by its persisted SHA-256 rather than attaching that same image to a different game; duplicate-image protection remains enforced. All 16 tests passed in production, including UI division-adjustment approval/revised publication and the new preseason journey on desktop/mobile. Synthetic tenants are retained for reruns, and the public reference seed stays unchanged.
+The browser suite signs in through visible forms; it does not inject a fake session or mock backend responses. Separate production fixtures force the first upload through Vercel. Reruns identify the original image's game by its persisted SHA-256 rather than attaching that same image to a different game; duplicate-image protection remains enforced. All 18 tests passed in production, including UI division-adjustment approval/revised publication, the preseason journey and the judge signup-screen restriction on desktop/mobile. Synthetic tenants are retained for reruns, and the public reference seed stays unchanged.
 
-Live Meta image recognition, real Resend acceptance/delivery and actual account confirmation-email receipt remain unverified. Meta must stay disabled until the owner confirms credits. Do not substitute manual review, mocked contracts or queued messages for live provider evidence.
+Live Meta image recognition remains unverified and disabled until owner credit confirmation/authorization. Real Resend smoke/signup/coach delivery and actual Gmail receipt were separately inspected; guardian delivery was observed in Spam. Normal signup confirmation followed the received email link, without an Auth Admin confirmation bypass. The notification retry uses a controlled pre-send network fault and real persisted backoff, followed by an actual provider send and duplicate prevention; it does not pretend Resend had an outage. See [EMAIL_READINESS.md](EMAIL_READINESS.md).
 
 No load test of 500 simultaneous browser users, multi-season ratings materialization, or production disaster recovery has been performed.
+
+`node scripts/rehearse-demo.mjs` reproduces the complete paused-model rehearsal and compares every public reference snapshot before/after. On this OneDrive workspace, a read-only cloud-placeholder build cache caused a later local cleanup failure; the production build was independently verified on Vercel and Linux CI. No unsafe cache removal was needed. Client scanning now uses actual file status for cloud-placeholder directories and can inspect deployed assets using `--live-origin`.
 
 ## Preseason and meaningful Meta preparation
 

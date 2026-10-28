@@ -20,7 +20,7 @@ This is an operations platform. It does not provide basketball coaching or evalu
 - Transactional notification outbox, leases, idempotency, retry timing and honest delivery states.
 - Public fictional reference league; signed-in users can create an isolated private demo.
 
-**Provider status:** Meta credentials are configured privately; `META_API_ENABLED=false` pauses all Meta requests while participant credits are pending. Integration and bounded tool orchestration still need a live verification run after authorization. Resend delivery requires a sending key and an authorized verified sender. Twilio sending is intentionally disabled pending complete opt-out handling. See [STATUS.md](STATUS.md) for verified evidence and outstanding work. A passing unit test of a mocked provider is not a live provider test.
+**Provider status:** Meta credentials are configured privately; `META_API_ENABLED=false` pauses all Meta requests while participant credits are pending. Integration and bounded tool orchestration still need a live verification run after authorization. Resend's testing sender is configured for one authorized inbox only: actual receipt, signup confirmation and notification retry were tested. General delivery requires a verified COURTSIDE domain, and guardian email initially landed in Spam. Twilio sending is intentionally disabled. See [STATUS.md](STATUS.md), [READINESS.md](READINESS.md) and [EMAIL_READINESS.md](EMAIL_READINESS.md). A passing mocked-provider test is not a live provider test.
 
 ## Meta's role
 
