@@ -146,4 +146,3 @@ begin
  insert into public.audit_events(league_id,actor_id,action,detail) values(l,actor,action,jsonb_build_object('entity_id',coalesce(id::text,p->>'sheet_id',p->>'version_id',p->>'team_id',p->>'proposal_id'),'correction_reason',p->>'correction_reason'));
  return jsonb_build_object('id',id,'ok',true);
 end $$;
-
