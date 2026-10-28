@@ -44,7 +44,7 @@ The Vercel plugin installer could not find its plugin in the current Codex marke
 
 GitHub Actions runs pinned installation, typecheck, unit tests and production build. A separate manually dispatched deployment workflow requires `VERCEL_TOKEN` in repository Actions secrets and Vercel project/team IDs as variables. It does not print the token or pass it as an argument. No workflow should deploy untrusted pull-request code with secrets.
 
-Direct Vercel deployments work through the authenticated CLI. Connecting the repository for automatic Vercel Git deployments was attempted and rejected by the provider; GitHub integration authorization is still needed unless a later attempt succeeds. This does not prevent manual deployment or source pushes.
+Direct Vercel deployments work through the authenticated CLI. The latest app is public at [courtside-ai-one.vercel.app](https://courtside-ai-one.vercel.app). Connecting the repository for automatic Vercel Git deployments requires installing the Vercel GitHub app; the provider approval page is open for the owner. Choose **Only select repositories → matcpu/courtside-ai**, then review the requested write permissions. No access to other repositories was granted. This does not prevent manual deployment or source pushes. GitHub-hosted CI has passed for the pushed source.
 
 ## Diagnostics
 
