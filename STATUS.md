@@ -24,7 +24,7 @@ The three prepared capabilities are substantive model jobs: image-to-structured 
 
 The official rubric and agentic prize were reviewed again. The guide excludes generic sports analyzers/coaches; COURTSIDE's scope is league administration and workflow coordination. Organizer eligibility and live Meta effectiveness are not guaranteed by that positioning.
 
-Resend sending credentials/authorized sender are absent; actual invitation/schedule email acceptance and receipt remain unverified. Private copied invitations and in-app updates work. SMS remains disabled pending credentials and complete signed opt-out handling. Signup confirmation-email receipt is also unverified; synthetic test accounts use supported Auth Admin confirmation, then normal issued sessions.
+Readiness work has configured a dedicated sending-only test credential privately and verified an actual smoke-test email in the authorized Gmail Inbox. Resend requires the account's registered dotted spelling of that same Gmail inbox. Supabase SMTP uses `onboarding@resend.dev`; normal UI signup, receipt of its confirmation email and following the received confirmation link returned a genuine signed-in session. No administrative confirmation bypass was used for this test. Coach-notification retry and guardian-invitation inbox checks are pending the restricted-email runtime deployment. Other recipients must remain suppressed; a verified COURTSIDE domain is still required for general delivery. No jewellery domain is used. SMS remains disabled.
 
 ## Deployment evidence
 

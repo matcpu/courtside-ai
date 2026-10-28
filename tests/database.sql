@@ -14,7 +14,7 @@ insert into auth.users(id,aud,role,email) values('aa000000-0000-4000-8000-000000
 select set_config('request.jwt.claims','{"sub":"aa000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
 do $$
-declare l uuid;created jsonb;s jsonb;result jsonb;tid uuid;player_id uuid;proposal_id uuid;draft_id uuid;published_id uuid;sheet_id uuid;g jsonb;fixtures jsonb;bad jsonb;locked jsonb;future jsonb;extraction jsonb;first_rating int;queue jsonb;vrecord jsonb;candidate jsonb;le jsonb;
+declare l uuid;created jsonb;s jsonb;result jsonb;tid uuid;player_id uuid;proposal_id uuid;draft_id uuid;published_id uuid;sheet_id uuid;g jsonb;fixtures jsonb;bad jsonb;locked jsonb;future jsonb;extraction jsonb;first_rating int;queue jsonb;queue2 jsonb;vrecord jsonb;candidate jsonb;le jsonb;
 begin
  created:=public.create_demo();l:=(created->>'id')::uuid;perform set_config('test.league',l::text,true);
  s:=public.league_snapshot(l,false);
@@ -57,8 +57,9 @@ begin
  perform pg_temp.ok('multi-team notifications queued',(select count(*)=13 from jsonb_array_elements(s->'notifications') n where n->>'channel'='email'));
  perform pg_temp.ok('in-app updates delivered for every approved team',(select count(*)=13 from jsonb_array_elements(s->'notifications') n where n->>'channel'='in_app' and n->>'status'='delivered' and n->>'read_at' is null));
  perform pg_temp.ok('publication is idempotent',pg_temp.denied(format('select public.league_command(%L,''publish_schedule'',%L::jsonb)',l,jsonb_build_object('version_id',draft_id)),'Draft schedule not found'));
- queue:=public.league_command(l,'claim_notifications');perform pg_temp.ok('durable queue claims only external channels',jsonb_array_length(queue)=13 and not exists(select 1 from jsonb_array_elements(queue) n where n->>'channel'='in_app'));
- perform pg_temp.ok('concurrent claim does not duplicate',jsonb_array_length(public.league_command(l,'claim_notifications'))=0);
+ queue:=public.league_command(l,'claim_notifications');perform pg_temp.ok('durable queue claims bounded external channels',jsonb_array_length(queue)=3 and not exists(select 1 from jsonb_array_elements(queue) n where n->>'channel'='in_app'));
+ queue2:=public.league_command(l,'claim_notifications');
+ perform pg_temp.ok('subsequent claim excludes active leases',jsonb_array_length(queue2)=3 and not exists(select 1 from jsonb_array_elements(queue) a join jsonb_array_elements(queue2) b on a->>'id'=b->>'id'));
  perform public.league_command(l,'finish_notification',jsonb_build_object('notification_id',queue#>>'{0,id}','lease_id',queue#>>'{0,lease_id}','status','failed','error','Synthetic provider outage'));
  s:=public.league_snapshot(l,false);
  perform pg_temp.ok('notification failure retained for retry',exists(select 1 from jsonb_array_elements(s->'notifications') n where n->>'status'='failed' and n->>'attempts'='1'));

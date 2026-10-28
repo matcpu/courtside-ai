@@ -277,6 +277,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
       meta: boolean;
       metaConfigured?: boolean;
       email: boolean;
+      emailMode?: string;
       sms: boolean;
     } | null>(null),
     [menu, setMenu] = useState(false),
@@ -2043,7 +2044,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                           ],
                           [
                             "Resend",
-                            "Transactional coach notifications",
+                            health?.emailMode === "test"
+                              ? "Restricted to the authorized test inbox"
+                              : "Transactional coach notifications",
                             health?.email,
                           ],
                           ["Twilio", "Consent saved · sending disabled", false],
@@ -2058,7 +2061,10 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                             </div>
                             <Badge tone={ready ? "green" : "orange"}>
                               {ready
-                                ? "Connected"
+                                ? name === "Resend" &&
+                                  health?.emailMode === "test"
+                                  ? "Test inbox only"
+                                  : "Connected"
                                 : name === "Meta Muse Spark" &&
                                     health?.metaConfigured
                                   ? "Configured · paused"
@@ -2311,6 +2317,14 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                     : "Your next season starts here."}
                 </h2>
                 <p>Secure access for the people who keep the league moving.</p>
+                {authMode === "signup" && health?.emailMode === "test" && (
+                  <p role="status">
+                    Email confirmations are currently restricted to the
+                    authorized test inbox while sender verification is pending.
+                    Visitors can explore the public demo; private roles require
+                    an invited test account.
+                  </p>
+                )}
                 <Form
                   busy={busy}
                   submit={authMode === "signin" ? "Sign in" : "Create account"}

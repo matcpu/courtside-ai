@@ -394,13 +394,19 @@ await step(
   },
 );
 await step(
-  "Unconfigured external delivery reports blocked, never simulated success",
-  () =>
-    request("admin", "/api/notifications", {
+  "External delivery stays disabled or suppresses synthetic test recipients",
+  async () => {
+    const health = await request("admin", "/api/health");
+    const result = await request("admin", "/api/notifications", {
       method: "POST",
       data: { league: state.league },
-      status: 503,
-    }),
+      status: health.email ? 200 : 503,
+    });
+    if (health.email) {
+      assert.equal(health.emailMode, "test");
+      assert.ok(result.results.every((r) => r.status === "suppressed"));
+    }
+  },
 );
 await step(
   "Coach receives real private in-app publication updates",

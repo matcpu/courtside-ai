@@ -2,7 +2,13 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "dotenv";
 const env = existsSync(".env.local") ? parse(readFileSync(".env.local")) : {};
-const secrets = ["SUPABASE_SERVICE_ROLE_KEY", "MODEL_API_KEY", "CRON_SECRET"]
+const secrets = [
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "MODEL_API_KEY",
+  "CRON_SECRET",
+  "RESEND_API_KEY",
+  "EMAIL_TEST_RECIPIENT",
+]
   .map((name) => env[name])
   .filter((value) => value && value.length > 16);
 function scan(path) {

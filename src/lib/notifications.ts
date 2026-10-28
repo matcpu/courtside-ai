@@ -9,6 +9,46 @@ export type Delivery = {
   idempotency_key: string;
   lease_id: string;
 };
+export function emailConfiguration() {
+  if (process.env.NOTIFICATIONS_ENABLED !== "true")
+    throw new ApiError(
+      "Email sending is disabled. Configure credentials and enable notifications.",
+      503,
+    );
+  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM)
+    throw new ApiError(
+      "Resend credentials or verified sender are missing",
+      503,
+    );
+  const from = process.env.RESEND_FROM;
+  const address = (from.match(/<([^<>]+)>$/)?.[1] ?? from).trim().toLowerCase();
+  if (/[\r\n]/.test(from))
+    throw new ApiError("Invalid sender configuration", 503);
+  const mode = process.env.EMAIL_DELIVERY_MODE ?? "test";
+  if (mode === "test") {
+    const recipient = process.env.EMAIL_TEST_RECIPIENT?.trim().toLowerCase();
+    if (
+      address !== "onboarding@resend.dev" ||
+      !recipient ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)
+    )
+      throw new ApiError(
+        "Test email requires the Resend testing sender and one authorized recipient",
+        503,
+      );
+    return { mode, recipient } as const;
+  }
+  if (
+    mode !== "production" ||
+    address.endsWith("@resend.dev") ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)
+  )
+    throw new ApiError(
+      "Production email requires an explicitly configured verified sender",
+      503,
+    );
+  return { mode, recipient: null } as const;
+}
 export async function deliver(item: Delivery, fetcher: typeof fetch = fetch) {
   if (process.env.NOTIFICATIONS_ENABLED !== "true")
     throw new ApiError(
@@ -22,11 +62,17 @@ export async function deliver(item: Delivery, fetcher: typeof fetch = fetch) {
       provider_id: null,
     };
   if (item.channel === "email") {
-    if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM)
-      throw new ApiError(
-        "Resend credentials or verified sender are missing",
-        503,
-      );
+    const config = emailConfiguration();
+    if (
+      config.mode === "test" &&
+      item.destination.trim().toLowerCase() !== config.recipient
+    )
+      return {
+        status: "suppressed",
+        error:
+          "Test mode permits only the authorized test inbox; no message sent",
+        provider_id: null,
+      };
     const res = await fetcher("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -54,7 +100,11 @@ export async function deliver(item: Delivery, fetcher: typeof fetch = fetch) {
     503,
   );
 }
-export async function dispatch(client: SupabaseClient, league: string) {
+export async function dispatch(
+  client: SupabaseClient,
+  league: string,
+  fetcher: typeof fetch = fetch,
+) {
   if (
     process.env.NOTIFICATIONS_ENABLED !== "true" ||
     !process.env.RESEND_API_KEY ||
@@ -64,6 +114,7 @@ export async function dispatch(client: SupabaseClient, league: string) {
       "Resend is not configured for sending. Notifications remain queued.",
       503,
     );
+  emailConfiguration();
   const items = (await command(
     client,
     league,
@@ -73,7 +124,7 @@ export async function dispatch(client: SupabaseClient, league: string) {
   for (const item of items) {
     let outcome;
     try {
-      outcome = await deliver(item);
+      outcome = await deliver(item, fetcher);
     } catch (e) {
       outcome = {
         status: "failed",
