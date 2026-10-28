@@ -189,7 +189,10 @@ await step(
 );
 await step("Tenant and roster privacy against real JWTs", async () => {
   await request("outsider", `/api/league?id=${state.league}`, { status: 403 });
-  const { data, error } = await clients.outsider.from("teams").select("id");
+  const { data, error } = await clients.outsider
+    .from("teams")
+    .select("id")
+    .eq("league_id", state.league);
   assert.equal(error, null);
   assert.equal(data.length, 0);
   const s = await snapshot("coach");

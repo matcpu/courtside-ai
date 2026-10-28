@@ -19,6 +19,10 @@ The ordered, tracked migrations in `supabase/migrations/` are authoritative. Loc
 | notifications | Outbox, destination, consented channel, retry and lease state |
 | audit_events | Database-generated actor/action history |
 | workflow_runs, ai_requests | Bounded agent trace and AI request reservations |
+| preseason_settings, coach_questionnaires | Configurable deadlines/readiness policy and versioned comprehensive assessments |
+| guardian_invitations, age_documents | Hashed/revocable one-player capabilities and private document/consent state |
+| eligibility_reviews | Human reviewer, reason, document-open event, age policy and decision history |
+| meta_evidence | Server-written actual provider identity, parsed output and selected-tool/action receipts |
 
 Composite `(league_id, id)` foreign keys prevent moving entities across tenant boundaries. A league row lock serializes all impactful commands. There is exactly one published schedule per league. A draft records both schedule revision and data revision, which are rechecked at publication.
 
@@ -46,7 +50,7 @@ Initial rating: `800 + experience×75 + min(yearsTogether,4)×25 + min(practices
 
 Elo uses K=32, a 400-point logistic expected score and rounded zero-sum changes. Games are replayed by `played_at,id`. Standings count confirmed games only: win 2, draw 1, loss 0; ties sort by differential then team name.
 
-U14 defaults to maximum age 13 on the season cutoff date. Birth dates alone do not mark a player verified; consent and administrator review are required. The current review verifies declared age against cutoff, **not authenticity of an identity document**.
+U14 defaults to maximum age 13 on the season cutoff. Divisions now have configurable category/minimum/maximum ages. Legacy `verify_player` checks declared date/consent only and is blocked in enforced preseason seasons. The new flow requires private proof submission, a reviewer-open audit and an explicit administrator decision. It is human document inspection, **not independent issuer authentication or guardianship proof**. Only synthetic documents have been tested.
 
 Result correction replaces the current official game score, supersedes a prior confirmed scoresheet, records a result revision, clears/replaces recorded player stats and replays ratings. A confirmed scoresheet can be reopened with a correction reason, reusing its original photo and preserving its first extraction. Reopening leaves the official score unchanged; rejecting that correction restores the confirmed sheet. Proposals become stale after corrected/new results. Rejected drafts do not change public fixtures.
 

@@ -2126,3 +2126,303 @@ td small {
     transition: none !important;
   }
 }
+
+.preseason-stack {
+  display: grid;
+  gap: 22px;
+}
+.preseason-section {
+  padding: 24px;
+}
+.preseason-section > form,
+.preseason-settings > form {
+  margin-top: 20px;
+}
+.preseason-section h3,
+.preseason-settings h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 16px 0 12px;
+}
+.preseason-section p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.preseason-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.preseason-metrics .panel {
+  padding: 17px;
+}
+.preseason-metrics small {
+  display: block;
+  font-size: 10px;
+  color: #758078;
+}
+.preseason-metrics strong {
+  display: block;
+  font-size: 27px;
+  margin-top: 7px;
+}
+.preseason-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.preseason-settings {
+  padding: 22px;
+}
+.preseason-settings > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.preseason-settings fieldset {
+  border: 1px solid #e1e7dc;
+  padding: 14px;
+  border-radius: 7px;
+}
+.preseason-settings legend {
+  font-size: 11px;
+  padding: 0 6px;
+}
+.preseason-recommendation {
+  border-top: 1px solid #e4e9df;
+  margin-top: 24px;
+  padding-top: 8px;
+}
+.preseason-recommendation ul {
+  font-size: 12px;
+  list-style: disc;
+  padding-left: 20px;
+  line-height: 1.8;
+}
+.preseason-recommendation .notice {
+  position: static;
+}
+.preseason-meta {
+  background: #f1f5eb;
+  border: 1px solid #dce8ce;
+  border-radius: 9px;
+  padding: 18px;
+  margin: 20px 0;
+}
+.preseason-meta h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.preseason-roster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 22px 0;
+}
+.preseason-roster > article {
+  padding: 20px;
+}
+.preseason-roster .inline-actions {
+  margin-top: 14px;
+}
+.preseason-invite {
+  background: #f2f6eb;
+  border: 1px solid #d8e4c9;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+.preseason-invite .button {
+  margin: 12px 0;
+}
+.preseason-review {
+  padding: 20px;
+  margin-bottom: 18px;
+}
+.preseason-document {
+  background: #f4f6f2;
+  padding: 14px;
+  margin: 16px 0;
+}
+.preseason-document img {
+  display: block;
+  max-width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+  margin: auto;
+}
+.preseason-document small {
+  display: block;
+  margin-top: 10px;
+  font-size: 10px;
+  color: #7d8973;
+}
+.preseason-section details > summary {
+  cursor: pointer;
+  font-size: 12px;
+  margin: 16px 0;
+}
+.guardian-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 30px 22px 50px;
+}
+.guardian-brand {
+  display: block;
+  font-size: 25px;
+  color: #173c2f;
+  letter-spacing: -1px;
+  margin: 0 0 28px;
+}
+.guardian-brand span {
+  font-size: 13px;
+  background: #d5f58c;
+  padding: 4px;
+  border-radius: 4px;
+  margin-left: 3px;
+}
+.guardian-card {
+  padding: 36px;
+}
+.guardian-card h1 {
+  font-size: 29px;
+  letter-spacing: -0.9px;
+  line-height: 1.2;
+  margin: 9px 0 15px;
+}
+.guardian-card > p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #74816d;
+}
+.guardian-icon {
+  width: 53px;
+  height: 53px;
+  background: #edf4e4;
+  color: #59723d;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+}
+.guardian-child {
+  background: #f4f7ef;
+  border: 1px solid #e0e8d6;
+  border-radius: 9px;
+  padding: 20px;
+  margin: 25px 0;
+}
+.guardian-child small {
+  font-size: 10px;
+  color: #788369;
+}
+.guardian-child h2 {
+  font-size: 21px;
+  margin: 9px 0;
+}
+.guardian-child p {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 9px 0;
+}
+.guardian-card .info-banner {
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+.guardian-card .info-banner svg {
+  flex-shrink: 0;
+}
+.guardian-card .info-banner p {
+  font-size: 11px;
+  line-height: 1.9;
+}
+.guardian-status {
+  padding: 22px;
+  background: #eef5e7;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.guardian-status svg {
+  flex-shrink: 0;
+}
+.guardian-status p {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.guardian-card > .small-muted {
+  margin: 20px 0;
+}
+.guardian-footer {
+  font-size: 10px;
+  line-height: 1.8;
+  text-align: center;
+  color: #8a9681;
+  margin-top: 22px;
+}
+.guardian-card .notice {
+  position: static;
+}
+.guardian-card .inline-actions {
+  flex-wrap: wrap;
+}
+.guardian-card .checkbox-label {
+  line-height: 1.8;
+  align-items: flex-start;
+}
+.guardian-card .checkbox-label input {
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+@media (max-width: 1000px) {
+  .preseason-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .preseason-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .preseason-roster {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .preseason-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .preseason-fields {
+    grid-template-columns: 1fr;
+  }
+  .preseason-section,
+  .preseason-settings {
+    padding: 18px;
+  }
+  .preseason-roster > article {
+    padding: 16px;
+  }
+  .guardian-shell {
+    padding: 22px 14px 35px;
+  }
+  .guardian-card {
+    padding: 22px;
+  }
+  .guardian-card h1 {
+    font-size: 25px;
+  }
+  .guardian-card .button {
+    min-height: 42px;
+  }
+  .preseason-settings .two-fields {
+    grid-template-columns: 1fr;
+  }
+  .preseason-stack .notice {
+    font-size: 11px;
+  }
+  .preseason-section .info-banner {
+    flex-wrap: wrap;
+  }
+}

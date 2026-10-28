@@ -12,7 +12,8 @@ This is an operations platform. It does not provide basketball coaching or evalu
 
 - Next.js App Router, TypeScript, Tailwind and a Radix/shadcn-style component foundation.
 - Real Supabase PostgreSQL, Auth and private Storage, with tenant membership authorization, RLS, composite tenant foreign keys and audited transactional commands.
-- Team questionnaire and deterministic initial placement, administrator approvals, private rosters and age/consent review.
+- Dedicated preseason setup and dashboard, comprehensive saved/resumable coach assessment, placement review/override, configurable roster readiness and opening-weekend scheduling gates.
+- Secure guardian invitations, real private proof uploads and consent, administrator document-review queue, resubmissions, decision history and retention/deletion controls. See [PRESEASON.md](PRESEASON.md) for precise security and verification limits.
 - Constraint-based round generation, confirmed court availability, 30-minute minimum rest, frozen completed fixtures and versioned publication.
 - Private scoresheet upload and human result review; corrections replay all official results to recalculate ratings. Missing statistics remain null or absent.
 - Evidence-based division proposals after three verified mismatches; rejection and stale-version checks.
@@ -26,6 +27,8 @@ This is an operations platform. It does not provide basketball coaching or evalu
 The configurable Meta model defaults to `muse-spark-1.3`, using the official [Meta Responses API](https://dev.meta.ai/docs/overview), not an alternative model behind a Meta label. The integration uses strict JSON schemas, local Zod validation, image input and `store:false`.
 
 Muse Spark interprets questionnaire context and explains the deterministic placement recommendation; extracts final scores and explicitly recorded player stats from a private scoresheet image; explains schedule changes; and selects tools in a bounded league operations workflow. Agent tools can inspect, evaluate balance and save schedule drafts. They cannot approve placements or results, move teams, publish schedules or send messages.
+
+The **Meta AI activity** screen distinguishes paused preparation from actual provider responses and resulting actions. The deeper agent investigates verified team history and readiness before proposing changes. No guardian document or identity data is sent to Meta. [META_HACKATHON.md](META_HACKATHON.md) maps the three priority capabilities to the judging criteria and a guarded future live-verification run. No actual Meta response is claimed while credits are pending.
 
 Age eligibility, ratings, standings, proposal thresholds, conflict detection and database integrity remain deterministic. The AI integration fails explicitly when unavailable. The manual result path is labeled manual and is never represented as Meta recognition.
 
@@ -66,4 +69,4 @@ The [official participant guide](https://cerebralvalley.ai/e/meta-ai-developer-h
 
 ## Project documentation
 
-[Feature audit](FEATURE_AUDIT.md) · [Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Setup](SETUP.md) · [Credits](CREDIT_SETUP.md) · [Tests](TESTING.md) · [Demo](DEMO.md) · [Status](STATUS.md)
+[Feature audit](FEATURE_AUDIT.md) · [Preseason](PRESEASON.md) · [Meta evidence](META_HACKATHON.md) · [Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Setup](SETUP.md) · [Credits](CREDIT_SETUP.md) · [Tests](TESTING.md) · [Demo](DEMO.md) · [Status](STATUS.md)

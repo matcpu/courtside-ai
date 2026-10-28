@@ -56,9 +56,13 @@ import {
   type Team,
 } from "@/lib/domain";
 import { Button } from "./ui/button";
+import { PreseasonOnboarding } from "./preseason-onboarding";
+import { MetaActivity } from "./meta-activity";
 
 type View =
   | "Overview"
+  | "Preseason Onboarding"
+  | "Meta AI activity"
   | "Teams & rosters"
   | "Schedule"
   | "Scoresheets"
@@ -75,6 +79,8 @@ type LeagueChoice = {
 };
 const nav: [View, typeof Activity][] = [
   ["Overview", LayoutDashboard],
+  ["Preseason Onboarding", ClipboardCheck],
+  ["Meta AI activity", Sparkles],
   ["Teams & rosters", Users],
   ["Schedule", CalendarDays],
   ["Scoresheets", FileImage],
@@ -308,20 +314,24 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
   );
   const mine = leagues.some((l) => l.id === selected) && !publicSlug;
   const selectedRef = useRef(selected);
+  const loadEpoch = useRef(0);
   selectedRef.current = selected;
   const load = useCallback(async () => {
     if (!selected) return;
+    const epoch = ++loadEpoch.current;
     setLoading(true);
     try {
       const data = await api(`/api/league?id=${selected}&public=${!mine}`);
-      if (selectedRef.current === selected) setSnapshot(data);
+      if (selectedRef.current === selected && epoch === loadEpoch.current)
+        setSnapshot(data);
     } catch (e) {
-      if (selectedRef.current === selected) {
+      if (selectedRef.current === selected && epoch === loadEpoch.current) {
         setNotice({ text: (e as Error).message, error: true });
         setSnapshot(null);
       }
     } finally {
-      if (selectedRef.current === selected) setLoading(false);
+      if (selectedRef.current === selected && epoch === loadEpoch.current)
+        setLoading(false);
     }
   }, [api, selected, mine]);
   useEffect(() => {
@@ -335,6 +345,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
     } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       if (!s) {
+        ++loadEpoch.current;
         setSnapshot(null);
         setLeagues([]);
         setSheet(null);
@@ -348,27 +359,51 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
     return () => subscription.unsubscribe();
   }, [supabase]);
   useEffect(() => {
+    let active = true;
     (async () => {
       try {
         const pubs = (await api("/api/league?public=true")) as LeagueChoice[];
+        if (!active) return;
         setPublicLeagues(pubs);
         let own: LeagueChoice[] = [];
         if (session) own = await api("/api/league");
+        if (!active) return;
         setLeagues(own);
         setSelected((current) => {
           if (publicSlug)
             return pubs.find((l) => l.slug === publicSlug)?.id ?? "";
-          if (current && [...own, ...pubs].some((l) => l.id === current))
-            return current;
+          if (current && own.some((l) => l.id === current)) return current;
+          let remembered = "";
+          try {
+            remembered =
+              localStorage.getItem(
+                `courtside:last-league:v1:${session?.user.id ?? "public"}`,
+              ) ?? "";
+          } catch {}
+          if (remembered && [...own, ...pubs].some((l) => l.id === remembered))
+            return remembered;
           return own[0]?.id ?? pubs[0]?.id ?? "";
         });
       } catch (e) {
-        notify((e as Error).message, true);
+        if (active) notify((e as Error).message, true);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     })();
+    return () => {
+      active = false;
+    };
   }, [api, session, publicSlug]);
+  const chooseLeague = (id: string) => {
+    setSelected(id);
+    if (!publicSlug)
+      try {
+        localStorage.setItem(
+          `courtside:last-league:v1:${session?.user.id ?? "public"}`,
+          id,
+        );
+      } catch {}
+  };
   useEffect(() => {
     void load();
   }, [load]);
@@ -437,13 +472,13 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
       const result = await api("/api/demo", { method: "POST", body: "{}" });
       const own = await api("/api/league");
       setLeagues(own);
-      setSelected(result.id);
+      chooseLeague(result.id);
       setModal(null);
     }, "Your private synthetic demo league is ready.");
   const refreshChoices = async (id: string) => {
     const own = await api("/api/league");
     setLeagues(own);
-    setSelected(id);
+    chooseLeague(id);
     setModal(null);
   };
 
@@ -482,7 +517,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
           <select
             aria-label="Switch league"
             value={selected}
-            onChange={(e) => setSelected(e.target.value)}
+            onChange={(e) => chooseLeague(e.target.value)}
           >
             {[
               ...leagues,
@@ -664,6 +699,10 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                 {
                   {
                     Overview: "Less administration. More time on the court.",
+                    "Preseason Onboarding":
+                      "From coach assessment to verified rosters and opening weekend.",
+                    "Meta AI activity":
+                      "Model observations, selected tools and actions you can verify.",
                     "Teams & rosters":
                       "Every team, in the right place. Built on verified information.",
                     Schedule:
@@ -705,7 +744,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                 <Button
                   onClick={() =>
                     (session && !s?.league.is_demo) || canWrite
-                      ? setModal("team")
+                      ? s?.league.preseason_enabled
+                        ? changeView("Preseason Onboarding")
+                        : setModal("team")
                       : setModal("auth")
                   }
                 >
@@ -1005,6 +1046,34 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                   </div>
                 </>
               )}
+              {view === "Preseason Onboarding" && (
+                <PreseasonOnboarding
+                  key={selected}
+                  league={selected}
+                  api={api}
+                  onChanged={async () => {
+                    await refreshChoices(selected);
+                    await load();
+                  }}
+                  metaEnabled={health?.meta ?? false}
+                  signedIn={!!session}
+                  divisions={s.divisions}
+                />
+              )}
+              {view === "Meta AI activity" && (
+                <MetaActivity
+                  key={selected}
+                  league={selected}
+                  api={api}
+                  isAdmin={!!isAdmin}
+                  enabled={health?.meta ?? false}
+                  onPlacement={() => changeView("Preseason Onboarding")}
+                  onScoresheet={() => changeView("Scoresheets")}
+                  onAgent={() =>
+                    isAdmin ? setModal("agent") : changeView("Settings")
+                  }
+                />
+              )}
               {view === "Teams & rosters" && (
                 <>
                   <div className="toolbar">
@@ -1114,6 +1183,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                                     {p.eligibility_status}
                                   </Badge>
                                   {isAdmin &&
+                                    !s.league.preseason_enabled &&
                                     p.eligibility_status === "pending" && (
                                       <button
                                         className="text-link"
@@ -2598,10 +2668,20 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                     </Field>
                   </div>
                   <label className="checkbox-label">
-                    <input name="consent" type="checkbox" /> Guardian consent
-                    has been obtained for league participation and private
-                    roster processing.
+                    <input
+                      name="consent"
+                      type="checkbox"
+                      disabled={s?.league.preseason_enabled}
+                    />{" "}
+                    Guardian consent has been obtained for league participation
+                    and private roster processing.
                   </label>
+                  {s?.league.preseason_enabled && (
+                    <p className="form-note">
+                      Guardians must provide consent through their private
+                      preseason invitation. Coaches cannot verify documents.
+                    </p>
+                  )}
                 </Form>
               </>
             )}
@@ -2690,7 +2770,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
               {sheet.source === "meta"
                 ? "Extracted by Meta Muse Spark"
                 : "Entered manually · no AI extraction"}{" "}
-              · {Math.round(extraction.confidence * 100)}% extraction confidence
+              {sheet.source === "meta"
+                ? ` · ${Math.round(extraction.confidence * 100)}% model confidence`
+                : " · Human data entry"}
             </p>
             <div className="review-grid">
               <div className="scoresheet-preview">

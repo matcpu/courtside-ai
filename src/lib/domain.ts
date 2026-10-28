@@ -219,8 +219,11 @@ export type Snapshot = {
     data_revision: number;
     is_demo: boolean;
     timezone: string;
+    preseason_enabled?: boolean;
+    season_start?: string;
   };
   role: string;
+  readiness?: import("./preseason").Readiness[];
   teams: Team[];
   divisions: Division[];
   courts: Court[];

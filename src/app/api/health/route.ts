@@ -21,6 +21,10 @@ export async function GET() {
         process.env.NOTIFICATIONS_ENABLED === "true",
       ),
       sms: false,
+      privateDocumentsConfigured: Boolean(
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+      ),
+      retentionConfigured: Boolean(process.env.CRON_SECRET),
     },
     { status: database ? 200 : 503, headers: { "Cache-Control": "no-store" } },
   );

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { metaJSON } from "../src/lib/meta";
+import { metaJSON, metaReceipt } from "../src/lib/meta";
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -103,5 +103,58 @@ describe("Meta Responses API contract (mock provider)", () => {
     await expect(
       metaJSON(z.object({ score: z.number() }), "Read", "image"),
     ).rejects.toThrow("incomplete");
+  });
+  it("records only parsed output and provider identity, excluding hidden reasoning and raw image bytes", async () => {
+    vi.stubEnv("MODEL_API_KEY", "unit-test-only");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            id: "mock-response-contract-only",
+            model: "muse-spark-1.3",
+            status: "completed",
+            output: [
+              { type: "reasoning", content: "hidden reasoning excluded" },
+              {
+                type: "message",
+                content: [{ type: "output_text", text: '{"score":78}' }],
+              },
+            ],
+          }),
+        ),
+      ),
+    );
+    const receipt = vi.fn();
+    await metaJSON(
+      z.object({ score: z.number() }),
+      "Read only image",
+      [
+        {
+          type: "input_image",
+          image_url: "data:image/png;base64,synthetic-private-bytes",
+        },
+      ],
+      receipt,
+    );
+    expect(receipt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "muse-spark-1.3",
+        response_id: "mock-response-contract-only",
+        response: { score: 78 },
+        request_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      }),
+    );
+    expect(JSON.stringify(receipt.mock.calls)).not.toContain(
+      "synthetic-private-bytes",
+    );
+    expect(JSON.stringify(receipt.mock.calls)).not.toContain(
+      "hidden reasoning",
+    );
+  });
+  it("refuses to fabricate an evidence receipt without a provider response ID", () => {
+    expect(() => metaReceipt({}, "request", { result: "anything" })).toThrow(
+      "no response identifier",
+    );
   });
 });

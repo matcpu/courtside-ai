@@ -1,6 +1,6 @@
 # Architecture
 
-The browser uses a Supabase Auth session. Each mutation sends its bearer access token to a Next.js route. Routes validate the token with `auth.getUser`, validate input, and call PostgreSQL using the same user's authorization. There is no service-role key in the application and no elevated server database client.
+The coach/admin browser uses a Supabase Auth session. Ordinary league mutations validate `auth.getUser` and call PostgreSQL with the caller's JWT. Guardians exchange a hashed, expiring one-player invitation for an HttpOnly cookie. A server-only service-role bridge is reserved for database-authorized private document signing/finalization/deletion and trusted provider receipt writes. It is never used as a blanket substitute for user authorization.
 
 ```mermaid
 flowchart LR
@@ -23,7 +23,7 @@ flowchart LR
 
 1. Questionnaire facts produce a deterministic initial rating and recommended tier. Meta may interpret context and explain, but cannot replace the stored rubric result.
 2. The administrator approves a division. Team registration is pending until that transaction succeeds.
-3. Scheduling uses approved teams in the same division, confirmed availability, 60-minute games and 30-minute rest. A bounded greedy round-robin solver reports any unscheduled games. It never fabricates court time. Completed games retain their exact original court and time.
+3. Scheduling uses approved teams in the same division, confirmed availability, 60-minute games and 30-minute rest. Enforced preseason seasons also require a submitted current questionnaire, matching placement approval, submitted size-compliant active roster and consented, document-approved, currently age-eligible players. No new fixture precedes opening weekend. A bounded greedy round-robin solver reports infeasibility; completed fixtures stay frozen.
 4. The database independently checks the draft. Publication requires a separate authenticated administrator command and matching schedule and data revisions.
 5. Private upload paths are scoped to league and uploader. Server code downloads the image under the caller's authorization, checks size/type/magic bytes, computes SHA-256 and optionally sends image input to Meta.
 6. A scorekeeper/administrator reviews team names, scores and recorded statistics. Official confirmation is atomic. Corrections require a reason, create an immutable result revision and replay all official results in chronological order for Elo consistency.
@@ -32,7 +32,7 @@ flowchart LR
 
 ## AI orchestration
 
-The Meta Responses agent is limited to four turns, three calls per turn and three allowlisted tools: inspect league, propose balance, draft schedule. Mutation tools run at most once per workflow. Each step and failure is stored in `workflow_runs`; official approvals are unavailable as tools. Input notes and image contents are treated as untrusted data. `store:false` limits provider-side response storage according to the provider API contract; it does not constitute a general zero-retention guarantee.
+The Meta Responses agent has a six-turn/48-second bound, at most three executed calls per turn, and five tools: inspect league, inspect team history, inspect preseason readiness, propose balance and draft schedule. It must inspect successfully and investigate history before a balance mutation. Mutation tools run at most once. Workflow traces and server-only provider receipts retain selected calls and resulting actions; official approvals are unavailable as tools. Proofs and guardian fields are excluded from model context. `store:false` limits response storage according to the provider contract; it is not a general zero-retention guarantee. All calls currently remain disabled.
 
 AI requests have per-user database reservations: 20/hour, 100/day. This is an application request quota, **not a currency spending cap**. API credentials remain server-side. No live calls have been made until credentials and billing/credits are verified.
 
@@ -41,6 +41,8 @@ AI requests have per-user database reservations: 20/hour, 100/day. This is an ap
 All exposed tables have RLS and no direct browser write grants. API-visible functions are invoker wrappers. Sensitive implementations live in `private`, pin an empty search path, revoke default PUBLIC execution, derive the actor from `auth.uid()` and check actual membership. Their elevated privileges are intentionally confined to the guarded transaction; no policy uses editable user metadata. Public snapshots expose team names, divisions, fixtures and official scores, and return no players, original sheets, contacts, notifications or audit details.
 
 The current client uses Supabase's persisted browser session and bearer API requests, not SSR cookies. React renders user text as text; the application does not inject HTML from AI. Session storage hardening and a production CSP should be revisited before real youth data is accepted.
+
+The separate guardian portal uses a Secure-on-HTTPS, HttpOnly, SameSite Strict capability cookie and Origin/Host checks. Raw tokens exist only in the initial fragment/exchange; only hashes persist. The reviewer queue records a document-open event and explicit human attestation/decision. Age rules, policy changes, duplicates, latest-submission checks and consent withdrawal are enforced independently in PostgreSQL. [PRESEASON.md](PRESEASON.md) documents signed upload lifetimes, retention, deletion and remaining identity limits.
 
 ## Scale and operational limits
 

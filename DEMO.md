@@ -1,41 +1,35 @@
-# Three-minute demonstration
+# Three-minute Meta operations demonstration
 
-Use fictional teams and synthetic children only. The public reference league is a safe, read-only way to explore the design; it is not a substitute for demonstrating authenticated operations.
+**Current state:** Meta is paused. The prepared integrations, manual workflow and contract tests must not be presented as actual model vision or autonomous model decisions. The final submission recording waits for owner-confirmed credits and real verification. See [META_HACKATHON.md](META_HACKATHON.md).
 
 ## Prerequisites
 
-- Sign in with your confirmed account and create a private demo in Settings. This isolates mutations from the public reference.
-- Connect a funded/credited Meta account and verify one real request. Confirm the eligible configured model ID.
-- Set up an approved Resend sender and controlled recipient. Example recipients are intentionally suppressed; queueing is not delivery.
-- Start with the private demo's existing past, unconfirmed **Eastside Eagles vs Riverside Ravens** fixture. The demo includes three prior verified mismatches for Eastside.
-- Download `public/demo/scoresheet.png` (fictional 78–43 sheet). No children's names or private documents are needed.
-- Make sure there is confirmed future court availability before recording.
+- Use only visibly synthetic teams/players/proofs. Keep credentials, unrelated tabs and real recipients off-screen.
+- Prepare an upcoming-season preseason tenant through the real coach/guardian/reviewer flow, plus a private historical operations demo with the fictional Eastside mismatch evidence. Identify them as two separate synthetic seasons. The public/legacy historical seed is not document-verified.
+- After explicit credit confirmation/authorization, verify real image recognition, inconsistent-questionnaire interpretation and a model-selected operations run. Inspect their actual provider receipts in Meta AI activity. Do not run the paid validator while disabled.
+- Use `public/demo/scoresheet.png`, the fictional Eastside Eagles 78–43 Riverside Ravens sheet, on its matching past fixture. It has no individual player statistics; do not invent any.
+- Confirm future court availability, pending proposal/draft behavior and public access. If demonstrating email, first configure an authorized sender and verify controlled receipt; queueing is not delivery.
 
-## Script
+## Recording script
 
-| Time | Screen and action | Narration |
+| Time | Show | Point to establish |
 |---|---|---|
-| 0:00–0:20 | Command center, synthetic season and operations checklist | “A volunteer should run a league without becoming a full-time administrator. Courtside coordinates the work, while people approve what counts.” |
-| 0:20–0:40 | Register a fictional team; enter coach questionnaire; approve placement | “The questionnaire establishes a reproducible starting rating. Muse Spark interprets the context and explains the proposed placement.” |
-| 0:40–0:55 | Show confirmed gym blocks; generate a draft | “Only confirmed court time is usable. The deterministic solver prevents court/team conflicts and preserves rest.” |
-| 0:55–1:25 | Upload the sample sheet for the past Eastside/Riverside fixture; show real Meta extraction and warnings | “Muse Spark reads the original sheet into a strict schema. Missing values stay missing. The model does not publish a result.” |
-| 1:25–1:45 | Compare image, confirm result, open standings/rating monitor | “A scorekeeper checks the photo. One transaction updates the official result, standings and ratings, with a permanent correction history.” |
-| 1:45–2:10 | Run the operations agent to inspect the season and evaluate mismatches | “The agent selects tools across a real workflow. Three verified mismatches support this proposal; it cannot move the team itself.” |
-| 2:10–2:35 | Approve Eastside's division adjustment; regenerate next round; inspect and publish | “We approve the adjustment. A revised schedule is checked again at the database boundary. Completed fixtures are frozen.” |
-| 2:35–2:50 | Process notification queue; show provider acceptance and the controlled inbox | “Publication and coach notification queueing are atomic. Retries use stable IDs. Accepted and delivered are separate states.” |
-| 2:50–3:00 | Public schedule and audit trail | “One authoritative league record connects every screen. Less administration, fairer competition, human control.” |
+| 0:00–0:20 | League command center, upcoming-season readiness and pending work | Volunteer league operations require coordinated administration. The system connects facts and prepares actions while preserving approval authority. |
+| 0:20–0:45 | Saved comprehensive coach assessment with inconsistent history/confidence; actual Muse Spark interpretation and response ID | Meta interprets ambiguous team-level context, flags contradictions and asks useful questions. The deterministic rubric and administrator retain final placement authority. |
+| 0:45–1:00 | Guardian mobile submission and administrator proof-review/readiness state | The operational foundation works. Documents are private, human-reviewed, retained under policy and never sent to Meta. This is the separate upcoming-season tenant. |
+| 1:00–1:35 | Private historical season: original scoresheet image beside actual Muse Spark structured extraction, uncertainty and human confirmation | Multimodal understanding produces useful structured facts. Missing stats stay missing; only human confirmation changes official standings/ratings. Show the real receipt, not a contract fixture. |
+| 1:35–2:25 | Give the operations agent an objective; inspect its actual calls, verified team-history investigation, readiness blockers, saved balance proposal and feasible draft | The model selects tools and coordinates meaningful work. Show successful/blocked outcomes and actual linked record IDs. No approval or message-sending tool exists. |
+| 2:25–2:50 | Administrator reviews/approves a division proposal, regenerates under the approved division and publishes; show coach in-app update | A proposal is not a division move. Current approved state drives the deterministic schedule, and publication requires a human. Do not imply the first draft anticipated an unapproved move. |
+| 2:50–3:00 | Public updated fixtures and Meta activity/audit receipts | The work is visible in one authoritative system: actual model responses, actions and human decisions can be checked. |
 
-If Meta or email credentials are still absent, explicitly state the integration is blocked and do not present manual entry as AI recognition or a queued message as delivered. Record the final submission only after those integrations work.
+Show actual response timestamps and IDs if using a previously recorded authorized run. A prepared response is not an instantaneous new live request. Do not hide a failed model outcome behind canned output or imply that an unconfigured email was delivered.
 
-## Recording checklist
+## Submission checks
 
-- [ ] Confirm the three-minute video limit and November 4, 9 PM Eastern submission deadline.
-- [ ] Show the new hackathon implementation and identify the README-only baseline commit `6865228`.
-- [ ] Keep API keys, account settings, real email addresses and private browser tabs off-screen.
-- [ ] Use a fresh private demo tenant; keep the public seed consistent for judges.
-- [ ] Upload a real image; show actual Meta output and human review.
-- [ ] Show a successful notification provider response and controlled receipt; no unrelated recipient messages.
-- [ ] Demonstrate a rejected or infeasible change briefly if time permits.
-- [ ] Check public repository, live app and video link in a signed-out browser.
-- [ ] List every participant and the new contributions on the submission form.
-- [ ] The participant must submit credit/participation/submission forms personally.
+- [ ] All three actual Meta capabilities passed the controlled live validator after credit confirmation.
+- [ ] Human review/approval, private document restrictions and deterministic schedule gates remain intact.
+- [ ] Video is at most three minutes and clearly identifies new October 28+ hackathon contributions from README-only baseline `6865228`.
+- [ ] Product positioning is league administration/workflow coordination; review the official exclusion of generic sports analyzers/coaches with organizers if eligibility is uncertain.
+- [ ] Public repository, live application and video are accessible to judges while signed out.
+- [ ] Participant list and submission materials are complete before November 4, 2026, 9 PM Eastern.
+- [ ] The participant personally submits participation/credit/submission forms. No billing, purchase or credit redemption is implied by code preparation.

@@ -63,7 +63,7 @@ begin
  s:=public.league_snapshot(l,false);
  perform pg_temp.ok('notification failure retained for retry',exists(select 1 from jsonb_array_elements(s->'notifications') n where n->>'status'='failed' and n->>'attempts'='1'));
  -- Confirm and correct an existing historical game using synthetic private-upload metadata.
- select value into g from jsonb_array_elements(s->'games') where value->>'status'='confirmed' limit 1;
+ select value into g from jsonb_array_elements(s->'games') gg where gg->>'status'='confirmed' and not exists(select 1 from jsonb_array_elements(s->'teams') tt where tt->>'name'='Eastside Eagles' and tt->>'id' in (gg->>'home_team_id',gg->>'away_team_id')) order by gg->>'id' limit 1;
  perform set_config('test.game',g->>'id',true);perform set_config('test.home',g->>'home_team_id',true);perform set_config('test.away',g->>'away_team_id',true);
  perform set_config('test.rating',(select rating::text from public.teams where id=(g->>'home_team_id')::uuid),true);
  perform pg_temp.ok('scoresheet requires private upload',pg_temp.denied(format('select public.league_command(%L,''submit_scoresheet'',%L::jsonb)',l,jsonb_build_object('game_id',g->>'id','sha256',repeat('a',64),'storage_path','missing','source','manual','extraction','{}'::jsonb)),'Private scoresheet upload'));

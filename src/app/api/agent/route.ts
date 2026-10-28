@@ -10,55 +10,28 @@ import {
   snapshot,
   reserveAI,
 } from "@/lib/server";
-import { dataBoundary, metaModel, metaIsEnabled } from "@/lib/meta";
+import {
+  dataBoundary,
+  metaModel,
+  metaIsEnabled,
+  metaReceipt,
+} from "@/lib/meta";
+import { recordMetaEvidence, redactCoachContext } from "@/lib/meta-evidence";
+import { operationsTools, executeOperationTool } from "@/lib/operations-agent";
 import { draftSchedule } from "../schedule/route";
 export const maxDuration = 60;
-const tools = [
-  {
-    type: "function",
-    name: "inspect_league",
-    description:
-      "Read team ratings, verified result summaries and available court time.",
-    parameters: {
-      type: "object",
-      properties: {},
-      required: [],
-      additionalProperties: false,
-    },
-    strict: true,
-  },
-  {
-    type: "function",
-    name: "propose_balance",
-    description:
-      "Run deterministic evidence checks and save division recommendations. Does not approve any move.",
-    parameters: {
-      type: "object",
-      properties: {},
-      required: [],
-      additionalProperties: false,
-    },
-    strict: true,
-  },
-  {
-    type: "function",
-    name: "draft_schedule",
-    description:
-      "Generate a constraint checked future schedule draft. Does not publish.",
-    parameters: {
-      type: "object",
-      properties: { round: { type: "integer", minimum: 0, maximum: 499 } },
-      required: ["round"],
-      additionalProperties: false,
-    },
-    strict: true,
-  },
-];
+type ProviderOutput = {
+  type: string;
+  name?: string;
+  arguments?: string;
+  call_id?: string;
+  content?: { type: string; text?: string }[];
+};
 export async function POST(request: Request) {
-  let run: string | undefined;
-  let context: Awaited<ReturnType<typeof authenticate>> | undefined;
-  let league: string | undefined;
-  const trace: { tool: string; outcome: unknown }[] = [];
+  let run: string | undefined,
+    context: Awaited<ReturnType<typeof authenticate>> | undefined,
+    league: string | undefined;
+  const trace: { tool: string; arguments?: unknown; outcome: unknown }[] = [];
   try {
     context = await authenticate(request);
     const b = z
@@ -66,12 +39,6 @@ export async function POST(request: Request) {
       .parse(await body(request));
     league = b.league;
     admin(await snapshot(context.client, league));
-    const key = process.env.MODEL_API_KEY;
-    if (!key)
-      throw new ApiError(
-        "Connect Meta to run the league operations agent.",
-        503,
-      );
     if (!metaIsEnabled())
       throw new ApiError(
         "Meta requests are disabled while credits are pending. No API call was made.",
@@ -83,29 +50,35 @@ export async function POST(request: Request) {
       p_status: "running",
       p_steps: [],
     });
-    if (started.error) throw new ApiError(started.error.message, 429);
+    if (started.error)
+      throw new ApiError("Could not start an auditable operations run", 500);
     run = started.data;
-    const input: unknown[] = [{ role: "user", content: b.objective }];
-    const deadline = Date.now() + 48000;
-    const used = new Set<string>();
-    for (let turn = 0; turn < 4 && Date.now() < deadline; turn++) {
+    const input: unknown[] = [
+        { role: "user", content: redactCoachContext(b.objective) },
+      ],
+      used = new Set<string>(),
+      deadline = Date.now() + 48000;
+    for (let turn = 0; turn < 6 && Date.now() < deadline; turn++) {
       await reserveAI(context.client, league, "agent_turn");
+      const requestBody = {
+        model: metaModel(),
+        store: false,
+        instructions:
+          dataBoundary +
+          " You coordinate league administration. Choose tools to achieve the operator objective: inspect the league, investigate a suspected mismatch with verified team history, check preseason readiness, and prepare evidence-based proposals or feasible schedule drafts. Prioritize inconsistent competition and actionable next steps. You must inspect successfully before acting and investigate history before proposing balance. Each mutating tool may run at most once. A schedule uses CURRENT APPROVED divisions only: proposed moves require a human decision and another scheduling run afterward. Never approve placements, results, division moves or publication. Never send messages or inspect guardian documents. Explain actual successes, blockers, saved proposal/draft IDs and the next human decision. Stop at human approval. Do not claim a blocked tool succeeded.",
+        tools: operationsTools,
+        input,
+        max_output_tokens: 2500,
+      };
+      const serializedRequest = JSON.stringify(requestBody),
+        requestSnapshot = JSON.parse(serializedRequest);
       const response = await fetch("https://api.meta.ai/v1/responses", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${key}`,
+          Authorization: `Bearer ${process.env.MODEL_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          model: metaModel(),
-          store: false,
-          instructions:
-            dataBoundary +
-            " You are Courtside league operations coordinator. Inspect the league before acting. Choose the tools needed for the operator objective. Run each mutating tool at most once. Never approve placements, results, division moves or schedules; stop at human approval. Never send messages. Explain what succeeded and what needs approval. Do not claim a blocked operation succeeded.",
-          tools,
-          input,
-          max_output_tokens: 2500,
-        }),
+        body: serializedRequest,
         signal: AbortSignal.timeout(
           Math.max(1000, Math.min(20000, deadline - Date.now())),
         ),
@@ -118,86 +91,92 @@ export async function POST(request: Request) {
       const result = await response.json();
       if (result.status !== "completed")
         throw new ApiError("Meta agent response was incomplete", 502);
-      input.push(...(result.output ?? []));
-      const calls = (result.output ?? []).filter(
-        (o: { type: string }) => o.type === "function_call",
-      );
-      if (!calls.length) {
-        const message = (result.output ?? [])
-          .filter((o: { type: string }) => o.type === "message")
-          .flatMap((o: { content: { text?: string }[] }) => o.content)
-          .map((c: { text?: string }) => c.text ?? "")
-          .join("");
-        await context.client.rpc("record_workflow", {
-          p_league: league,
-          p_run: run,
-          p_status: "awaiting_approval",
-          p_steps: trace,
-        });
-        return NextResponse.json({
-          run,
-          trace,
-          message,
-          requiresHumanApproval: true,
-        });
-      }
-      for (const call of calls.slice(0, 3)) {
+      const output = (result.output ?? []) as ProviderOutput[],
+        calls = output.filter((o) => o.type === "function_call");
+      const message = output
+        .filter((o) => o.type === "message")
+        .flatMap((o) => o.content ?? [])
+        .filter((c) => c.type === "output_text")
+        .map((c) => c.text ?? "")
+        .join("");
+      if (calls.length > 8)
+        throw new ApiError("The agent exceeded its bounded tool budget", 502);
+      input.push(...output);
+      const turnTrace: typeof trace = [];
+      for (let index = 0; index < calls.length; index++) {
+        const call = calls[index];
         let outcome: unknown;
         try {
-          if (!tools.some((t) => t.name === call.name))
-            throw new Error("Unknown tool");
-          if (call.name !== "inspect_league" && used.has(call.name))
-            throw new Error("This tool already ran");
-          if (call.name !== "inspect_league" && !used.has("inspect_league"))
-            throw new Error("Inspect the league first");
-          used.add(call.name);
-          if (call.name === "inspect_league") {
-            const s = await snapshot(context.client, league);
-            outcome = {
-              teams: s.teams.map((t) => ({
-                name: t.name,
-                rating: t.rating,
-                status: t.status,
-                division: s.divisions.find((d) => d.id === t.division_id)?.name,
-              })),
-              verifiedResults: s.games.filter((g) => g.status === "confirmed"),
-              confirmedSlots: s.availability.filter((a) => a.confirmed),
-              pendingMoves: s.proposals.filter((p) => p.status === "pending"),
-              publishedVersion:
-                s.versions.find((v) => v.status === "published")?.number ?? 0,
-            };
-          } else if (call.name === "propose_balance") {
-            await command(context.client, league, "propose_balance");
-            outcome = (await snapshot(context.client, league)).proposals.filter(
-              (p) => p.status === "pending",
-            );
-          } else {
-            const args = z
-              .object({ round: z.number().int().min(0).max(499) })
-              .parse(JSON.parse(call.arguments));
-            outcome = await draftSchedule(
-              context.client,
-              league,
-              args.round,
-              false,
-            );
-          }
+          if (index >= 3 || Date.now() >= deadline)
+            throw new Error("This turn reached its bounded tool budget");
+          outcome = await executeOperationTool(
+            call.name ?? "",
+            call.arguments ?? "{}",
+            used,
+            {
+              snapshot: () => snapshot(context!.client, league!),
+              propose: () =>
+                command(context!.client, league!, "propose_balance"),
+              draft: (round) =>
+                draftSchedule(context!.client, league!, round, false),
+            },
+          );
         } catch (e) {
           outcome = { error: e instanceof Error ? e.message : "Tool failed" };
         }
-        trace.push({ tool: call.name, outcome });
+        let args: unknown = {};
+        try {
+          args = JSON.parse(call.arguments ?? "{}");
+        } catch {
+          args = { invalid: true };
+        }
+        const entry = {
+          tool: call.name ?? "unknown",
+          arguments: args,
+          outcome,
+        };
+        trace.push(entry);
+        turnTrace.push(entry);
         input.push({
           type: "function_call_output",
           call_id: call.call_id,
           output: JSON.stringify(outcome),
         });
       }
-      await context.client.rpc("record_workflow", {
+      await recordMetaEvidence(
+        league,
+        context.user.id,
+        "operations",
+        run!,
+        metaReceipt(result, requestSnapshot, {
+          message,
+          calls: calls.map((c) => ({
+            name: c.name,
+            arguments: c.arguments,
+            call_id: c.call_id,
+          })),
+        }),
+        turnTrace,
+      );
+      const saved = await context.client.rpc("record_workflow", {
         p_league: league,
         p_run: run,
-        p_status: "running",
+        p_status: calls.length ? "running" : "awaiting_approval",
         p_steps: trace,
       });
+      if (saved.error)
+        throw new ApiError(
+          "Agent actions were saved, but its workflow receipt needs review",
+          502,
+        );
+      if (!calls.length)
+        return NextResponse.json({
+          run,
+          trace,
+          message,
+          requiresHumanApproval: true,
+          providerEvidence: true,
+        });
     }
     await context.client.rpc("record_workflow", {
       p_league: league,
@@ -209,8 +188,9 @@ export async function POST(request: Request) {
       run,
       trace,
       message:
-        "The bounded workflow stopped. Review saved proposals and drafts before approval.",
+        "The bounded operations run stopped. Review saved evidence, proposals and schedule drafts. Human approval is still required.",
       requiresHumanApproval: true,
+      providerEvidence: true,
     });
   } catch (e) {
     if (run && context && league)

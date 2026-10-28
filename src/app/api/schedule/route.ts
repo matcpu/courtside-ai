@@ -12,6 +12,7 @@ import {
 } from "@/lib/server";
 import { roundRobin, schedule } from "@/lib/domain";
 import { dataBoundary, metaJSON } from "@/lib/meta";
+import { seasonStartInstant } from "@/lib/preseason";
 export const maxDuration = 60;
 export async function draftSchedule(
   client: Awaited<ReturnType<typeof authenticate>>["client"],
@@ -27,13 +28,20 @@ export async function draftSchedule(
       f.version_id === published?.id &&
       s.games.find((g) => g.id === f.game_id)?.status === "confirmed",
   );
-  const pairs = roundRobin(s.teams, round).map((p) => ({
+  const eligibleTeams = s.league.preseason_enabled
+    ? s.teams.filter((t) =>
+        s.readiness?.some(
+          (r) => r.team_id === t.id && r.eligible_for_scheduling,
+        ),
+      )
+    : s.teams;
+  const pairs = roundRobin(eligibleTeams, round).map((p) => ({
     ...p,
     game_id: crypto.randomUUID(),
   }));
   if (!pairs.length)
     throw new ApiError(
-      "Approve at least two teams in the same division first.",
+      "At least two scheduling-ready teams in the same division are required. Complete preseason questionnaire, placement, roster and verification first.",
     );
   const generated = schedule(
     pairs,
@@ -41,7 +49,16 @@ export async function draftSchedule(
     locked,
     60,
     30,
-    new Date().toISOString(),
+    new Date(
+      Math.max(
+        Date.now(),
+        s.league.preseason_enabled && s.league.season_start
+          ? Date.parse(
+              seasonStartInstant(s.league.season_start, s.league.timezone),
+            )
+          : 0,
+      ),
+    ).toISOString(),
   );
   if (generated.unscheduled.length)
     throw new ApiError(

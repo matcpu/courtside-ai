@@ -22,7 +22,15 @@ Notifications require `RESEND_API_KEY`, an authorized verified `RESEND_FROM`, an
 
 `SMS_ENABLED` is a reserved setting and does not enable the current implementation. SMS sending remains fail-closed even with credentials. Complete signed inbound opt-out handling, outbound consent rechecks and a verified provider test before implementing the sender. No phone numbers were purchased.
 
-## Authentication
+## Preseason private documents and evidence
+
+The private upload/reviewer/deletion bridge and trusted Meta receipt writer require a **server-only** `SUPABASE_SERVICE_ROLE_KEY`; ordinary league APIs continue using the caller's JWT. Never place it in `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or any browser variable. `CRON_SECRET` protects daily document retention. Both are stored privately in ignored `.env.local` and Vercel Secrets for this project.
+
+On this authenticated Windows setup, `node scripts/configure-preseason.mjs --vercel` reads the existing project's key through the supported Supabase CLI, saves it privately and passes values to Vercel through stdin with redacted output. It refuses a different project or enabled Meta configuration. It does not call Meta. New deployments apply the variables. Run `node scripts/check-client-secrets.mjs` after building to check configured private values are absent from `.next/static`.
+
+`vercel.json` configures a daily retention request; `CRON_SECRET` must remain set in production. Administrators can also run due cleanup for their own league. See [PRESEASON.md](PRESEASON.md) for file lifetimes, authorization and retention limits. The first scheduled invocation remains unverified until it occurs; direct handler deletion is integration-tested.
+
+## Account access
 
 Email/password signup and sign-in use Supabase Auth. This project currently requires email confirmation. No shared admin password or auth bypass is provided. Sign up with an account you own and confirm its email; then sign in and create a league or private demo. New league creators become administrators only of that new league. Existing users can be added by a league administrator as coach, scorekeeper or referee.
 

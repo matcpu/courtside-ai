@@ -1,6 +1,6 @@
 # Verification
 
-The October 28 audit includes TypeScript, production build, 40 Vitest tests, 65 real PostgreSQL assertions and 14 public/authenticated desktop/mobile browser tests. Deployment-specific results are recorded in STATUS.md. Disabled Meta tests use mocked fetch functions and prove that saving a key does not enable API requests. Real Git index tests reject force-staged `.env.local` and `.local/` files.
+The expanded October 28 audit includes TypeScript, production build, 58 Vitest tests, 97 real PostgreSQL assertions (65 league + 32 preseason) and 16 public/authenticated desktop/mobile browser tests. Deployment-specific results are in STATUS.md. Meta contracts are explicitly mocked and cannot establish live provider effectiveness. Real Git index tests reject force-staged `.env.local` and `.local/` files.
 
 ## Commands
 
@@ -49,3 +49,15 @@ Preparation creates only fictional `.invalid` accounts using the supported Auth 
 Live Meta image recognition, real Resend acceptance/delivery and actual account confirmation-email receipt remain unverified. Meta must stay disabled until the owner confirms credits. Do not substitute manual review, mocked contracts or queued messages for live provider evidence.
 
 No load test of 500 simultaneous browser users, multi-season ratings materialization, or production disaster recovery has been performed.
+
+## Preseason and meaningful Meta preparation
+
+`tests/preseason-database.sql` adds 32 rolled-back assertions for drafts/submissions/overrides, guardian capabilities, blocked shortcuts, latest-document review, real reviewer decisions, age-policy changes, withdrawal, revocation and unforgeable browser-side provider receipts. Its Storage rows are synthetic metadata only.
+
+`node scripts/preseason-audit.mjs` runs 21 checks using the real local app or `E2E_BASE_URL=https://courtside-ai-one.vercel.app`, real Supabase sessions and actual signed PNG uploads. It checks malformed bytes, cross-origin rejection, one-player capability scope, private document access, consent validation, resubmission, duplicates, over-age rejection, expiry/revocation, readiness/opening-weekend connection, stale publication, origin deletion and retention receipts. Reports and synthetic images are kept only under `.local/`. It creates ordinary isolated seasons, not document-verified fake seed rows.
+
+`tests/e2e/preseason.spec.ts` signs in through the visible administrator/coach forms, configures the season, saves/reloads a draft, submits an assessment/roster, opens a guardian invitation in a separate browser context, uploads/resubmits an actual proof, performs explicit reviewer approval, verifies readiness and publishes opening weekend. It runs on desktop and iPhone-sized Chromium alongside the previous 14 tests. Traces/video are disabled to avoid recording capabilities or passwords. Physical iOS/Safari capture is not certified by emulation.
+
+`tests/operations-agent.test.ts` verifies the tool boundary and execution semantics with mocked model context: successful inspection before action, verified-history investigation, deterministic draft invocation, exactly-once mutations, argument rejection, and exclusion of youth identity/guardian data. Meta receipt contract tests exclude hidden reasoning and raw images and require a provider response ID.
+
+The guarded `scripts/verify-meta-live.mjs` is prepared but **must not run until owner-confirmed credits and explicit model-call authorization**. Both an operator flag and enabled local/production configuration are required. No live response or actual tool-selection quality has been claimed from the current tests. See [META_HACKATHON.md](META_HACKATHON.md).

@@ -73,6 +73,10 @@ for (const role of [
   "desktop_coach",
   "mobile_admin",
   "mobile_coach",
+  "desktop_preseason_admin",
+  "desktop_preseason_coach",
+  "mobile_preseason_admin",
+  "mobile_preseason_coach",
 ]) {
   if (state.accounts[role]) continue;
   const password = randomBytes(32).toString("base64url");

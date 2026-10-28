@@ -11,7 +11,13 @@ import {
   reserveAI,
 } from "@/lib/server";
 import { extractionSchema, validateExtraction } from "@/lib/domain";
-import { dataBoundary, metaJSON } from "@/lib/meta";
+import {
+  dataBoundary,
+  metaJSON,
+  metaIsEnabled,
+  type MetaReceipt,
+} from "@/lib/meta";
+import { recordMetaEvidence } from "@/lib/meta-evidence";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
@@ -61,7 +67,13 @@ export async function POST(request: Request) {
     if (!magic) throw new ApiError("The file is not a supported image");
     const home = s.teams.find((t) => t.id === game.home_team_id)!.name,
       away = s.teams.find((t) => t.id === game.away_team_id)!.name;
+    if (b.mode === "meta" && !metaIsEnabled())
+      throw new ApiError(
+        "Meta scoresheet recognition is paused until credits are confirmed. No API call was made.",
+        503,
+      );
     if (b.mode === "meta") await reserveAI(client, b.league, "scoresheet");
+    let receipt: MetaReceipt | undefined;
     const extraction =
       b.mode === "meta"
         ? await metaJSON(
@@ -84,6 +96,9 @@ export async function POST(request: Request) {
                 ],
               },
             ],
+            (r) => {
+              receipt = r;
+            },
           )
         : b.extraction;
     if (!extraction) throw new ApiError("Manual extraction is required");
@@ -95,11 +110,21 @@ export async function POST(request: Request) {
       extraction,
       source: b.mode === "meta" ? "meta" : "manual",
     });
+    const evidence = receipt
+      ? await recordMetaEvidence(
+          b.league,
+          user.id,
+          "scoresheet",
+          result.id,
+          receipt,
+        )
+      : null;
     return NextResponse.json({
       ...result,
       extraction,
       validationWarnings: warnings,
       official: false,
+      evidence,
     });
   } catch (e) {
     return fail(e);
