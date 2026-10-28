@@ -47,7 +47,9 @@ test("real coach and administrator operate a private synthetic season", async ({
     );
     return result;
   };
-  const fixtureFile = `.local/authenticated-${info.project.name}.json`;
+  // A separate production tenant forces an actual upload through Vercel,
+  // rather than reusing a photo already submitted to the local server.
+  const fixtureFile = `.local/authenticated-${info.project.name}${origin.startsWith("https://") ? "-production" : ""}.json`;
   const fixture = existsSync(fixtureFile)
     ? JSON.parse(readFileSync(fixtureFile, "utf8"))
     : { league: (await post("/api/demo", {})).id };
@@ -246,6 +248,31 @@ test("real coach and administrator operate a private synthetic season", async ({
       .click();
     await expect(review).toHaveCount(0);
   } else await review.getByRole("button", { name: "Close review" }).click();
+  s = await snap();
+  if (
+    s.divisions.find(
+      (d: { id: string }) =>
+        d.id ===
+        s.teams.find((t: { id: string }) => t.id === eagles.id).division_id,
+    ).tier > 1
+  ) {
+    await nav("Competitive balance");
+    await page
+      .getByRole("button", { name: "Evaluate balance", exact: true })
+      .click();
+    const proposal = page
+      .locator("section")
+      .filter({
+        has: page.getByRole("heading", {
+          name: "Eastside Eagles",
+          exact: true,
+        }),
+      });
+    await proposal
+      .getByRole("button", { name: "Approve adjustment", exact: true })
+      .click();
+    await expect(proposal).toHaveCount(0);
+  }
   await nav("Schedule");
   await page
     .getByRole("button", { name: "Generate next round", exact: true })
