@@ -8,12 +8,12 @@ Live: [courtside-ai-one.vercel.app](https://courtside-ai-one.vercel.app). Source
 - Comprehensive coach assessment with saved/resumable drafts, submission revisions, evidence-based rubric/explanation/confidence/flags, and administrator placement approval or reasoned override.
 - Real guardian invitation → private signed upload → explicit consent → administrator original-document review → decision/resubmission/history. Revocation, expiry, wrong roles, duplicate flags, over-age rejection and withdrawal are exercised using synthetic actual file bytes.
 - Current questionnaire/placement, submitted size-compliant roster, guardian consent, human document approval and current age rules gate scheduling. SQL rechecks readiness, opening date and stale revisions. Rules/roster/consent changes invalidate relevant readiness.
-- Manual origin deletion and authenticated retention cleanup remove actual files and preserve decision receipts. Daily Vercel cron configuration and server secret are prepared; a future scheduled invocation is not claimed as already observed.
+- Manual origin deletion and authenticated retention cleanup remove actual files and preserve decision receipts. Daily Vercel cron configuration and server secret are deployed; the endpoint passed integration checks, but its first future scheduled invocation has not been observed.
 - Existing verified-results, corrections/Elo replay, standings/private recorded statistics, balancing, revised publication, private coach inbox and public-privacy workflows remain connected.
 - 58 Vitest tests, typecheck and production build passed. This includes Meta schema/receipt/tool-boundary contracts, not live inference.
 - 97 PostgreSQL assertions passed and rolled back: 65 league operations + 32 preseason. The Storage rows in these SQL suites are metadata fixtures; separate integration/browser tests upload actual bytes.
-- All 16 local desktop/iPhone-sized Chromium browser tests passed, including visible admin/coach logins and a separate guardian context, draft return, proof upload/resubmission, explicit review and opening-weekend publication. Physical iOS/Safari capture is not certified by emulation.
-- All 21 real preseason API/file integration checks passed locally, including malformed bytes, cross-origin rejection, one-player capability scoping, duplicate/age decisions, actual deletion and retention. Production reruns for this revision are pending deployment below.
+- All 16 desktop/iPhone-sized Chromium browser tests passed locally and against the production URL, including visible admin/coach logins and a separate guardian context, draft return, proof upload/resubmission, explicit review and opening-weekend publication. Physical iOS/Safari capture is not certified by emulation.
+- All 21 real preseason API/file integration checks passed locally and in production, including malformed bytes, cross-origin rejection, one-player capability scoping, duplicate/age decisions, actual deletion and retention. The separate 23-check production operations audit also passed, including ordinary seasons' enforced readiness gates.
 - All 24 public tables have RLS and direct client writes are revoked. New sensitive tables have explicit direct-client denial policies. Both buckets are private. Private environment/audit files are ignored and commit-blocked; configured private values are checked against client build artifacts.
 
 ## Meta and external-provider status
@@ -28,7 +28,7 @@ Resend sending credentials/authorized sender are absent; actual invitation/sched
 
 ## Deployment evidence
 
-Previous operations source `15675e1` is Ready in production and passed [GitHub CI](https://github.com/matcpu/courtside-ai/actions/runs/40716403471). The new preseason/Meta-evidence revision is awaiting its production deployment and real-URL reruns in this work session. Server-only document/retention secrets are configured privately in Production and Preview; Meta is still disabled.
+Application source `97da04d` is Ready in production as Vercel deployment `dpl_JBeWphurnTJYSTFRyDSEv7DCJRKz` and passed [GitHub CI](https://github.com/matcpu/courtside-ai/actions/runs/40730966642). Both stable aliases point to that deployment. Its real-URL verification passed all 16 browser tests, 21 preseason API/file checks and 23 league-operations checks. Follow-up changes only stabilize the repeatable test fixtures and record these results; application runtime code is unchanged. Server-only document/retention secrets are configured privately in Production and Preview; live health reports Meta disabled. Database checks confirm zero model requests and zero actual provider receipts.
 
 Direct Vercel Hobby CLI deployment works. Automatic GitHub-to-Vercel connection still requires repository-specific owner authorization; no unrelated repository permissions were granted.
 

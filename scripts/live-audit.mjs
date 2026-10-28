@@ -447,17 +447,22 @@ await step("Disabled operations agent makes no model request", () =>
     status: 503,
   }),
 );
+// Ordinary seasons now default to strict preseason gates. The positive
+// guardian/document/scheduling journey lives in preseason-audit.mjs.
 await step(
-  "Create an ordinary private season from an empty league",
+  "Ordinary seasons begin with enforced preseason registration",
   async () => {
-    if (!state.emptyLeague) {
+    let current = state.emptyLeague
+      ? await request("admin", `/api/preseason?league=${state.emptyLeague}`)
+      : null;
+    if (!current?.settings.enabled) {
       const created = await request("admin", "/api/league", {
         method: "POST",
         data: {
           league: null,
           action: "create_league",
           payload: {
-            name: "Synthetic Foundation League",
+            name: "Synthetic Foundation Preseason",
             season: "Fall 2026 Audit",
             cutoff: "2026-09-01",
           },
@@ -465,11 +470,13 @@ await step(
       });
       state.emptyLeague = created.id;
       writeFileSync(".local/live-audit.json", JSON.stringify(state, null, 2));
+      current = await request(
+        "admin",
+        `/api/preseason?league=${state.emptyLeague}`,
+      );
     }
-    const s = await request("admin", `/api/league?id=${state.emptyLeague}`);
-    assert.equal(s.league.is_demo, false);
-    assert.equal(s.league.season_name, "Fall 2026 Audit");
-    assert.equal(s.divisions.length, 3);
+    assert.equal(current.settings.enabled, true);
+    assert.equal(current.settings.registration_status, "draft");
   },
 );
 const foundationCommand = (action, payload = {}) =>
@@ -477,72 +484,68 @@ const foundationCommand = (action, payload = {}) =>
     method: "POST",
     data: { league: state.emptyLeague, action, payload },
   });
-await step("Onboard and place teams in the ordinary season", async () => {
+await step("Closed ordinary registration blocks coach enrollment", async () => {
   await foundationCommand("invite_member", {
     email: state.accounts.coach.email,
     role: "coach",
   });
-  for (const name of ["Fictional Foundation A", "Fictional Foundation B"]) {
-    let current = await request("admin", `/api/league?id=${state.emptyLeague}`);
-    let team = current.teams.find((t) => t.name === name);
-    if (!team) {
-      const saved = await request("coach", "/api/register", {
+  await request("coach", "/api/register", {
+    method: "POST",
+    data: {
+      league: state.emptyLeague,
+      name: "Fictional Closed Team",
+      assessment: {
+        experience: 3,
+        yearsTogether: 2,
+        practicesPerWeek: 2,
+        notes: "Synthetic",
+      },
+      phone: "",
+      sms_consent: false,
+    },
+    status: 400,
+  });
+});
+await step(
+  "Basic registrations cannot bypass comprehensive readiness",
+  async () => {
+    for (const name of ["Fictional Foundation A", "Fictional Foundation B"]) {
+      const current = await request(
+        "admin",
+        `/api/league?id=${state.emptyLeague}`,
+      );
+      let team = current.teams.find((t) => t.name === name);
+      if (!team)
+        team = await request("admin", "/api/register", {
+          method: "POST",
+          data: {
+            league: state.emptyLeague,
+            name,
+            assessment: {
+              experience: 3,
+              yearsTogether: 2,
+              practicesPerWeek: 2,
+              notes: "Synthetic",
+            },
+            phone: "",
+            sms_consent: false,
+          },
+        });
+      await request("admin", "/api/league", {
         method: "POST",
         data: {
           league: state.emptyLeague,
-          name,
-          assessment: {
-            experience: 3,
-            yearsTogether: 2,
-            practicesPerWeek: 2,
-            notes: "Synthetic test only",
-          },
-          phone: "",
-          sms_consent: false,
+          action: "approve_team",
+          payload: { team_id: team.id },
         },
-      });
-      assert.equal(saved.ai, false);
-      team = { id: saved.id, status: "pending" };
-    }
-    if (team.status === "pending")
-      await foundationCommand("approve_team", { team_id: team.id });
-  }
-  const current = await request("coach", `/api/league?id=${state.emptyLeague}`);
-  assert.equal(current.teams.filter((t) => t.status === "approved").length, 2);
-});
-await step(
-  "Confirm a real court block and publish an ordinary season's first schedule",
-  async () => {
-    let current = await request("admin", `/api/league?id=${state.emptyLeague}`);
-    if (!current.courts.length)
-      await foundationCommand("add_court", {
-        name: "Fictional Audit Court",
-        venue: "Synthetic Gym",
-      });
-    current = await request("admin", `/api/league?id=${state.emptyLeague}`);
-    if (!current.availability.some((a) => +new Date(a.ends_at) > Date.now())) {
-      const start = new Date();
-      start.setUTCDate(start.getUTCDate() + 1);
-      start.setUTCHours(16, 0, 0, 0);
-      await foundationCommand("add_availability", {
-        court_id: current.courts[0].id,
-        starts_at: start.toISOString(),
-        ends_at: new Date(+start + 8 * 3600000).toISOString(),
+        status: 400,
       });
     }
-    const draft = await request("admin", "/api/schedule", {
+    await request("admin", "/api/schedule", {
       method: "POST",
       data: { league: state.emptyLeague, round: 0, useMeta: false },
+      status: 400,
     });
-    await foundationCommand("publish_schedule", { version_id: draft.id });
-    const after = await request("coach", `/api/league?id=${state.emptyLeague}`);
-    assert.equal(
-      after.fixtures.filter((f) => f.version_id === draft.id).length,
-      1,
-    );
-    assert.ok(
-      after.notifications.filter((n) => n.channel === "in_app").length >= 2,
-    );
   },
 );
 report.finishedAt = new Date().toISOString();

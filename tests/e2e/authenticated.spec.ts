@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { parse } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import { createHash } from "node:crypto";
 
 // Deliberately opt-in: no test account password, token, trace or storageState is committed.
 test.use({ trace: "off", screenshot: "off", video: "off" });
@@ -87,7 +88,15 @@ test("real coach and administrator operate a private synthetic season", async ({
       team_id: eagles.id,
       email: accounts.coach.email,
     });
+  const sampleHash = createHash("sha256")
+    .update(readFileSync("public/demo/scoresheet.png"))
+    .digest("hex");
+  const existingSheet = s.scoresheets.find(
+    (sh: { sha256: string }) => sh.sha256 === sampleHash,
+  );
   const game =
+    s.games.find((g: { id: string }) => g.id === existingSheet?.game_id) ??
+    s.games.find((g: { id: string }) => g.id === fixture.game) ??
     s.games.find(
       (g: { home_team_id: string; status: string; id: string }) =>
         g.home_team_id === eagles.id &&
@@ -96,7 +105,7 @@ test("real coach and administrator operate a private synthetic season", async ({
           (f: { game_id: string; starts_at: string }) =>
             f.game_id === g.id && +new Date(f.starts_at) < Date.now(),
         ),
-    ) ?? s.games.find((g: { id: string }) => g.id === fixture.game);
+    );
   fixture.game = game.id;
   writeFileSync(fixtureFile, JSON.stringify(fixture));
   const errors: string[] = [];
@@ -215,11 +224,13 @@ test("real coach and administrator operate a private synthetic season", async ({
   await expect(
     review.getByAltText("Private uploaded scoresheet for review"),
   ).toBeVisible();
-  expect(
-    await review
-      .getByAltText("Private uploaded scoresheet for review")
-      .evaluate((img: HTMLImageElement) => img.naturalWidth),
-  ).toBeGreaterThan(0);
+  await expect
+    .poll(() =>
+      review
+        .getByAltText("Private uploaded scoresheet for review")
+        .evaluate((img: HTMLImageElement) => img.naturalWidth),
+    )
+    .toBeGreaterThan(0);
   await expect(
     review.getByRole("button", {
       name: "Confirm official result",
@@ -260,14 +271,12 @@ test("real coach and administrator operate a private synthetic season", async ({
     await page
       .getByRole("button", { name: "Evaluate balance", exact: true })
       .click();
-    const proposal = page
-      .locator("section")
-      .filter({
-        has: page.getByRole("heading", {
-          name: "Eastside Eagles",
-          exact: true,
-        }),
-      });
+    const proposal = page.locator("section").filter({
+      has: page.getByRole("heading", {
+        name: "Eastside Eagles",
+        exact: true,
+      }),
+    });
     await proposal
       .getByRole("button", { name: "Approve adjustment", exact: true })
       .click();
