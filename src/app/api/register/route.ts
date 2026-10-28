@@ -6,7 +6,7 @@ import {
   initialRating,
   divisionForRating,
 } from "@/lib/domain";
-import { dataBoundary, metaJSON } from "@/lib/meta";
+import { dataBoundary, metaJSON, metaIsEnabled } from "@/lib/meta";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       tier = divisionForRating(rating);
     let explanation = `Questionnaire rubric recommends tier ${tier} with an initial rating of ${rating}. Based on experience, years together and weekly practices. Administrator approval is required.`,
       ai = false;
-    if (process.env.MODEL_API_KEY) {
+    if (metaIsEnabled()) {
       await reserveAI(client, b.league, "registration");
       const result = await metaJSON(
         z.object({

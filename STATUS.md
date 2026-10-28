@@ -9,7 +9,7 @@ This document distinguishes implementation from verification. The entire P0 work
 - Applied and verified schema/RLS/private storage only in `xdmkgoradmbnjofmbojs`. Security advisor reports no findings.
 - Created a real, synthetic reference league: 12 teams, three divisions, two courts, 18 historical results and versioned fixtures.
 - Implemented command center, coach registration/assessment, roster review, court availability, schedule drafts/publication/history, scoresheet review, standings, Elo monitor, division approvals, notification history and member access controls.
-- Typecheck and production build passed; 35 unit assertions passed. Scheduler test includes 500 teams / 250 games.
+- Typecheck and production build passed; 39 unit assertions passed. Scheduler test includes 500 teams / 250 games; new tests verify disabled Meta requests never call the provider and private environment files are rejected even when force-staged.
 - 53 real PostgreSQL assertions passed and rolled back: placement, eligibility/consent, balance evidence, rejections, court conflicts, publication, multi-team notification leases/retry state, duplicate sheets, result correction/replay, human-review gates, tenant isolation and public privacy. The suite includes an approved division move followed by a regenerated and approved schedule with frozen completed games, and reopening the same original scoresheet with permanent correction history.
 - 12 desktop/mobile browser/API assertions passed against both the local app and the public production deployment, using the real database and no Vercel login or bypass token.
 - [GitHub-hosted CI passed](https://github.com/matcpu/courtside-ai/actions/runs/40706519482) for pushed commit `f09f827` on Linux: installation, typecheck, 35 unit tests and production build.
@@ -33,7 +33,7 @@ This document distinguishes implementation from verification. The entire P0 work
 
 ## Blocked by credentials or account-owner action
 
-- Meta developer onboarding is now complete in the browser, with an account key listed. Its secret is not available to the application: `MODEL_API_KEY` is absent from local/server configuration. No model call has been made.
+- Meta API key setup is complete: the owner pasted the key directly into ignored `.env.local` in Notepad; it is stored as a Vercel Secret in Production and Preview. `META_API_ENABLED=false` keeps inference and agent requests paused while participant credits are pending. No model call or key-validity request was made. Credential presence does not prove provider authentication.
 - Meta participant credits have not been claimed or verified. The guide requires a card for API use; no payment authorization was made. See CREDIT_SETUP.md.
 - Resend API sending credential and an authorized sender for Courtside. The connected account has a verified unrelated business domain; it has not been repurposed or changed.
 - Actual confirmed Courtside user session for signed-in live browser testing. No shared password or authentication bypass was created.

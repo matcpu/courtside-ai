@@ -1,6 +1,6 @@
 # Verification
 
-The verified baseline on October 28, 2026 includes TypeScript, production build, 35 Vitest assertions, 53 real PostgreSQL assertions and 12 browser/API checks on desktop/mobile. Browser checks passed locally and against the public production deployment. Final run counts and deployment evidence are recorded in STATUS.md.
+The verified baseline on October 28, 2026 includes TypeScript, production build, 39 Vitest assertions, 53 real PostgreSQL assertions and 12 browser/API checks on desktop/mobile. Browser checks passed locally and against the public production deployment. Final run counts and deployment evidence are recorded in STATUS.md. Disabled Meta tests use mocked fetch functions and prove that saving a key does not itself enable API requests. Real Git index tests verify that force-staged `.env.local` files are rejected by the commit guard.
 
 ## Commands
 

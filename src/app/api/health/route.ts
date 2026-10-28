@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/server";
+import { metaIsEnabled } from "@/lib/meta";
 export const dynamic = "force-dynamic";
 export async function GET() {
   let database = false;
@@ -11,7 +12,9 @@ export async function GET() {
     {
       app: "Courtside AI",
       database,
-      meta: Boolean(process.env.MODEL_API_KEY),
+      meta: metaIsEnabled(),
+      metaConfigured: Boolean(process.env.MODEL_API_KEY),
+      metaEnabled: process.env.META_API_ENABLED === "true",
       email: Boolean(
         process.env.RESEND_API_KEY &&
         process.env.RESEND_FROM &&

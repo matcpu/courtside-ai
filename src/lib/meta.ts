@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { ApiError } from "./server";
 export const metaModel = () => process.env.META_MODEL || "muse-spark-1.3";
+export const metaIsEnabled = () =>
+  Boolean(process.env.MODEL_API_KEY) && process.env.META_API_ENABLED === "true";
 /** Verified against dev.meta.ai Responses and structured-output reference, 2026-10-28. */
 export async function metaJSON<T>(
   schema: z.ZodType<T>,
@@ -11,6 +13,11 @@ export async function metaJSON<T>(
   if (!key)
     throw new ApiError(
       "Meta is not connected. Add MODEL_API_KEY to enable Muse Spark.",
+      503,
+    );
+  if (!metaIsEnabled())
+    throw new ApiError(
+      "Meta requests are disabled while credits are pending. No API call was made.",
       503,
     );
   const jsonSchema = z.toJSONSchema(schema);

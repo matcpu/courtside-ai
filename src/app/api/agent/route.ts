@@ -10,7 +10,7 @@ import {
   snapshot,
   reserveAI,
 } from "@/lib/server";
-import { dataBoundary, metaModel } from "@/lib/meta";
+import { dataBoundary, metaModel, metaIsEnabled } from "@/lib/meta";
 import { draftSchedule } from "../schedule/route";
 export const maxDuration = 60;
 const tools = [
@@ -70,6 +70,11 @@ export async function POST(request: Request) {
     if (!key)
       throw new ApiError(
         "Connect Meta to run the league operations agent.",
+        503,
+      );
+    if (!metaIsEnabled())
+      throw new ApiError(
+        "Meta requests are disabled while credits are pending. No API call was made.",
         503,
       );
     const started = await context.client.rpc("record_workflow", {

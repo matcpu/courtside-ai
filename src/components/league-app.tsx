@@ -269,6 +269,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
     [health, setHealth] = useState<{
       database: boolean;
       meta: boolean;
+      metaConfigured?: boolean;
       email: boolean;
       sms: boolean;
     } | null>(null),
@@ -515,7 +516,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
             <p>
               {health?.meta
                 ? "Muse Spark is connected. Ready to coordinate your next workflow."
-                : "Connect Meta to unlock your league operations agent."}
+                : health?.metaConfigured
+                  ? "Meta key saved. Requests are paused while credits are pending."
+                  : "Connect Meta to unlock your league operations agent."}
             </p>
             <button
               onClick={() =>
@@ -1358,7 +1361,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                             },
                             health?.meta
                               ? "Extraction saved for human review. No official result recorded."
-                              : "Photo saved for manual review. Meta is not connected.",
+                              : "Photo saved for manual review. Meta requests are not enabled.",
                           );
                         }}
                       >
@@ -1826,7 +1829,12 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                               <small>{desc}</small>
                             </div>
                             <Badge tone={ready ? "green" : "orange"}>
-                              {ready ? "Connected" : "Setup required"}
+                              {ready
+                                ? "Connected"
+                                : name === "Meta Muse Spark" &&
+                                    health?.metaConfigured
+                                  ? "Configured · paused"
+                                  : "Setup required"}
                             </Badge>
                           </div>
                         ))}
@@ -2211,7 +2219,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                   <p className="form-note">
                     {health?.meta
                       ? "Meta Muse Spark explains the questionnaire recommendation."
-                      : "Meta is not connected. The deterministic placement rubric is available."}
+                      : "Meta requests are not enabled. The deterministic placement rubric is available."}
                   </p>
                 </Form>
               </>

@@ -12,6 +12,12 @@ Copy `.env.example` to `.env.local`; never commit the resulting file. `.env.exam
 
 `MODEL_API_KEY`, `RESEND_API_KEY` and Twilio credentials are server-only and must not have a `NEXT_PUBLIC_` prefix. Meta's URL is fixed to `https://api.meta.ai/v1/responses`; `META_MODEL` defaults to `muse-spark-1.3`. API credentials must not be pasted into chat, command arguments, logs or tracked files.
 
+**Credits pending:** `META_API_ENABLED=false` keeps all Meta inference requests disabled even with a saved API key. It defaults to disabled when omitted. The server guards both structured extraction/explanation requests and the agent's direct requests. Registration continues with the deterministic rubric, and scoresheets can use manual review. Enable this setting only after credits/funding are verified and the owner explicitly authorizes API use.
+
+The project-local Git configuration uses `.githooks/pre-commit`, which rejects staged private `.env*` files (including a force-added `.env.local`) and `.vercel/` configuration. CI checks tracked paths too. `.env.example` is the only permitted environment template. On a new checkout, run `git config core.hooksPath .githooks` to install the local guard. Deliberately bypassing Git hooks remains possible; no software guard can promise safety if those controls are intentionally overridden.
+
+On this Windows machine, after privately saving a key, `node scripts/configure-meta.mjs` sends it to the existing Vercel project's Production and Preview environments through stdin as a Secret, together with `META_API_ENABLED=false`. The helper does not call Meta. Redeploying applies the variables to the new deployment; key presence is not a live authentication test.
+
 Notifications require `RESEND_API_KEY`, an authorized verified `RESEND_FROM`, and `NOTIFICATIONS_ENABLED=true`. Leave the flag false until the owner approves the sender and a controlled real-delivery test. Synthetic `example.com`, `example.org`, `example.net` and `.invalid` recipients are suppressed. The existing connected email account's domains were inspected read-only; no unrelated domain configuration was changed.
 
 `SMS_ENABLED` is a reserved setting and does not enable the current implementation. SMS sending remains fail-closed even with credentials. Complete signed inbound opt-out handling, outbound consent rechecks and a verified provider test before implementing the sender. No phone numbers were purchased.

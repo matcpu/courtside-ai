@@ -19,7 +19,7 @@ This is an operations platform. It does not provide basketball coaching or evalu
 - Transactional notification outbox, leases, idempotency, retry timing and honest delivery states.
 - Public fictional reference league; signed-in users can create an isolated private demo.
 
-**Provider status:** Meta API integration and bounded tool orchestration are implemented but require an account API key and a live verification run. Resend delivery requires a sending key and an authorized verified sender. Twilio sending is intentionally disabled pending complete opt-out handling. See [STATUS.md](STATUS.md) for verified evidence and outstanding work. A passing unit test of a mocked provider is not a live provider test.
+**Provider status:** Meta credentials are configured privately; `META_API_ENABLED=false` pauses all Meta requests while participant credits are pending. Integration and bounded tool orchestration still need a live verification run after authorization. Resend delivery requires a sending key and an authorized verified sender. Twilio sending is intentionally disabled pending complete opt-out handling. See [STATUS.md](STATUS.md) for verified evidence and outstanding work. A passing unit test of a mocked provider is not a live provider test.
 
 ## Meta's role
 
