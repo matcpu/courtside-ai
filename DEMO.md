@@ -10,19 +10,19 @@ Private fixtures and complete rehearsal are reproducible through [READINESS.md](
 - Prepare an upcoming-season preseason tenant through the real coach/guardian/reviewer flow, plus a private historical operations demo with the fictional Eastside mismatch evidence. Identify them as two separate synthetic seasons. The public/legacy historical seed is not document-verified.
 - After explicit credit confirmation/authorization, verify real image recognition, inconsistent-questionnaire interpretation and a model-selected operations run. Inspect their actual provider receipts in Meta AI activity. Do not run the paid validator while disabled.
 - Use `public/demo/scoresheet.png`, the fictional Eastside Eagles 78–43 Riverside Ravens sheet, on its matching past fixture. It has no individual player statistics; do not invent any.
-- Confirm future court availability, pending proposal/draft behavior and public access. If demonstrating email, first configure an authorized sender and verify controlled receipt; queueing is not delivery.
+- Confirm future court availability, pending proposal/draft behavior and public access. Restricted email testing is complete; show the coach's in-app update without expanding email scope.
 
 ## Recording script
 
 | Time | Show | Point to establish |
 |---|---|---|
-| 0:00–0:20 | League command center, upcoming-season readiness and pending work | Volunteer league operations require coordinated administration. The system connects facts and prepares actions while preserving approval authority. |
-| 0:20–0:45 | Saved comprehensive coach assessment with inconsistent history/confidence; actual Muse Spark interpretation and response ID | Meta interprets ambiguous team-level context, flags contradictions and asks useful questions. The deterministic rubric and administrator retain final placement authority. |
+| 0:00–0:18 | Signed-out working public demo, then private upcoming-season readiness | Volunteer league operations require coordinated administration. Public access needs no email signup; identify two separate private synthetic seasons. |
+| 0:18–0:45 | Saved comprehensive coach assessment with inconsistent history/confidence; actual Muse Spark interpretation and response ID | Meta interprets ambiguous team-level context, flags contradictions and asks useful questions. The deterministic rubric and administrator retain final placement authority. |
 | 0:45–1:00 | Guardian mobile submission and administrator proof-review/readiness state | The operational foundation works. Documents are private, human-reviewed, retained under policy and never sent to Meta. This is the separate upcoming-season tenant. |
-| 1:00–1:35 | Private historical season: original scoresheet image beside actual Muse Spark structured extraction, uncertainty and human confirmation | Multimodal understanding produces useful structured facts. Missing stats stay missing; only human confirmation changes official standings/ratings. Show the real receipt, not a contract fixture. |
-| 1:35–2:25 | Give the operations agent an objective; inspect its actual calls, verified team-history investigation, readiness blockers, saved balance proposal and feasible draft | The model selects tools and coordinates meaningful work. Show successful/blocked outcomes and actual linked record IDs. No approval or message-sending tool exists. |
-| 2:25–2:50 | Administrator reviews/approves a division proposal, regenerates under the approved division and publishes; show coach in-app update | A proposal is not a division move. Current approved state drives the deterministic schedule, and publication requires a human. Do not imply the first draft anticipated an unapproved move. |
-| 2:50–3:00 | Public updated fixtures and Meta activity/audit receipts | The work is visible in one authoritative system: actual model responses, actions and human decisions can be checked. |
+| 1:00–1:32 | Private historical season: original scoresheet image beside actual Muse Spark structured extraction, uncertainty and human confirmation | Multimodal understanding produces useful structured facts. Confirm the result BEFORE the operations stage so its evidence will stay current. Show the real receipt, not a contract fixture. |
+| 1:32–2:25 | Inspect the actual timestamped agent run: selected calls, history/readiness investigation, saved balance proposal and feasible draft | The model selects tools and coordinates meaningful work. Show successful outcomes and actual linked record IDs; do not make another paid call for a retake. |
+| 2:25–2:48 | Administrator reviews/approves the actual proposal, regenerates under approved divisions and publishes; show coach in-app update | A proposal is not a division move. Regeneration follows approval; publication is a separate human decision. |
+| 2:48–3:00 | Private published fixtures and Meta activity/audit receipts | Connect actual responses, actions and human decisions. Leave the original public reference untouched. |
 
 Show actual response timestamps and IDs if using a previously recorded authorized run. A prepared response is not an instantaneous new live request. Do not hide a failed model outcome behind canned output or imply that an unconfigured email was delivered.
 

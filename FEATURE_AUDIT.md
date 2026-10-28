@@ -65,5 +65,5 @@ Verification counts, deployed revision and final live results are recorded in [S
 ## Three highest-priority submission tasks
 
 1. **After the owner confirms credits:** enable Meta deliberately, verify the eligible configured model, run real questionnaire/image/agent requests and record their actual outputs and human approvals. Until then `META_API_ENABLED=false` remains enforced.
-2. Supply and verify a dedicated COURTSIDE sender before general signup/invitation/notification delivery. Controlled delivery, signup confirmation and notification retries now work; fix/measure guardian spam placement and add signed delivery events before general rollout. Keep SMS disabled.
-3. Rehearse and record the three-minute synthetic demo, verify judge access to the public repository/live site/video, and finish the participant/submission forms. Clearly disclose deferred referee/reporting/scale work and keep secrets off-screen.
+2. Resolve the official anti-project eligibility ambiguity with organizers; the current league-administration scope does not itself establish approval. No organizer communication has been sent.
+3. Record the genuine three-minute model demonstration, verify its public link, confirm track/team/permission choices and finish submission. Public browsing and temporary synthetic role logins are verified without unrestricted signup. Restricted email testing is complete; domain expansion and deferred production features are not hackathon blockers.

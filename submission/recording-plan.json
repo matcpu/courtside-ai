@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "totalSeconds": 180,
+  "captureSize": { "width": 1920, "height": 1080, "fps": 30 },
+  "guardianViewport": { "width": 390, "height": 844 },
+  "finalFormat": "MP4 H.264 with readable narration/captions; no longer than 180 seconds",
+  "chapters": [
+    {
+      "id": "orientation",
+      "start": 0,
+      "end": 18,
+      "screens": [
+        "Signed-out public reference: Overview, View schedule",
+        "Private upcoming-season Preseason Onboarding"
+      ],
+      "actions": [
+        "Show working public access without signup",
+        "Identify the two separate private synthetic seasons"
+      ],
+      "authority": "Public exploration and product disclosure"
+    },
+    {
+      "id": "placement",
+      "start": 18,
+      "end": 45,
+      "screens": [
+        "Coach: submitted Fictional Uncertain Comets questionnaire",
+        "Administrator: upcoming-season Meta AI activity"
+      ],
+      "actions": [
+        "Show contradictory record/continuity/confidence fields",
+        "Expand actual placement response, model and provider response ID",
+        "Keep deterministic rubric separate from model interpretation"
+      ],
+      "authority": "Model interprets; deterministic rubric recommends; administrator owns placement",
+      "receipt": "placement"
+    },
+    {
+      "id": "guardian",
+      "start": 45,
+      "end": 60,
+      "screens": [
+        "Guardian mobile viewport after invitation fragment is removed",
+        "Administrator document review/readiness queue"
+      ],
+      "actions": [
+        "Show synthetic guardian submission or its pending status",
+        "Show private-review and scheduling-readiness boundaries",
+        "Keep invitation, login fields and document identifiers off-screen"
+      ],
+      "authority": "Guardian consent, human review and deterministic eligibility; no Meta document processing"
+    },
+    {
+      "id": "vision",
+      "start": 60,
+      "end": 92,
+      "screens": [
+        "Historical private season Scoresheets: original beside actual extraction",
+        "Meta AI activity: actual vision receipt",
+        "Administrator official-result review"
+      ],
+      "actions": [
+        "Show actual image facts and absent unrecorded stats",
+        "Show provider ID and original extraction",
+        "Capture explicit human result confirmation BEFORE operations stage"
+      ],
+      "authority": "Model reads image; validators check it; human confirms; standings/ratings recalculate",
+      "receipt": "scoresheet"
+    },
+    {
+      "id": "agent",
+      "start": 92,
+      "end": 145,
+      "screens": [
+        "Historical private season Meta AI activity: actual operations run",
+        "Competitive balance proposal and Schedule draft"
+      ],
+      "actions": [
+        "Show actual inspect_league, inspect_team_history and inspect_preseason_readiness calls",
+        "Show successful propose_balance and draft_schedule outcomes",
+        "Show saved proposal/draft IDs and model reply",
+        "State that this is the timestamped authorized run, not an extra recording-time call"
+      ],
+      "authority": "Model selects tools; deterministic tools save bounded pending actions",
+      "receipt": "operations"
+    },
+    {
+      "id": "approvals",
+      "start": 145,
+      "end": 168,
+      "screens": [
+        "Administrator Competitive balance",
+        "Administrator Schedule",
+        "Coach Notifications"
+      ],
+      "actions": [
+        "Review and approve the actual proposed move",
+        "Regenerate deterministically against the newly approved divisions",
+        "Review and publish the new draft as a separate human action",
+        "Show the coach's in-app schedule update"
+      ],
+      "authority": "Human approves and publishes; deterministic scheduler enforces current facts"
+    },
+    {
+      "id": "close",
+      "start": 168,
+      "end": 180,
+      "screens": [
+        "Private season published fixtures",
+        "Meta AI activity receipts"
+      ],
+      "actions": [
+        "Connect actual model work, saved actions and human decisions",
+        "Finish on the private published schedule; leave original public reference unchanged"
+      ],
+      "authority": "Inspectable actual outcomes"
+    }
+  ],
+  "neverCapture": [
+    "Passwords or environment files",
+    "Guardian/confirmation URL tokens",
+    "Real mailbox addresses or inbox content",
+    "Unrelated browser tabs",
+    "Invented model output or test-contract fixtures"
+  ],
+  "preCaptureOrder": [
+    "Owner authorizes credits and bounded usage",
+    "Perception stage: at most two model requests",
+    "Human reviews and confirms the actual scoresheet in the normal UI; record that clip",
+    "Operations stage: at most six model turns",
+    "Inspect actual receipts and pending actions",
+    "Disable inference again before remaining recording; do not rerun model buttons for retakes"
+  ],
+  "finalChecks": [
+    "Video duration is at most 180 seconds",
+    "All three actual receipts are visible",
+    "Every claimed tool outcome succeeded",
+    "Model, deterministic and human responsibilities are explicitly identified",
+    "No original public reference data changed",
+    "Public video URL works while signed out"
+  ]
+}

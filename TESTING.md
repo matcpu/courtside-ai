@@ -1,6 +1,6 @@
 # Verification
 
-The expanded October 28 audit includes TypeScript, cloud production build, 62 Vitest tests, 97 real PostgreSQL assertions (65 league + 32 preseason) and 18 public/authenticated desktop/mobile browser tests. Deployment-specific results are in STATUS.md. Meta contracts are explicitly mocked and cannot establish live provider effectiveness. Real Git index tests reject force-staged `.env.local` and `.local/` files.
+The expanded October 28 audit includes TypeScript, cloud production build, 65 Vitest tests, 97 real PostgreSQL assertions (65 league + 32 preseason) and the earlier 18 public/authenticated desktop/mobile browser tests. A separate 16-test submission smoke run verifies public browsing, signup-screen disclosure and the exact fresh temporary-role credentials without sending email or calling a model. Deployment-specific results are in STATUS.md. Provider contracts cannot establish live model effectiveness. Git index tests reject force-staged `.env.local` and `.local/` files.
 
 ## Commands
 
@@ -53,6 +53,8 @@ Live Meta image recognition remains unverified and disabled until owner credit c
 No load test of 500 simultaneous browser users, multi-season ratings materialization, or production disaster recovery has been performed.
 
 `node scripts/rehearse-demo.mjs` reproduces the complete paused-model rehearsal and compares every public reference snapshot before/after. On this OneDrive workspace, a read-only cloud-placeholder build cache caused a later local cleanup failure; the production build was independently verified on Vercel and Linux CI. No unsafe cache removal was needed. Client scanning now uses actual file status for cloud-placeholder directories and can inspect deployed assets using `--live-origin`.
+
+Restricted email testing is now frozen as complete. Use `node scripts/submission-check.mjs` for the submission-only pass: paused preflight, recording evidence gate, 16 read-only public/exact-role checks and credential scans. It keeps the original reference unchanged and does not rerun email delivery or operations mutations. Missing genuine model evidence is explicitly reported as a recording gate. `tests/meta-run-control.test.ts` verifies crash-safe attempt markers, the eight-request bound and rejection of unreviewed/manual-substitute results; all are offline tests.
 
 ## Preseason and meaningful Meta preparation
 

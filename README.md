@@ -20,7 +20,9 @@ This is an operations platform. It does not provide basketball coaching or evalu
 - Transactional notification outbox, leases, idempotency, retry timing and honest delivery states.
 - Public fictional reference league; signed-in users can create an isolated private demo.
 
-**Provider status:** Meta credentials are configured privately; `META_API_ENABLED=false` pauses all Meta requests while participant credits are pending. Integration and bounded tool orchestration still need a live verification run after authorization. Resend's testing sender is configured for one authorized inbox only: actual receipt, signup confirmation and notification retry were tested. General delivery requires a verified COURTSIDE domain, and guardian email initially landed in Spam. Twilio sending is intentionally disabled. See [STATUS.md](STATUS.md), [READINESS.md](READINESS.md) and [EMAIL_READINESS.md](EMAIL_READINESS.md). A passing mocked-provider test is not a live provider test.
+**Submission access:** [Explore the public demonstration without signup](https://courtside-ai-one.vercel.app/league/northstar-demo). Temporary synthetic admin/coach access is prepared privately; see [JUDGE_GUIDE.md](JUDGE_GUIDE.md). Restricted email testing is complete and unchanged. No new domain or unrestricted signup is needed for judging.
+
+**Provider status:** Meta credentials are private; `META_API_ENABLED=false` pauses all inference until owner credit confirmation/authorization. The prepared two-stage verification allows at most eight requests with a human review pause and no automatic paid retries. Actual model effectiveness and the final recording remain unverified. Twilio stays disabled. See [STATUS.md](STATUS.md), [READINESS.md](READINESS.md), [RECORDING_RUNBOOK.md](RECORDING_RUNBOOK.md) and [EMAIL_READINESS.md](EMAIL_READINESS.md). A passing mocked-provider test is not a live provider test.
 
 ## Meta's role
 

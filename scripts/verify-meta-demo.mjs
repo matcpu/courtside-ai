@@ -1,5 +1,5 @@
 // No inference unless the OWNER has confirmed credits and explicitly authorized use.
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import {
   actor,
@@ -8,7 +8,17 @@ import {
   publicFingerprint,
   assertPrivate,
 } from "./lib/readiness.mjs";
+import {
+  claimModelAttempt,
+  assertHumanResultReview,
+  META_VERIFY_LIMITS,
+} from "./lib/meta-run-control.mjs";
 const live = process.argv.includes("--credits-confirmed");
+const stage = process.argv[process.argv.indexOf("--stage") + 1];
+if (live && !["perception", "operations"].includes(stage))
+  throw new Error(
+    "Live mode requires --stage perception or --stage operations, with a human result-review pause between them.",
+  );
 if (!live && !process.argv.includes("--preflight"))
   throw new Error(
     "Choose --preflight. Live mode requires owner credit confirmation and authorization.",
@@ -32,7 +42,20 @@ const admin = await actor(fixture.accounts.admin),
 const baseline = await publicFingerprint();
 assert.deepEqual(baseline, fixture.publicReference);
 const before = await assertPrivate(admin, fixture.operations.league);
-await assertPrivate(admin, fixture.preseason.league);
+const preseasonBefore = await assertPrivate(admin, fixture.preseason.league);
+const evidenceBefore = [];
+if (!live)
+  for (const league of [fixture.preseason.league, fixture.operations.league])
+    evidenceBefore.push(
+      ...(await admin.api(`/api/evidence?league=${league}`)).evidence,
+    );
+if (live)
+  assert.ok(
+    before.teams.length <= 12 &&
+      before.games.length <= 30 &&
+      before.availability.length <= 80,
+    "Controlled fixture exceeded its planned input scope",
+  );
 const requests = [
   [
     "placement",
@@ -62,29 +85,58 @@ const requests = [
     },
   ],
 ];
-const report = {
-  at: new Date().toISOString(),
-  mode: live ? "actual-provider" : "disabled-preflight",
-  synthetic: true,
-  checks: [],
-  actualModelOutputs: live,
-  publicReference: baseline,
-  results: {},
-};
 const output = live
-  ? ".local/meta-live-report.json"
+  ? `.local/meta-live-${fixture.run}.json`
   : ".local/meta-preflight-report.json";
+const report =
+  live && existsSync(output)
+    ? JSON.parse(readFileSync(output))
+    : {
+        at: new Date().toISOString(),
+        mode: live ? "actual-provider" : "disabled-preflight",
+        synthetic: true,
+        checks: [],
+        actualModelOutputs: false,
+        fixtureRun: fixture.run,
+        limits: META_VERIFY_LIMITS,
+        publicReference: baseline,
+        results: {},
+        stages: {},
+      };
+if (live && stage === "operations") {
+  assert.equal(
+    report.stages?.perception,
+    "complete",
+    "Complete the perception stage before operations",
+  );
+  assertHumanResultReview(
+    before,
+    report.results.scoresheet,
+    fixture.operations.game,
+  );
+}
 const save = () => writeFileSync(output, JSON.stringify(report, null, 2));
 try {
   for (const [feature, who, path, payload] of requests) {
+    if (
+      live &&
+      ((stage === "perception" && feature === "operations") ||
+        (stage === "operations" && feature !== "operations"))
+    )
+      continue;
     if (live) {
       const e = await admin.api(`/api/evidence?league=${payload.league}`);
       assert.ok(
         !e.evidence.some((r) => r.feature === feature),
         "Existing provider evidence found; inspect it rather than repeat paid work. Prepare a fresh fixture if a new run is authorized.",
       );
+      claimModelAttempt(".local", fixture.run, feature);
     }
     const result = await who.api(path, payload, "POST", live ? 200 : 503);
+    // Save the actual response before evaluating its quality; failures must remain visible.
+    report.results[feature] = result;
+    if (live) report.actualModelOutputs = true;
+    save();
     if (!live) assert.match(result.error, /paused|disabled/i);
     if (live && feature === "placement") {
       assert.ok(result.evidence?.id);
@@ -97,8 +149,14 @@ try {
     if (live && feature === "scoresheet") {
       assert.ok(result.evidence?.id);
       assert.equal(result.official, false);
-      assert.equal(result.extraction.homeTeam, "Eastside Eagles");
-      assert.equal(result.extraction.awayTeam, "Riverside Ravens");
+      assert.equal(
+        result.extraction.homeTeam?.trim().toLowerCase(),
+        "eastside eagles",
+      );
+      assert.equal(
+        result.extraction.awayTeam?.trim().toLowerCase(),
+        "riverside ravens",
+      );
       assert.equal(result.extraction.homeScore, 78);
       assert.equal(result.extraction.awayScore, 43);
       assert.deepEqual(
@@ -141,8 +199,14 @@ try {
   );
   assert.equal(
     after.games.find((g) => g.id === fixture.operations.game).status,
-    "scheduled",
+    before.games.find((g) => g.id === fixture.operations.game).status,
     "No automatic result confirmation",
+  );
+  const preseasonAfter = await assertPrivate(admin, fixture.preseason.league);
+  assert.deepEqual(
+    preseasonAfter.teams.map((t) => [t.id, t.status, t.division_id]),
+    preseasonBefore.teams.map((t) => [t.id, t.status, t.division_id]),
+    "No automatic preseason approval",
   );
   report.receipts = [];
   for (const league of [fixture.preseason.league, fixture.operations.league]) {
@@ -150,7 +214,9 @@ try {
     report.receipts.push(...e.evidence);
   }
   if (live) {
-    for (const feature of ["placement", "scoresheet", "operations"])
+    for (const feature of stage === "perception"
+      ? ["placement", "scoresheet"]
+      : ["placement", "scoresheet", "operations"])
       assert.ok(
         report.receipts.some(
           (r) =>
@@ -160,36 +226,47 @@ try {
             r.request_digest,
         ),
       );
-    assert.ok(
-      after.proposals.some(
-        (p) =>
-          p.status === "pending" &&
-          !before.proposals.some((b) => b.id === p.id),
-      ),
-      "Agent must save a NEW pending proposal",
-    );
-    assert.ok(
-      after.versions.some(
-        (v) =>
-          v.status === "draft" && !before.versions.some((b) => b.id === v.id),
-      ),
-      "Agent must save a NEW feasible draft",
-    );
+    if (stage === "operations") {
+      assert.ok(
+        after.proposals.some(
+          (p) =>
+            p.status === "pending" &&
+            !before.proposals.some((b) => b.id === p.id),
+        ),
+        "Agent must save a NEW pending proposal",
+      );
+      assert.ok(
+        after.versions.some(
+          (v) =>
+            v.status === "draft" && !before.versions.some((b) => b.id === v.id),
+        ),
+        "Agent must save a NEW feasible draft",
+      );
+    }
   } else
     assert.deepEqual(
-      report.receipts,
-      [],
-      "Fixtures must never masquerade as model evidence",
+      report.receipts.map((r) => [r.id, r.request_digest]).sort(),
+      evidenceBefore.map((r) => [r.id, r.request_digest]).sort(),
+      "Paused preflight must preserve existing genuine evidence without creating any",
     );
   assert.deepEqual(await publicFingerprint(), baseline);
   report.finishedAt = new Date().toISOString();
   report.humanApprovalsPerformed = false;
+  if (live) {
+    report.stages[stage] = "complete";
+    report.next =
+      stage === "perception"
+        ? "Stop. Administrator must inspect and confirm the actual scoresheet in the normal UI before the operations stage."
+        : "Review saved proposal and draft. Do not confirm another result before the proposal decision; that would invalidate its evidence.";
+  }
   report.publicReferenceUnchanged = true;
   save();
   console.log(
     live
-      ? "All three actual model jobs verified. Review private activity and saved actions; human approvals remain required."
-      : "All three integrations fail closed correctly. Actual model effectiveness remains unverified. Public reference data is unchanged.",
+      ? stage === "perception"
+        ? "Perception responses captured. Stop for human scoresheet review/confirmation; no operations call has run."
+        : "All three actual model jobs verified across two stages. Review private activity and pending actions; no move or publication was approved."
+      : "All three integrations fail closed correctly. This preflight does not verify live model effectiveness. Public reference data is unchanged.",
   );
 } catch (e) {
   report.failed = true;

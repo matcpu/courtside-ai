@@ -42,7 +42,8 @@ export async function actor(account) {
           Origin: origin,
         },
         ...(data ? { body: JSON.stringify(data) } : {}),
-        signal: AbortSignal.timeout(55000),
+        // Allow the server's 60-second bounded operation to return its receipt.
+        signal: AbortSignal.timeout(70000),
       }).catch(() => {
         throw new Error("Readiness transport failed; credentials redacted");
       });

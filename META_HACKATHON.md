@@ -27,10 +27,12 @@ Do not enable the flag or run a paid request until the human owner confirms cred
 After that authorization, deliberately enable `META_API_ENABLED` in the intended environment, keep the eligible model configurable, and run the prepared controlled validator:
 
 ```sh
-node scripts/verify-meta-live.mjs --credits-confirmed
+node scripts/verify-meta-live.mjs --credits-confirmed --stage perception
+# STOP: administrator reviews and confirms the actual scoresheet in the UI.
+node scripts/verify-meta-live.mjs --credits-confirmed --stage operations
 ```
 
-It also requires locally enabled configuration and an enabled production health check. `scripts/prepare-demo.mjs` creates the private synthetic fixtures first. The sequence tests an inconsistent questionnaire, a real scoresheet image and a genuine model-selected operations run. It requires successful tool outcomes, NEW pending proposals/drafts, actual receipts for all three features and unchanged official/public state. Output goes to ignored `.local/meta-live-report.json` and the private activity screens in the two separate seasons. A failed answer or missed tool is a failed verification, not a canned success. Live mode has **not been run** while credits are pending. The safe `--preflight` mode has passed against all three disabled endpoints without inference; see [READINESS.md](READINESS.md).
+It requires enabled local/server configuration and explicit owner authorization. Prepared fixtures cover an inconsistent questionnaire, actual image bytes and a model-selected operations run. The two-stage sequence pauses for human result confirmation BEFORE the agent, preventing a later confirmation from invalidating its proposals/draft. It requires successful tools, NEW pending records, genuine receipts and unchanged public state. Output goes to ignored `.local/meta-live-<fixture-run>.json` and private activity screens. Durable per-feature markers are written before dispatch, so a timeout/crash cannot trigger another automatic paid attempt. The ceiling is eight provider requests and 23,000 output tokens; input/image/reasoning usage is additional and no dollar ceiling is implied. Transport retries are zero. Live mode has **not run**; the safe `--preflight` passed. See [RECORDING_RUNBOOK.md](RECORDING_RUNBOOK.md).
 
 Current API contracts were checked against [image understanding](https://dev.meta.ai/docs/image-understanding), [tool calling](https://dev.meta.ai/docs/tool-calling), [structured output](https://dev.meta.ai/docs/structured-output) and the [Responses schema](https://dev.meta.ai/docs/api-reference/responses/schemas). Tool calls are model-selected (`auto`); outputs are returned with matching call IDs. Applications still validate schemas and permissions independently.
 
