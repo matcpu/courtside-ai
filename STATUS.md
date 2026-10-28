@@ -1,51 +1,42 @@
 # Status — October 28, 2026
 
-This document distinguishes implementation from verification. The entire P0 workflow is **not yet certified end to end**: live Meta, email and confirmed-account browser mutations still need account credentials/owner actions.
+Live application: [courtside-ai-one.vercel.app](https://courtside-ai-one.vercel.app). Repository: [matcpu/courtside-ai](https://github.com/matcpu/courtside-ai). Database: existing Supabase `xdmkgoradmbnjofmbojs` only. The original-requirement audit is in [FEATURE_AUDIT.md](FEATURE_AUDIT.md).
 
 ## Completed and tested
 
-- Connected the existing public `matcpu/courtside-ai` repository and fetched `main`; baseline was README-only commit `6865228`.
-- Installed compatible pinned Next.js 16.4.3 / React 19.3.1 / Supabase JS 2.118.0 / TypeScript / Tailwind / Vitest / Playwright tooling.
-- Applied and verified schema/RLS/private storage only in `xdmkgoradmbnjofmbojs`. Security advisor reports no findings.
-- Created a real, synthetic reference league: 12 teams, three divisions, two courts, 18 historical results and versioned fixtures.
-- Implemented command center, coach registration/assessment, roster review, court availability, schedule drafts/publication/history, scoresheet review, standings, Elo monitor, division approvals, notification history and member access controls.
-- Typecheck and production build passed; 39 unit assertions passed. Scheduler test includes 500 teams / 250 games; new tests verify disabled Meta requests never call the provider and private environment files are rejected even when force-staged.
-- 53 real PostgreSQL assertions passed and rolled back: placement, eligibility/consent, balance evidence, rejections, court conflicts, publication, multi-team notification leases/retry state, duplicate sheets, result correction/replay, human-review gates, tenant isolation and public privacy. The suite includes an approved division move followed by a regenerated and approved schedule with frozen completed games, and reopening the same original scoresheet with permanent correction history.
-- 12 desktop/mobile browser/API assertions passed against both the local app and the public production deployment, using the real database and no Vercel login or bypass token.
-- [GitHub-hosted CI passed](https://github.com/matcpu/courtside-ai/actions/runs/40710526748) for pushed commit `e93e19f` on Linux: installation, environment-file guard, typecheck, 39 unit tests and production build.
-- npm audit reports zero vulnerabilities after moving the Vercel CLI outside project dependencies and regenerating the portable lockfile.
-- Vercel global CLI 65.5.0 authenticated as `matcpu`; free Hobby project `matcpus-projects/courtside-ai` created and linked. Shared Vercel MCP OAuth completed in user configuration. Standalone Vercel guidance installed after the plugin marketplace installation failed.
-- Linux Vercel production deployment built successfully and is marked Ready. Public application: [courtside-ai-one.vercel.app](https://courtside-ai-one.vercel.app). Stable alternate origin: [courtside-ai-matcpus-projects.vercel.app](https://courtside-ai-matcpus-projects.vercel.app).
-- Supabase Site URL is set to the stable production origin; explicit localhost and production redirects were saved and visually verified. Signup supplies the current origin as its return URL.
-- Application and documentation milestones are pushed to public `main`; no secret environment files are tracked. Latest application deployment `dpl_33qUE2SKo9eyUjM5FeXzB2dZAGYV` is Ready. Production `/api/health` verifies `metaConfigured:true`, `metaEnabled:false` and `meta:false`: the key is present but all Meta requests remain paused while credits are pending. No key-validation or inference request was made.
-- Final database verification: all 18 public tables have RLS; both file buckets are private; rolled-back tests left zero test users and only the intended synthetic reference league.
+- Real Supabase Auth password sign-in for isolated synthetic administrator, coach and outsider accounts. Normal account confirmation settings were not weakened. Supported Auth Admin APIs prepared test accounts; administrative credentials were kept out of the runtime, Git and output.
+- Live deployed API workflow passed 21 checks before the audit improvements: coach registration, deterministic placement, admin approval, private roster/eligibility review, actual PNG upload/download, duplicate detection, human result confirmation, rating updates, verified rebalancing, draft rejection, revised publication, frozen result history and real tenant/role denial.
+- The unconfigured external notification route returned an honest 503 rather than simulated delivery. The operations agent returned disabled without a Meta request.
+- Added actual private in-app schedule notifications/read receipts, notification coverage for teams without a future fixture, coach reassignment, private recorded-statistics display, division standings filtering and own-team coach upload choices.
+- Fixed unreachable sidebar sign-in/sign-out controls, hidden form errors, notification banners intercepting mobile review controls, duplicate browser Auth clients and retained private state after sign-out.
+- 40 Vitest tests, TypeScript and production build passed. Tests include a 500-team/250-game scheduler round and fail-closed Meta/notification contracts.
+- 65 actual PostgreSQL assertions passed in a rolled-back transaction: roles/RLS, corrections, statistics/nulls/privacy, scheduling conflicts, stale approvals, same-photo history, rebalancing, notification leasing and private inbox/read receipt access.
+- All 14 public/authenticated desktop and iPhone-sized Chromium tests passed locally, including actual private photo uploads. The updated production rerun is being completed for this revision; final evidence will be recorded below.
+- All 18 public tables have RLS; both Storage buckets are private. `.env.local`, `.vercel/` and `.local/` are ignored; the commit guard rejects private environment/audit files even if force-staged. No service-role key is used in runtime APIs.
 
-## Implemented but unverified
+## Provider boundaries
 
-- Meta Muse Spark questionnaire interpretation, strict image extraction, schedule explanations and bounded tool-calling agent. Mock contract tests pass; **no live model call has been made**.
-- Resend sending adapter with idempotency, durable claims, retries and truthful `accepted` state. **No real email has been sent or delivered by this application**.
-- Actual Supabase email signup/confirmation and a complete signed-in browser mutation walkthrough. Database authorization/workflow assertions pass; these are not an Auth token issuance test.
-- Manually dispatched Vercel workflow needs repository deployment secrets/variables before it can run. Hosted CI is verified above.
+- **Meta remains disabled until the owner confirms credits.** The key is privately stored locally and as a Vercel Secret. `META_API_ENABLED=false` is enforced. No billable request, key-validation request, live image extraction or model tool-calling test has been made. Contract tests do not establish provider functionality.
+- Resend adapter/outbox/retry-state code exists, but an authorized sender and sending credential are missing. No actual email acceptance or delivery has been verified. In-app notifications work independently.
+- SMS consent and settings exist; Twilio sending remains disabled. Credentials, signed inbound STOP handling and controlled receipt are unfinished.
+- Actual user signup/email confirmation has not been tested through a delivered confirmation email. Audit users were explicitly confirmed by the supported Auth Admin API; password/JWT issuance and app permissions were exercised normally afterward.
 
-## In progress
+## Deployment and operational limits
 
-- GitHub-to-Vercel automatic deployment connection. CLI attempt was rejected by the provider; direct CLI deployment works.
+- Vercel Hobby direct CLI deployment works. GitHub-to-Vercel automatic connection still requires repository-specific owner authorization; no access to unrelated repositories was granted.
+- Latest production verification for the audit improvements: pending deployment/recheck in this work session.
+- Supabase database security advisors show no database findings. Auth leaked-password protection remains disabled; see [Supabase guidance](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). No paid plan upgrade was authorized. Small-dataset unused-index notices remain informational.
+- Private synthetic audit tenants/accounts are retained for reproducible tests and isolated from the public reference. No real children or real recipient messages are involved. The SQL suite rolls back its separate fixtures.
+- No 500-concurrent-user load test, large-season pagination, recovery exercise, unattended retry worker, provider webhook or physical iOS/Safari camera test has been completed.
 
-## Blocked by credentials or account-owner action
+## Deferred product features
 
-- Meta API key setup is complete: the owner pasted the key directly into ignored `.env.local` in Notepad; it is stored as a Vercel Secret in Production and Preview. `META_API_ENABLED=false` keeps inference and agent requests paused while participant credits are pending. No model call or key-validity request was made. Credential presence does not prove provider authentication.
-- Meta participant credits have not been claimed or verified. The guide requires a card for API use; no payment authorization was made. See CREDIT_SETUP.md.
-- Resend API sending credential and an authorized sender for Courtside. The connected account has a verified unrelated business domain; it has not been repurposed or changed.
-- Actual confirmed Courtside user session for signed-in live browser testing. No shared password or authentication bypass was created.
-- Vercel GitHub app installation: the provider approval page is open. It requests repository write permissions; access must be restricted to `matcpu/courtside-ai` and approved by the owner. Browser input/capture timed out on this permission page; no access to other repositories was granted.
-- Twilio credentials, consented test destination and complete signed opt-out integration. SMS sending remains disabled.
+Whole-season/advanced constraint optimization, team blackouts, referee availability/assignment, youth-document authenticity/retention, weekly/monthly reports, awards, player profiles, permits, parent portal, payments and predictive analytics remain partial or deferred as specified in the feature audit. Schedule generation is a deterministic replacement round requiring administrator review and publication.
 
-## Not started / deferred
+## Three priorities before submission
 
-- Recurring notification retry/agent worker and provider delivery webhooks. Configured publication automatically starts one delivery pass; subsequent retries/larger queues currently need another pass.
-- Referee availability and assignment screens; referee read role exists.
-- Youth document authenticity review, permit workflows and document retention/deletion policies.
-- Advanced reporting, verified player awards, parent portal, payments and predictive analytics.
-- Production concurrency/load testing, pagination for very large seasons and disaster-recovery exercise.
+1. After the owner confirms credits, deliberately enable and verify real Meta questionnaire/image/agent requests using the eligible configured model.
+2. Configure an authorized Resend sender/secret and verify controlled email receipt, retry behavior and delivery events. Keep SMS disabled until its safeguards are complete.
+3. Record/rehearse the three-minute synthetic demo, verify judge access to the repository/live site/video and complete participant/submission forms before November 4, 2026, 9 PM Eastern.
 
-No paid services, phone numbers, credit redemptions or external participant forms have been authorized or submitted by the build.
+No paid service, number purchase, payment authorization, credit redemption or participant form was submitted by this work.

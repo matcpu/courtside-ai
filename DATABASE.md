@@ -22,6 +22,10 @@ The ordered, tracked migrations in `supabase/migrations/` are authoritative. Loc
 
 Composite `(league_id, id)` foreign keys prevent moving entities across tenant boundaries. A league row lock serializes all impactful commands. There is exactly one published schedule per league. A draft records both schedule revision and data revision, which are rechecked at publication.
 
+Publication also creates actual `in_app` notifications for every approved team's current coach, including teams without a future fixture. `recipient_id` and `read_at` keep receipts private. External queue claims exclude in-app rows. Administrators can inspect history but cannot mark another user's receipt. Coach reassignment validates membership, clears prior phone/consent, and suppresses old pending external messages.
+
+Private snapshots expose explicitly recorded player-stat rows to administrators/scorekeepers and the owning coach. RLS enforces the same restriction on direct reads. Public snapshots return empty statistics; absent fields remain null.
+
 ## Access
 
 - Administrator: league operations and approval authority.

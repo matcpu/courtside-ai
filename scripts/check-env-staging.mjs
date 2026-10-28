@@ -11,7 +11,9 @@ const blocked = paths.filter((path) => {
   return (
     ((name === ".env" || name.startsWith(".env.")) &&
       name !== ".env.example") ||
-    path.toLowerCase().startsWith(".vercel/")
+    [".vercel/", ".local/"].some((prefix) =>
+      path.toLowerCase().startsWith(prefix),
+    )
   );
 });
 if (blocked.length) {

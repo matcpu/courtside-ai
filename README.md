@@ -66,4 +66,4 @@ The [official participant guide](https://cerebralvalley.ai/e/meta-ai-developer-h
 
 ## Project documentation
 
-[Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Setup](SETUP.md) · [Credits](CREDIT_SETUP.md) · [Tests](TESTING.md) · [Demo](DEMO.md) · [Status](STATUS.md)
+[Feature audit](FEATURE_AUDIT.md) · [Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Setup](SETUP.md) · [Credits](CREDIT_SETUP.md) · [Tests](TESTING.md) · [Demo](DEMO.md) · [Status](STATUS.md)

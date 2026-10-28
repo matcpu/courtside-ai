@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve, relative, isAbsolute } from "node:path";
+import { dirname, join, resolve, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const directories: string[] = [];
@@ -28,6 +28,7 @@ function repository(filename: string) {
   directories.push(directory);
   execFileSync("git", ["init", "--quiet"], { cwd: directory });
   writeFileSync(join(directory, ".gitignore"), ".env*\n!.env.example\n");
+  mkdirSync(dirname(join(directory, filename)), { recursive: true });
   writeFileSync(join(directory, filename), "MODEL_API_KEY=\n");
   execFileSync("git", ["add", "--force", filename], { cwd: directory });
   return spawnSync(process.execPath, [guard], {
@@ -43,5 +44,8 @@ describe("environment commit protection with a real Git index", () => {
   });
   it("allows the empty .env.example template", () => {
     expect(repository(".env.example").status).toBe(0);
+  });
+  it("blocks force-added private audit credentials", () => {
+    expect(repository(".local/live-audit.json").status).toBe(1);
   });
 });

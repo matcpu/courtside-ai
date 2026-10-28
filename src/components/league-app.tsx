@@ -275,6 +275,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
     } | null>(null),
     [menu, setMenu] = useState(false),
     [teamFilter, setTeamFilter] = useState(""),
+    [divisionFilter, setDivisionFilter] = useState(""),
     [round, setRound] = useState(0),
     [sheet, setSheet] = useState<Sheet | null>(null),
     [extraction, setExtraction] = useState<Extraction | null>(null),
@@ -331,7 +332,15 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+    } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (!s) {
+        setSnapshot(null);
+        setLeagues([]);
+        setSheet(null);
+        setImageUrl("");
+      }
+    });
     fetch("/api/health")
       .then((r) => r.json())
       .then(setHealth)
@@ -493,6 +502,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
           {nav.map(([title, Icon]) => (
             <button
               key={title}
+              aria-label={title}
               className={view === title ? "active" : ""}
               onClick={() => changeView(title)}
             >
@@ -501,6 +511,13 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
               {title === "Scoresheets" && pendingSheets.length > 0 && (
                 <span className="nav-count">{pendingSheets.length}</span>
               )}
+              {title === "Notifications" &&
+                s?.notifications.some(
+                  (n) =>
+                    n.channel === "in_app" &&
+                    n.recipient_id === session?.user.id &&
+                    !n.read_at,
+                ) && <span className="nav-dot" />}
               {title === "Competitive balance" &&
                 pendingProposals.length > 0 && <span className="nav-dot" />}
             </button>
@@ -1368,12 +1385,25 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                         <Field label="Published game">
                           <select name="game_id" required>
                             <option value="">Choose a game</option>
-                            {officialFixtures.map((f) => (
-                              <option key={f.game_id} value={f.game_id}>
-                                {teamName(f.home_team_id)} vs{" "}
-                                {teamName(f.away_team_id)} · {date(f.starts_at)}
-                              </option>
-                            ))}
+                            {officialFixtures
+                              .filter(
+                                (f) =>
+                                  s.role !== "coach" ||
+                                  s.teams.some(
+                                    (t) =>
+                                      t.coach_id === session?.user.id &&
+                                      [f.home_team_id, f.away_team_id].includes(
+                                        t.id,
+                                      ),
+                                  ),
+                              )
+                              .map((f) => (
+                                <option key={f.game_id} value={f.game_id}>
+                                  {teamName(f.home_team_id)} vs{" "}
+                                  {teamName(f.away_team_id)} ·{" "}
+                                  {date(f.starts_at)}
+                                </option>
+                              ))}
                           </select>
                         </Field>
                         <Field label="Scoresheet photo (JPEG, PNG, WebP · up to 6 MB)">
@@ -1467,8 +1497,28 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                   <Panel
                     title="Season standings"
                     subtitle="2 points for a win · 1 for a draw · Verified results only"
+                    action={
+                      <select
+                        aria-label="Standings division"
+                        value={divisionFilter}
+                        onChange={(e) => setDivisionFilter(e.target.value)}
+                      >
+                        <option value="">All divisions</option>
+                        {s.divisions.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    }
                   >
-                    <StandingsTable rows={table} />
+                    <StandingsTable
+                      rows={table.filter(
+                        (row) =>
+                          !divisionFilter ||
+                          row.team.division_id === divisionFilter,
+                      )}
+                    />
                   </Panel>
                   <Panel title="Latest confirmed results">
                     <div className="results-grid">
@@ -1498,6 +1548,65 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                       </Empty>
                     )}
                   </Panel>
+                  {canWrite && (
+                    <Panel
+                      title="Verified player statistics"
+                      subtitle="Recorded values from confirmed scoresheets. A dash means the statistic was not recorded; it is never inferred."
+                    >
+                      {s.statistics?.length ? (
+                        <div className="table-wrap">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Team / jersey</th>
+                                <th>Game</th>
+                                <th>Points</th>
+                                <th>Rebounds</th>
+                                <th>Assists</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {s.statistics
+                                .filter(
+                                  (stat) =>
+                                    !divisionFilter ||
+                                    s.teams.find((t) => t.id === stat.team_id)
+                                      ?.division_id === divisionFilter,
+                                )
+                                .map((stat) => {
+                                  const game = s.games.find(
+                                    (g) => g.id === stat.game_id,
+                                  );
+                                  return (
+                                    <tr
+                                      key={`${stat.game_id}:${stat.team_id}:${stat.jersey}`}
+                                    >
+                                      <td>
+                                        {teamName(stat.team_id)} · #
+                                        {stat.jersey}
+                                      </td>
+                                      <td>
+                                        {game
+                                          ? `${teamName(game.home_team_id)} vs ${teamName(game.away_team_id)}`
+                                          : "Confirmed game"}
+                                      </td>
+                                      <td>{stat.points ?? "—"}</td>
+                                      <td>{stat.rebounds ?? "—"}</td>
+                                      <td>{stat.assists ?? "—"}</td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <Empty title="No player statistics recorded">
+                          Confirm explicitly recorded statistics during
+                          scoresheet review to show them here.
+                        </Empty>
+                      )}
+                    </Panel>
+                  )}
                 </>
               )}
               {view === "Competitive balance" && (
@@ -1713,8 +1822,10 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
               )}
               {view === "Notifications" && (
                 <Panel
-                  title="Coach notification history"
-                  subtitle="Queued on publication. Provider acceptance and delivery are distinct states."
+                  title={
+                    isAdmin ? "Coach notification history" : "Your team updates"
+                  }
+                  subtitle="In-app updates arrive when a schedule is published. External email delivery depends on provider configuration."
                   action={
                     isAdmin && (
                       <Button
@@ -1752,9 +1863,13 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                             <tr key={n.id}>
                               <td>
                                 <b>{n.subject}</b>
-                                <small>{time(n.created_at)}</small>
+                                <small>
+                                  {teamName(n.team_id)} · {time(n.created_at)}
+                                </small>
                               </td>
-                              <td>{n.channel}</td>
+                              <td>
+                                {n.channel === "in_app" ? "In app" : n.channel}
+                              </td>
                               <td>
                                 <Badge
                                   tone={
@@ -1765,15 +1880,58 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                                         : "neutral"
                                   }
                                 >
-                                  {n.status}
+                                  {n.channel === "in_app"
+                                    ? n.read_at
+                                      ? "Read"
+                                      : "Unread"
+                                    : n.status}
                                 </Badge>
                               </td>
-                              <td>{n.attempts} / 5</td>
                               <td>
-                                {n.last_error ??
+                                {n.channel === "in_app"
+                                  ? "—"
+                                  : `${n.attempts} / 5`}
+                              </td>
+                              <td>
+                                {n.channel === "in_app" ? (
+                                  <>
+                                    <p>{n.body}</p>
+                                    <div className="inline-actions">
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => changeView("Schedule")}
+                                      >
+                                        View schedule
+                                      </Button>
+                                      {n.recipient_id === session?.user.id &&
+                                        !n.read_at && (
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            disabled={busy}
+                                            onClick={() =>
+                                              void act(
+                                                () =>
+                                                  cmd(
+                                                    "mark_notification_read",
+                                                    { notification_id: n.id },
+                                                  ),
+                                                "Update marked as read.",
+                                              )
+                                            }
+                                          >
+                                            Mark as read
+                                          </Button>
+                                        )}
+                                    </div>
+                                  </>
+                                ) : (
+                                  (n.last_error ??
                                   (n.provider_id
                                     ? "Provider message recorded"
-                                    : "Awaiting configured provider")}
+                                    : "Awaiting configured provider"))
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -1785,11 +1943,11 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                       title={
                         isAdmin
                           ? "No updates queued yet"
-                          : "Notification history is private"
+                          : "No team updates yet"
                       }
                     >
-                      Publishing a schedule queues updates for affected coaches.
-                      Synthetic recipients are never sent real messages.
+                      Publishing a schedule adds an update to each coach’s
+                      inbox. External sending suppresses synthetic addresses.
                     </Empty>
                   )}
                 </Panel>
@@ -1917,6 +2075,38 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                         </Form>
                       </Panel>
                       <Panel
+                        title="Assign a team coach"
+                        subtitle="Add the account as a league member first. Reassignment clears the previous coach’s phone and SMS consent."
+                      >
+                        <Form
+                          busy={busy}
+                          submit="Assign coach"
+                          onSubmit={async (f) => {
+                            await act(
+                              () =>
+                                cmd("assign_coach", {
+                                  team_id: f.get("team_id"),
+                                  email: f.get("email"),
+                                }),
+                              "Team coach assigned.",
+                            );
+                          }}
+                        >
+                          <Field label="Team to assign">
+                            <select name="team_id" required>
+                              {s.teams.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name}
+                                </option>
+                              ))}
+                            </select>
+                          </Field>
+                          <Field label="Coach account email">
+                            <input name="email" type="email" required />
+                          </Field>
+                        </Form>
+                      </Panel>
+                      <Panel
                         title="Public league site"
                         subtitle="Public data excludes player identities, documents and coach contact information."
                       >
@@ -2035,6 +2225,11 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
             >
               <X size={20} />
             </button>
+            {notice?.error && (
+              <p className="notice notice-error" role="alert">
+                {notice.text}
+              </p>
+            )}
             {modal === "auth" && (
               <>
                 <span className="modal-icon">
@@ -2074,10 +2269,12 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                         setSession(data.session);
                         setModal(null);
                         notify("Signed in. Your workspace is ready.");
-                      } else
+                      } else {
+                        setModal(null);
                         notify(
                           "Check your email to confirm your account, then sign in.",
                         );
+                      }
                     } catch (e) {
                       notify((e as Error).message, true);
                     } finally {
@@ -2484,6 +2681,11 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
               <X size={20} />
             </button>
             <h2>Review before it counts.</h2>
+            {notice?.error && (
+              <p className="notice notice-error" role="alert">
+                {notice.text}
+              </p>
+            )}
             <p>
               {sheet.source === "meta"
                 ? "Extracted by Meta Muse Spark"

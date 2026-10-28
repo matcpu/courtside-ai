@@ -173,6 +173,10 @@ export type Sheet = {
 };
 export type Notification = {
   id: string;
+  team_id: string;
+  recipient_id: string | null;
+  read_at: string | null;
+  body: string;
   channel: string;
   status: string;
   attempts: number;
@@ -197,6 +201,14 @@ export type Player = {
   eligibility_status: string;
 };
 export type Snapshot = {
+  statistics: {
+    game_id: string;
+    team_id: string;
+    jersey: string;
+    points: number | null;
+    rebounds: number | null;
+    assists: number | null;
+  }[];
   league: {
     id: string;
     name: string;

@@ -41,6 +41,8 @@ const allowed = [
   "create_league",
   "configure_public",
   "invite_member",
+  "assign_coach",
+  "mark_notification_read",
   "approve_team",
   "reject_team",
   "add_court",
