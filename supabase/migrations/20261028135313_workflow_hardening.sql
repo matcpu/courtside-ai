@@ -1,0 +1,159 @@
+create table public.result_revisions (
+ id uuid primary key default gen_random_uuid(),league_id uuid not null references public.leagues(id),game_id uuid not null,scoresheet_id uuid not null,actor_id uuid not null references auth.users(id),
+ previous_score jsonb not null,confirmed_score jsonb not null,reason text,extraction jsonb not null,created_at timestamptz not null default now(),
+ foreign key(league_id,game_id) references public.games(league_id,id),foreign key(league_id,scoresheet_id) references public.scoresheets(league_id,id)
+);
+create index result_revisions_league on public.result_revisions(league_id,game_id);
+alter table public.result_revisions enable row level security;
+revoke all on public.result_revisions from anon,authenticated;
+grant select on public.result_revisions to authenticated;
+create policy admin_read on public.result_revisions for select to authenticated using(private.member_role(league_id)='admin');
+create or replace function private.command(l uuid,action text,p jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
+declare actor uuid:=auth.uid(); r text; id uuid; tid uuid; div_id uuid; v record; le record; t record; g record; item jsonb; stat jsonb;
+ lease_token uuid; rating_value int; tier_value int; n int; hs int; aws int; target int; margin numeric; played int; wins int; losses int;
+begin
+ if actor is null then raise exception 'Authentication required' using errcode='42501'; end if;
+ if action='create_league' then
+ insert into public.leagues(name,slug,season_name,cutoff_date,owner_id,is_demo) values (p->>'name', 'league-'||gen_random_uuid()::text,coalesce(p->>'season','Fall 2026'),coalesce((p->>'cutoff')::date,'2026-09-01'),actor,coalesce((p->>'demo')::boolean,false)) returning * into le;
+ l:=le.id;insert into public.memberships values(l,actor,'admin');
+ insert into public.divisions(league_id,name,tier) values(l,'U14 · Premier',1),(l,'U14 · Competitive',2),(l,'U14 · Development',3);
+ insert into public.audit_events(league_id,actor_id,action) values(l,actor,'league.created');return jsonb_build_object('id',l);
+ end if;
+ select * into le from public.leagues where leagues.id=l for update;
+ if not found then raise exception 'League not found'; end if;
+ r:=private.member_role(l);
+ if action='register_team' then
+ if r is null then
+ if not le.is_public or le.is_demo then raise exception 'Registration is closed' using errcode='42501';end if;
+ insert into public.memberships values(l,actor,'coach'); r:='coach'; end if;
+ if r not in ('admin','coach') then raise exception 'Coach or administrator required' using errcode='42501';end if;
+ if coalesce((p#>>'{assessment,experience}')::int,0) not between 1 and 5 or coalesce((p#>>'{assessment,yearsTogether}')::int,-1) not between 0 and 15 or coalesce((p#>>'{assessment,practicesPerWeek}')::int,-1) not between 0 and 7 then raise exception 'Invalid questionnaire';end if;
+ rating_value:=800+(p#>>'{assessment,experience}')::int*75+least((p#>>'{assessment,yearsTogether}')::int,4)*25+least((p#>>'{assessment,practicesPerWeek}')::int,4)*15;
+ tier_value:=case when rating_value>=1150 then 1 when rating_value>=950 then 2 else 3 end;
+ insert into public.teams(league_id,name,coach_id,coach_email,phone,sms_consent,recommended_division,assessment,assessment_explanation,initial_rating,rating)
+ values(l,p->>'name',actor,(select email from auth.users where auth.users.id=actor),nullif(p->>'phone',''),coalesce((p->>'sms_consent')::boolean,false),tier_value,p->'assessment',left(p->>'explanation',4000),rating_value,rating_value) returning teams.id into id;
+ elsif action='set_sms_consent' then
+ select * into t from public.teams where teams.id=(p->>'team_id')::uuid and league_id=l;
+ if t.coach_id is distinct from actor then raise exception 'Only the coach can change SMS consent' using errcode='42501';end if;
+ update public.teams set sms_consent=(p->>'consent')::boolean,phone=nullif(p->>'phone','') where teams.id=t.id;
+ update public.notifications set status='suppressed',last_error='Coach opted out' where team_id=t.id and channel='sms' and status in ('pending','failed');
+ elsif action='add_player' then
+ select * into t from public.teams where teams.id=(p->>'team_id')::uuid and league_id=l;
+ if t.id is null or (r is distinct from 'admin' and t.coach_id is distinct from actor) then raise exception 'Roster access denied' using errcode='42501';end if;
+ if (p->>'birth_date')::date>le.cutoff_date or (p->>'birth_date')::date<le.cutoff_date-interval '21 years' then raise exception 'Invalid birth date';end if;
+ insert into public.players(league_id,team_id,display_name,jersey,birth_date,guardian_consent) values(l,t.id,p->>'display_name',p->>'jersey',(p->>'birth_date')::date,coalesce((p->>'guardian_consent')::boolean,false)) returning players.id into id;
+ elsif action='submit_scoresheet' then
+ select * into g from public.games where games.id=(p->>'game_id')::uuid and league_id=l;
+ if g.id is null or (r not in ('admin','scorekeeper') and not exists(select 1 from public.teams where teams.id in (g.home_team_id,g.away_team_id) and coach_id=actor)) or r is null then raise exception 'Scoresheet access denied' using errcode='42501';end if;
+ if not exists(select 1 from public.fixtures f join public.schedule_versions sv on sv.id=f.version_id where f.game_id=g.id and sv.status='published') then raise exception 'Game must be on the published schedule';end if;
+ if not exists(select 1 from storage.objects o where o.bucket_id='scoresheets' and o.name=p->>'storage_path' and split_part(o.name,'/',1)=l::text and split_part(o.name,'/',2)=actor::text) then raise exception 'Private scoresheet upload is required';end if;
+ if p->>'source' not in ('meta','manual') then raise exception 'Invalid extraction provenance';end if;
+ insert into public.scoresheets(league_id,game_id,sha256,storage_path,extraction,source,submitted_by) values(l,g.id,p->>'sha256',p->>'storage_path',p->'extraction',p->>'source',actor) returning scoresheets.id into id;
+ else
+ if r is null or (r<>'admin' and not(r='scorekeeper' and action in ('confirm_result','reject_scoresheet'))) then raise exception 'Administrator required' using errcode='42501';end if;
+ case action
+ when 'configure_public' then update public.leagues set is_public=(p->>'enabled')::boolean where leagues.id=l;
+ when 'invite_member' then
+ if p->>'role' not in ('coach','scorekeeper','referee') then raise exception 'Invalid member role';end if;
+ select users.id into tid from auth.users where lower(email)=lower(p->>'email');
+ if tid is null then raise exception 'This user must first create an account';end if;
+ insert into public.memberships values(l,tid,p->>'role') on conflict(league_id,user_id) do update set role=excluded.role where memberships.role<>'admin';
+ when 'approve_team' then
+ select * into t from public.teams where teams.id=(p->>'team_id')::uuid and league_id=l and status='pending';if t.id is null then raise exception 'Pending team not found';end if;
+ select divisions.id into div_id from public.divisions where league_id=l and tier=coalesce((p->>'tier')::int,t.recommended_division);
+ if div_id is null then raise exception 'Invalid division';end if;
+ update public.teams set status='approved',division_id=div_id where teams.id=t.id;
+ when 'reject_team' then update public.teams set status='rejected' where teams.id=(p->>'team_id')::uuid and league_id=l and status='pending';
+ when 'add_court' then insert into public.courts(league_id,name,venue) values(l,p->>'name',p->>'venue') returning courts.id into id;
+ when 'add_availability' then insert into public.availability(league_id,court_id,starts_at,ends_at) values(l,(p->>'court_id')::uuid,(p->>'starts_at')::timestamptz,(p->>'ends_at')::timestamptz) returning availability.id into id;
+ when 'verify_player' then
+ select pl.*,d.max_age into t from public.players pl join public.teams te on te.id=pl.team_id join public.divisions d on d.id=te.division_id where pl.id=(p->>'player_id')::uuid and pl.league_id=l;
+ if t.id is null then raise exception 'Player must be on an approved team';end if;
+ update public.players set eligibility_status=case when t.guardian_consent and extract(year from age(le.cutoff_date,t.birth_date))<=t.max_age then 'verified' else 'ineligible' end where players.id=t.id;
+ when 'draft_schedule' then
+ if (p->>'base_revision')::int is distinct from le.revision or (p->>'data_revision')::int is distinct from le.data_revision then raise exception 'Stale league state. Refresh and regenerate.';end if;
+ if jsonb_array_length(p->'fixtures')>3000 then raise exception 'Too many fixtures';end if;
+ select coalesce(max(number),0)+1 into n from public.schedule_versions where league_id=l;
+ insert into public.schedule_versions(league_id,number,base_revision,data_revision,explanation,created_by) values(l,n,le.revision,le.data_revision,left(p->>'explanation',4000),actor) returning schedule_versions.id into id;
+ for item in select value from jsonb_array_elements(p->'fixtures') loop
+ tid:=(item->>'game_id')::uuid;
+ if not exists(select 1 from public.games where games.id=tid and league_id=l) then
+ insert into public.games(id,league_id,home_team_id,away_team_id) values(tid,l,(item->>'home_team_id')::uuid,(item->>'away_team_id')::uuid);
+ elsif not exists(select 1 from public.games where games.id=tid and league_id=l and home_team_id=(item->>'home_team_id')::uuid and away_team_id=(item->>'away_team_id')::uuid) then raise exception 'Game participants cannot change';end if;
+ insert into public.fixtures(league_id,version_id,game_id,court_id,starts_at,ends_at) values(l,id,tid,(item->>'court_id')::uuid,(item->>'starts_at')::timestamptz,(item->>'ends_at')::timestamptz);
+ end loop;
+ perform private.validate_schedule(l,id);
+ when 'reject_schedule' then update public.schedule_versions set status='rejected' where schedule_versions.id=(p->>'version_id')::uuid and league_id=l and status='draft';
+ when 'publish_schedule' then
+ select * into v from public.schedule_versions where schedule_versions.id=(p->>'version_id')::uuid and league_id=l and status='draft';
+ if v.id is null then raise exception 'Draft schedule not found';end if;
+ if v.base_revision<>le.revision or v.data_revision<>le.data_revision then raise exception 'Draft is stale. Regenerate before approval.';end if;
+ perform private.validate_schedule(l,v.id);
+ update public.schedule_versions set status='superseded' where league_id=l and status='published';
+ update public.schedule_versions set status='published',approved_by=actor where schedule_versions.id=v.id;
+ update public.leagues set revision=revision+1 where leagues.id=l;
+ for t in select * from public.teams where league_id=l and status='approved' and exists(select 1 from public.fixtures f join public.games g on g.id=f.game_id where f.version_id=v.id and g.status<>'confirmed' and teams.id in (g.home_team_id,g.away_team_id)) loop
+ insert into public.notifications(league_id,team_id,channel,destination,subject,body,idempotency_key)
+ values(l,t.id,'email',t.coach_email,'Your Courtside schedule has been published',format('%s: schedule version %s has been approved. %s. Check the league schedule for your updated fixtures.',le.name,v.number,v.explanation),v.id::text||':'||t.id::text||':email') on conflict(idempotency_key) do nothing;
+ if t.sms_consent and t.phone is not null then insert into public.notifications(league_id,team_id,channel,destination,subject,body,idempotency_key) values(l,t.id,'sms',t.phone,'Schedule updated',format('%s schedule v%s is approved. Check your coach portal. Reply STOP to opt out.',le.name,v.number),v.id::text||':'||t.id::text||':sms') on conflict(idempotency_key) do nothing;end if;
+ end loop;
+ when 'reject_scoresheet' then update public.scoresheets set status='rejected' where scoresheets.id=(p->>'sheet_id')::uuid and league_id=l and status='review';
+ when 'confirm_result' then
+ select * into v from public.scoresheets where scoresheets.id=(p->>'sheet_id')::uuid and league_id=l and status='review';if v.id is null then raise exception 'Scoresheet already reviewed or missing';end if;
+ select * into g from public.games where games.id=v.game_id for update;
+ if g.status='confirmed' and length(coalesce(p->>'correction_reason',''))<5 then raise exception 'A correction reason is required for an official result';end if;
+ if not coalesce((p->>'reviewed')::boolean,false) then raise exception 'Human review confirmation required';end if;
+ hs:=(p#>>'{extraction,homeScore}')::int;aws:=(p#>>'{extraction,awayScore}')::int;
+ if hs is null or aws is null or hs not between 0 and 300 or aws not between 0 and 300 then raise exception 'Both valid final scores are required';end if;
+ if (p#>>'{extraction,homeTeam}') is distinct from (select name from public.teams where teams.id=g.home_team_id) or (p#>>'{extraction,awayTeam}') is distinct from (select name from public.teams where teams.id=g.away_team_id) then raise exception 'Scoresheet team names do not match fixture';end if;
+ if not exists(select 1 from public.fixtures f join public.schedule_versions sv on sv.id=f.version_id where f.game_id=g.id and sv.status='published' and f.starts_at<=now()) then raise exception 'Cannot confirm a game before its scheduled start';end if;
+ insert into public.result_revisions(league_id,game_id,scoresheet_id,actor_id,previous_score,confirmed_score,reason,extraction)
+ values(l,g.id,v.id,actor,jsonb_build_object('home',g.home_score,'away',g.away_score),jsonb_build_object('home',hs,'away',aws),p->>'correction_reason',p->'extraction');
+ delete from public.player_statistics where game_id=g.id;
+ for stat in select value from jsonb_array_elements(coalesce(p#>'{extraction,players}','[]')) loop
+ if stat->>'team' not in ('home','away') then raise exception 'Invalid player team';end if;
+ insert into public.player_statistics(league_id,game_id,team_id,jersey,points,rebounds,assists) values(l,g.id,case when stat->>'team'='home' then g.home_team_id else g.away_team_id end,stat->>'jersey',(stat->>'points')::int,(stat->>'rebounds')::int,(stat->>'assists')::int);
+ end loop;
+ if coalesce((select sum(points) from public.player_statistics where game_id=g.id and team_id=g.home_team_id),0)>hs or coalesce((select sum(points) from public.player_statistics where game_id=g.id and team_id=g.away_team_id),0)>aws then raise exception 'Player points exceed final team score';end if;
+ update public.games set status='confirmed',home_score=hs,away_score=aws,played_at=coalesce(played_at,(select f.starts_at from public.fixtures f join public.schedule_versions sv on sv.id=f.version_id where f.game_id=g.id and sv.status='published' limit 1)) where games.id=g.id;
+ update public.scoresheets set status='superseded' where game_id=g.id and status='confirmed';
+ update public.scoresheets set status='confirmed',extraction=p->'extraction' where scoresheets.id=v.id;
+ perform private.recalculate(l);
+ update public.division_proposals set status='stale' where league_id=l and status='pending';
+ when 'propose_balance' then
+ update public.division_proposals set status='stale' where league_id=l and status='pending';
+ for t in select te.*,d.tier from public.teams te join public.divisions d on d.id=te.division_id where te.league_id=l and te.status='approved' loop
+ select count(*),count(*) filter(where diff>0),count(*) filter(where diff<0),avg(diff) into played,wins,losses,margin from
+ (select case when home_team_id=t.id then home_score-away_score else away_score-home_score end diff from public.games where league_id=l and status='confirmed' and t.id in (home_team_id,away_team_id) order by played_at desc,games.id desc limit 3) recent;
+ target:=case when played=3 and wins=3 and margin>=15 then greatest(1,t.tier-1) when played=3 and losses=3 and margin<=-15 then least(3,t.tier+1) else t.tier end;
+ if target<>t.tier then
+ select divisions.id into div_id from public.divisions where league_id=l and tier=target;
+ insert into public.division_proposals(league_id,team_id,from_division_id,to_division_id,reason,evidence,data_revision) values(l,t.id,t.division_id,div_id,format('Last 3 verified games: %s wins, %s losses, average margin %s. Recommend one tier %s; administrator review required.',wins,losses,round(margin,1),case when target<t.tier then 'up' else 'down' end),jsonb_build_object('games',played,'wins',wins,'losses',losses,'average_margin',margin,'rating',t.rating),le.data_revision);
+ end if;
+ end loop;
+ when 'decide_proposal' then
+ select * into v from public.division_proposals where division_proposals.id=(p->>'proposal_id')::uuid and league_id=l and status='pending';
+ if v.id is null or v.data_revision<>le.data_revision then raise exception 'Proposal is missing or stale';end if;
+ if (p->>'approve')::boolean then
+ if exists(select 1 from public.players pl join public.divisions d on d.id=v.to_division_id where pl.team_id=v.team_id and (not pl.guardian_consent or pl.eligibility_status<>'verified' or extract(year from age(le.cutoff_date,pl.birth_date))>d.max_age)) then raise exception 'Resolve roster eligibility and guardian consent before moving division';end if;
+ update public.teams set division_id=v.to_division_id where teams.id=v.team_id and division_id=v.from_division_id;
+ update public.division_proposals set status='approved' where division_proposals.id=v.id;
+ else update public.division_proposals set status='rejected' where division_proposals.id=v.id;end if;
+ when 'claim_notifications' then
+ id:=gen_random_uuid();lease_token:=id;
+ return (with q as (
+ update public.notifications set status='processing',attempts=attempts+1,lease_id=lease_token,lease_until=now()+interval '2 minutes'
+ where notifications.id in (select nn.id from public.notifications nn where nn.league_id=l and nn.attempts<5 and nn.created_at>now()-interval '23 hours' and ((nn.status in ('pending','failed') and nn.next_attempt_at<=now()) or(nn.status='processing' and nn.lease_until<now())) order by nn.created_at limit 20 for update skip locked)
+ returning * ) select coalesce(jsonb_agg(to_jsonb(q)),'[]') from q);
+ when 'finish_notification' then
+ if p->>'status' not in ('accepted','failed','suppressed') then raise exception 'Invalid delivery state';end if;
+ update public.notifications set status=p->>'status',provider_id=p->>'provider_id',last_error=left(p->>'error',300),next_attempt_at=now()+make_interval(secs=>least(3600,power(2,attempts)::int*30)),lease_until=null
+ where notifications.id=(p->>'notification_id')::uuid and league_id=l and lease_id=(p->>'lease_id')::uuid and status='processing';
+ else raise exception 'Unknown action';
+ end case;
+ end if;
+ if action in ('register_team','approve_team','reject_team','add_court','add_availability','confirm_result','decide_proposal','add_player','verify_player') then update public.leagues set data_revision=data_revision+1 where leagues.id=l;end if;
+ insert into public.audit_events(league_id,actor_id,action,detail) values(l,actor,action,jsonb_build_object('entity_id',coalesce(id::text,p->>'sheet_id',p->>'version_id',p->>'team_id',p->>'proposal_id'),'correction_reason',p->>'correction_reason'));
+ return jsonb_build_object('id',id,'ok',true);
+end $$;
+
