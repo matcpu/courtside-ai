@@ -1,6 +1,8 @@
 # Verification
 
-The expanded October 28 audit includes TypeScript, cloud production build, 65 Vitest tests, 97 real PostgreSQL assertions (65 league + 32 preseason) and the earlier 18 public/authenticated desktop/mobile browser tests. A separate 16-test submission smoke run verifies public browsing, signup-screen disclosure and the exact fresh temporary-role credentials without sending email or calling a model. Deployment-specific results are in STATUS.md. Provider contracts cannot establish live model effectiveness. Git index tests reject force-staged `.env.local` and `.local/` files.
+The current change passes TypeScript, 78 unit tests and 102 real PostgreSQL assertions (65 league + 37 preseason). Updated desktop/mobile guardian journeys exercise local screening, escalation and human decisions. Production-specific build, CI and API/browser results are in STATUS.md. Two genuine Meta perception responses are recorded in META_VERIFICATION.md; agent execution remains protected by the owner's human result-confirmation gate. Mock provider tests do not establish live quality. Git index tests reject force-staged private files.
+
+For local proof evaluation, run `node scripts/prepare-fraud-experiment.mjs` then `node --import tsx scripts/evaluate-document-screening.mjs`. Both make zero inference requests. The prepared synthetic Meta screening experiment is separate from the eight-request allowance and requires additional explicit authorization to execute. See DOCUMENT_SCREENING.md for observed misses and limits. `scripts/preseason-audit.mjs` now uses invitation links with `send_email:false`; email tests are not repeated.
 
 ## Commands
 
