@@ -1276,7 +1276,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                                   body: JSON.stringify({
                                     league: selected,
                                     round,
-                                    useMeta: health?.meta ?? false,
+                                    useMeta: false,
                                   }),
                                 }),
                               "Schedule draft saved. Review before publishing.",

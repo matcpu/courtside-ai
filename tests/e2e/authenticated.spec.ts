@@ -282,10 +282,31 @@ test("real coach and administrator operate a private synthetic season", async ({
       .click();
     await expect(proposal).toHaveCount(0);
   }
+  // Connection availability must never turn deterministic scheduling into an
+  // additional paid explanation call. Only this UI health response is varied;
+  // the schedule request and Supabase transaction remain real.
+  await page.route("**/api/health", async (route) => {
+    const actual = await route.fetch();
+    await route.fulfill({
+      response: actual,
+      json: { ...(await actual.json()), meta: true },
+    });
+  });
+  await page.reload();
+  await page.getByLabel("Switch league").selectOption(fixture.league);
   await nav("Schedule");
+  const generatedResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/schedule") &&
+      response.request().method() === "POST",
+  );
   await page
     .getByRole("button", { name: "Generate next round", exact: true })
     .click();
+  const generated = await generatedResponse;
+  expect(generated.request().postDataJSON().useMeta).toBe(false);
+  expect((await generated.json()).ai).toBe(false);
+  await page.unroute("**/api/health");
   await expect(
     page.getByRole("heading", { name: /Draft schedule/ }),
   ).toBeVisible();

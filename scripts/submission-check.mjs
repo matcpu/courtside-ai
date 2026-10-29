@@ -46,21 +46,15 @@ try {
       p.on("error", reject);
       p.on("exit", resolve);
     });
-    const expectedGate =
-      name === "Recording plan and real-evidence gate" && code === 2;
     report.phases.push({
       name,
-      status: expectedGate
-        ? "blocked-awaiting-real-model-evidence"
-        : code === 0
-          ? "passed"
-          : "failed",
+      status: code === 0 ? "passed" : "failed",
     });
     writeFileSync(
       ".local/submission-readiness.json",
       JSON.stringify(report, null, 2),
     );
-    assert.ok(code === 0 || expectedGate, `${name} failed`);
+    assert.equal(code, 0, `${name} failed`);
   }
   report.demonstrationAndPrivateAccessVerified = true;
   report.recording = JSON.parse(
@@ -78,5 +72,5 @@ try {
   assert.equal(report.publicReferenceUnchanged, true);
 }
 console.log(
-  "Public/temporary-role demonstration verified without email signup. Public reference unchanged. Final submission still needs actual Meta evidence, video and representative decisions.",
+  "Public/temporary-role demonstration and genuine Meta evidence verified without inference or email. Public reference unchanged. Final video publication and entry submission await owner review.",
 );

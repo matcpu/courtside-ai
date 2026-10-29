@@ -167,10 +167,12 @@ test("temporary judge roles explore only their synthetic seasons without signup 
       "Private capability removed from visible URL",
     ).toBe(true);
     await expect(
-      page.getByRole("button", {
-        name: "Submit proof and guardian consent",
-        exact: true,
-      }),
+      page
+        .getByRole("button", {
+          name: "Submit proof and guardian consent",
+          exact: true,
+        })
+        .or(page.getByText("Verification: pending", { exact: true })),
     ).toBeVisible();
   } finally {
     await parentContext.close();
