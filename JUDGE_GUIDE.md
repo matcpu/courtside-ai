@@ -4,7 +4,7 @@ Open [the working public demonstration](https://courtside-ai-one.vercel.app/leag
 
 1. From Overview, choose **View schedule** to inspect published fixtures and confirmed courts.
 2. Open **Teams & rosters**, search for **Eastside**, then inspect **Standings**. Only confirmed results count; youth identities/documents and coach contact details are excluded from public views.
-3. Open **Meta AI activity** to see the three integrated jobs and the current paused status. Actual provider evidence is private to authorized administrators and will only exist after the owner authorizes the controlled model run. No test fixture is represented as a model response.
+3. Open **Meta AI activity** to see the three integrated jobs and the current paused status. Genuine provider evidence now exists and is private to authorized administrators. No mocked response is represented as a model result.
 
 ## Private roles without email signup
 
@@ -13,7 +13,7 @@ The representative has a private access packet at `.local/judge-access.md`. It c
 Both accounts use normal password sign-in. They have roles in exactly two isolated, wholly synthetic seasons, separate from the earlier controlled-email test tenant:
 
 - **Upcoming season:** the coach can inspect the saved comprehensive assessment, roster progress and scheduling blockers. The administrator can review placement and synthetic proof decisions. The guardian invitation opens one fictional child's mobile form, never the administrator workspace.
-- **Historical operations season:** the coach can see their own team's games and in-app updates. The administrator can inspect original scoresheets, actual model receipts when available, pending competitive adjustments and schedule versions. Historical seed records are fictional legacy inputs, not document-verified results.
+- **Historical operations season:** inspect the original 78–43 sheet, actual vision/agent receipts, owner-approved Eastside/Riverside moves and revised schedule v3 awaiting publication review. Expand the final original agent answer to see the canonical-record warning for its Riverside/Parkdale name mistake. The coach sees their own games and any already-published in-app updates; unpublished v3 produces no publication notice. Historical seeds are fictional legacy inputs, not document-verified results.
 
 Questionnaire/roster/verification deadlines extend through November 10, 2026, after the November 5–8 judging window. The opening weekend is November 14. Guardian invitations deliberately expire after at most 72 hours; issue a fresh link without email immediately before a private walkthrough and regenerate the private packet. Refresh again if the judging window extends past its expiry.
 

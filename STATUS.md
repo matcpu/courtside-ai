@@ -1,44 +1,49 @@
-# Status — October 28, 2026 Eastern
+# Status — October 29, 2026 Eastern
 
-Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Source: [matcpu/courtside-ai](https://github.com/matcpu/courtside-ai). Existing database: xdmkgoradmbnjofmbojs. Public reference data is preserved. No replacement infrastructure, purchases, billing changes, real youth records or additional email tests were used.
+Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Runtime source **69e006d025417f9eaaa62a3a72909381937371dd** is Ready as **dpl_3848BEZeBbTh8VFmmdM8bUampmQ1**, serving both existing aliases. [Linux CI passed](https://github.com/matcpu/courtside-ai/actions/runs/40819537953). Source: [matcpu/courtside-ai](https://github.com/matcpu/courtside-ai). Supabase remains xdmkgoradmbnjofmbojs.
 
-## Actual Meta verification
+## Actual Meta work
 
-The owner confirmed $150 promotional credits and authorized one eight-request/23,000-output-token sequence, zero retries and an explicit human pause between perception and operations. The non-inference model catalog authenticated the saved key and listed muse-spark-1.3; the dashboard showed active credits.
+All three capabilities have genuine Muse Spark responses. The main sequence used seven requests: specific contradictory-questionnaire interpretation, exact 78–43 image extraction without invented statistics and five operations responses selecting all five tools. The actual owner-confirmed result was recorded through normal review before the agent ran. The agent saved two proposals and a feasible current-division draft without approving or publishing.
 
-**Two real perception requests passed.** Placement identified specific unsupported/mismatched questionnaire claims and asked relevant follow-up questions. Vision read the actual synthetic Eastside Eagles 78–43 Riverside Ravens image with no invented player statistics. Trusted provider IDs, structured responses, request digests and usage are saved in private Meta AI activity. No placement or result was automatically approved.
+The owner then approved both original moves: Eastside Eagles Competitive → Premier and Riverside Ravens Competitive → Development. Both normal administrator decisions are audited. A narrow revision fix allows independent unchanged sibling proposals to be reviewed without staling the second merely because the first was approved. Other substantive data changes still invalidate recommendations.
 
-Observed usage: 2,698 input + 1,622 output = 4,320 tokens; reasoning is included in output. Published-rate estimate: US$0.010266. The provider dashboard had not yet reported these requests and warns of up to one hour of lag; no exact invoice/credit-debit claim is made. See [META_VERIFICATION.md](META_VERIFICATION.md).
+The subsequent deterministic schedule v3 retains 19 completed fixtures, adds five games and gives Lakeside Lynx/Valley Vipers byes. **It remains unpublished for owner review.** Original model draft v2 is retained separately. The original model narrative's Riverside/Parkdale mistake is preserved and visibly flagged against canonical saved records.
 
-**Operations has not run.** It awaits the owner's explicit confirmation of the extracted result. No model-selected tool or agent-saved-record success is claimed. At most six remaining operations requests/15,000 output tokens are authorized. No additional billable evaluation is authorized, including synthetic document AI experiments.
+Expanded evaluation includes five new scoresheets, two new questionnaires, eight generated fictional document illustrations and two actual error/recovery runs. The second recovery returned a final model explanation explicitly acknowledging the rejected lookup and successful subsequent actions. The first saved actions but reached its server bound before a final model summary. Its bounded-stop message is system text. See [EVALUATION_REPORT.md](EVALUATION_REPORT.md).
 
-Saved local and production inference remain disabled. Only a scoped loopback server was enabled for perception; it is paused again. Server-side fsynced journals enforce model, actor/tenant scope, request/output ceilings and stop on failed/uncertain outcomes. Public users cannot invoke this controlled run. No background inference or paid retry is enabled.
+## Usage and controls
 
-## Document screening
+There are **32 completed provider responses**, 164,392 input and 18,482 output tokens, with 94,902 cached input tokens. No uncertain reservation remains. All-input-uncached conservative estimate: **US$0.2840385**; the software's two-times safety debit is **0.568077 guard units**. This is not an invoice.
 
-The existing guardian upload now performs bounded server-local OCR and image processing. It checks supported name/ISO-date consistency, readability, exact league-scoped reuse, experimental perceptual similarity and supported TD3-style checksums. PostgreSQL still owns age eligibility. Screening does not alter registered dates or automatically reject/approve anyone.
+The last genuine billing observation was **149.98 free credit units at 03:30 UTC**. Later billing-page checks remained loading. Its freshness expired at 04:30; no current balance is invented. The global budget is paused, saved local and production inference are disabled, and further inference requires a fresh truthful observation. No card charge, billing change or other service purchase was authorized or performed.
 
-The private administrator review shows findings/sources, age bounds, duplicate warnings, limitations and authenticity-unverified status, with audited escalation that leaves verification pending. Original inspection, human approval, consent, resubmission, retention and readiness gates remain. Deletion clears original bytes, screening and exact/perceptual hashes; decision history remains.
+The owner superseded the original eight-request limit with cumulative promotional development authorization of approximately 120/150, reserving 30. Serialized service-only database reservations, conservative usage accounting, exact attempt deduplication, explicit observation timestamps and pause-on-uncertainty enforce software controls. Provider built-in paid tools, public/background inference and automatic transport retries are disallowed. These controls are not a guaranteed provider hard cap.
 
-Six visibly synthetic illustrations were evaluated locally: consistent fields had no specific issue; conflicting/altered-year text and another player's name were flagged; unreadable/missing evidence was unable to assess; exact duplicate bytes matched. One JPEG recompression differed by six bits and was missed by the four-bit similarity threshold. This is an experimental hint, not general forgery detection or an accuracy benchmark. Meta document-screening requests are prepared only, with **zero executions**. See [DOCUMENT_SCREENING.md](DOCUMENT_SCREENING.md).
+## Document screening and onboarding
+
+Regular guardian uploads use private Storage and server-local OCR; no guardian document goes to Meta. Exact reuse, versioned combined pHash/dHash similarity, registered name/date consistency, supported checksums and deterministic age eligibility support an authorized human reviewer. OCR worker initialization, recognition and nested cleanup are bounded.
+
+The previous JPEG similarity miss is fixed for the measured fixture and passes a real deployed upload regression: zero exact match but a similar-document flag. Private image hashes are stripped from reviewer responses and cleared with original deletion. Shared layouts and strong transformations remain possible false positives/misses.
+
+Eight immutable generated illustrations were separately evaluated with Meta: 4/4 constructed inconsistencies flagged, 0/2 benign suspicion flags, 2/2 unreadable/unsupported outcomes handled, and only 1/2 requested visual-anomaly observations detected. The miss is retained. This is a small prototype evaluation, not issuer authentication or general fraud accuracy.
+
+The main fictional guardian submitted proof and consent through the real mobile form. Verification is pending an administrator decision. Placement/readiness approval is not fabricated. Both guardian/reviewer and opening-weekend workflows are independently exercised in isolated synthetic test seasons.
 
 ## Verification
 
-- 78 unit tests and TypeScript passed, including real local OCR, no-retry guards, scope restrictions and authoritative rules.
-- 102 transactional PostgreSQL assertions passed and rolled back: 65 operations + 37 preseason, including private derived-screening access, mandatory human approval and escalation history.
-- 21 actual preseason API/file checks passed locally and against the latest production deployment, including signed uploads, real OCR matches, unauthorized/forged screening denial, exact duplicates, escalation history, resubmission, over-age rejection, opening-weekend readiness and deletion/retention. Deleted originals retain zero hashes or screening features, including under the migrated historical deletion policy.
-- The updated guardian–coach–administrator journey and exact temporary judge-role access passed on desktop and iPhone-sized Chromium in production. Together with 14 public/signup-screen checks, 18 browser checks passed across scoped runs; both private journeys were rechecked after the final packaging fix. Physical Safari/camera capture is not certified by emulation.
-- Fresh isolated production build and OCR deployment-trace check passed. [Linux CI passed](https://github.com/matcpu/courtside-ai/actions/runs/40807977199). Reachable Git history and 10 deployed client assets/both entry pages passed configured-secret scans. Three disabled-Meta checks preserve the two genuine receipts and unchanged public fingerprint. Restricted email tests remain complete and were not repeated.
-- Supabase's advisor found no new database security issue. The existing Auth [leaked-password protection warning](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) remains; no paid upgrade or general real-user rollout was performed.
+- TypeScript and **104 unit tests** passed.
+- **170 real transactional SQL assertions** passed and rolled back: 65 operations, 37 preseason, four independent proposal reviews and 64 finance/evidence/timestamp checks. Finance contract tests made zero provider calls.
+- **21 production preseason API/file checks** passed, including real signed uploads/OCR, exact and recompressed duplicates, role restrictions, resubmissions, consent/age/readiness, opening-weekend publication, deletion and retention.
+- **20 production browser tests** passed in one full run: public/signup screens, normal coach/admin operations and revised publication/in-app receipts, guardian/reviewer onboarding and exact judge roles on desktop/mobile Chromium. Canonical Riverside warning and approved action records were visible.
+- Fresh isolated build and dynamic OCR deployment trace passed. The existing OneDrive cache was not deleted. Reachable history/source and 10 deployed client assets/both entry pages passed configured-secret scans.
+- All three disabled-Meta checks and actual recording-evidence gate passed; public reference fingerprint remains unchanged. Restricted email testing remains complete and was not repeated.
+- Supabase advisor reports four informational no-policy notices for intentionally browser-inaccessible private budget tables, and the existing Auth [leaked-password protection warning](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). No new security warning or paid upgrade.
 
-## Deployment
+## Review work
 
-Runtime source **8922f89** is Ready as **dpl_6ym7ZAyTiL72FZjKgJx1mpvPX1By**, serving both existing stable aliases, including https://courtside-ai-one.vercel.app/. Initial clean-install and dynamic-worker tracing failures were repaired and the actual deployed OCR journey retested successfully. Later documentation commits do not require another runtime deployment. No sending domain, email expansion or automatic GitHub authorization was added.
+The updated 180-second screen plan, narration, honest feature audit and official-form draft are prepared. A narrated 178.920-second 1920×1080 WebM review recording is saved privately at `.local/review-demo/courtside-ai-review-draft.webm`. Its actual application captures come from verified deployed runtime 69e006d. All 22 scene cuts were decoded and checked, including complete placement questions and genuine coach updates; encoded narration was verified through the closing scene. No public upload or final submission has occurred. See RECORDING_RUNBOOK.md and SUBMISSION.md. The public submission form's field comparison is dated October 28; October 29 signed-out access showed only the event landing page.
 
-## Submission gates
+Temporary judge accounts avoid unrestricted signup. Their private packet is ignored and staging-blocked; guardian invitations expire and must be refreshed before judging. Physical Safari/camera support, general real-user signup/email delivery, large-scale load, disaster recovery and issuer authentication remain outside verified scope. They are not current submission blockers.
 
-1. Obtain explicit human confirmation of the actual 78–43 extraction, record it through normal review, then complete only the remaining authorized agent stage. Preserve genuine responses/failures; do not rerun perception.
-2. Record/review the 180-second demonstration after the agent evidence exists. Owner approval is required before publishing the final video.
-3. Confirm representative track/team/permission choices and obtain owner approval before entry submission. The owner reports concept disclosure and registration acceptance; further organizer eligibility discussion is not a blocker.
-
-Public browsing and temporary synthetic roles work without unrestricted signup. Refresh short-lived guardian invitations before handoff; retire accounts manually. Credentials stay ignored and commit-blocked. Domains, SMS, referees, awards, advanced analytics, load/recovery certification and production document-authentication services are deferred, not submission blockers. No final video or entry has been published/submitted.
+Final owner decisions are review of the local video/materials, schedule publication if desired, accurate track/team/permission choices, and authorization for public video upload and entry submission.

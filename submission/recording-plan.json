@@ -1,9 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "totalSeconds": 180,
-  "captureSize": { "width": 1920, "height": 1080, "fps": 30 },
-  "guardianViewport": { "width": 390, "height": 844 },
-  "finalFormat": "MP4 H.264 with readable narration/captions; no longer than 180 seconds",
+  "captureSize": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30
+  },
+  "guardianViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "finalFormat": "Local narrated WebM review draft; final public distribution format subject to owner review; no longer than 180 seconds",
   "chapters": [
     {
       "id": "orientation",
@@ -89,29 +96,29 @@
       "start": 145,
       "end": 168,
       "screens": [
-        "Administrator Competitive balance",
-        "Administrator Schedule",
-        "Coach Notifications"
+        "Administrator approved Competitive balance records",
+        "Administrator Schedule v3 pending publication",
+        "Optional coach Notifications from earlier publication"
       ],
       "actions": [
-        "Review and approve the actual proposed move",
-        "Regenerate deterministically against the newly approved divisions",
-        "Review and publish the new draft as a separate human action",
-        "Show the coach's in-app schedule update"
+        "Show the saved explicit owner approvals of both actual proposals",
+        "Show deterministic v3 after those approved divisions: five new games and two byes",
+        "Leave main v3 unpublished for owner review",
+        "If showing coach notifications, label them as earlier published-version updates"
       ],
-      "authority": "Human approves and publishes; deterministic scheduler enforces current facts"
+      "authority": "Owner-approved moves; deterministic revised draft; publication remains pending"
     },
     {
       "id": "close",
       "start": 168,
       "end": 180,
       "screens": [
-        "Private season published fixtures",
+        "Private season schedule draft awaiting owner publication review",
         "Meta AI activity receipts"
       ],
       "actions": [
-        "Connect actual model work, saved actions and human decisions",
-        "Finish on the private published schedule; leave original public reference unchanged"
+        "Connect actual model work, saved actions and explicit human decisions",
+        "Keep revised main schedule unpublished and public reference unchanged"
       ],
       "authority": "Inspectable actual outcomes"
     }
@@ -124,12 +131,12 @@
     "Invented model output or test-contract fixtures"
   ],
   "preCaptureOrder": [
-    "Owner authorizes credits and bounded usage",
-    "Perception stage: at most two model requests",
-    "Human reviews and confirms the actual scoresheet in the normal UI; record that clip",
-    "Operations stage: at most six model turns",
-    "Inspect actual receipts and pending actions",
-    "Disable inference again before remaining recording; do not rerun model buttons for retakes"
+    "Verify paused inference and all three saved actual Meta capabilities",
+    "Sign in before capture; remove guardian fragments before footage",
+    "Show saved timestamped result confirmation before original agent run",
+    "Show actual agent receipts and canonical action warnings",
+    "Show saved owner moves and later deterministic unpublished draft",
+    "Do not dispatch paid inference for retakes"
   ],
   "finalChecks": [
     "Video duration is at most 180 seconds",
@@ -137,6 +144,16 @@
     "Every claimed tool outcome succeeded",
     "Model, deterministic and human responsibilities are explicitly identified",
     "No original public reference data changed",
-    "Public video URL works while signed out"
-  ]
+    "Local draft reviewed; public upload and final entry submission pending owner approval"
+  ],
+  "localReviewDraft": {
+    "path": ".local/review-demo/courtside-ai-review-draft.webm",
+    "durationSeconds": 178.92,
+    "width": 1920,
+    "height": 1080,
+    "format": "VP9/Opus WebM",
+    "publicUpload": false,
+    "captureSourceCommit": "69e006d",
+    "sha256": "aa819a2cb2aeb224d1177f5a7145bbf4913a5cc04924d6fec238b06c2d6fc432"
+  }
 }

@@ -22,7 +22,7 @@ This is an operations platform. It does not provide basketball coaching or evalu
 
 **Submission access:** [Explore the public demonstration without signup](https://courtside-ai-one.vercel.app/league/northstar-demo). Temporary synthetic admin/coach access is prepared privately; see [JUDGE_GUIDE.md](JUDGE_GUIDE.md). Restricted email testing is complete and unchanged. No new domain or unrestricted signup is needed for judging.
 
-**Provider status:** Meta credentials are private; `META_API_ENABLED=false` pauses all inference until owner credit confirmation/authorization. The prepared two-stage verification allows at most eight requests with a human review pause and no automatic paid retries. Actual model effectiveness and the final recording remain unverified. Twilio stays disabled. See [STATUS.md](STATUS.md), [READINESS.md](READINESS.md), [RECORDING_RUNBOOK.md](RECORDING_RUNBOOK.md) and [EMAIL_READINESS.md](EMAIL_READINESS.md). A passing mocked-provider test is not a live provider test.
+**Provider status:** All three Muse Spark capabilities have genuine provider responses and resulting action evidence. Production inference remains paused; retakes use saved, timestamped evidence. The owner authorized promotional development under a cumulative 120-credit ceiling with a 30-credit reserve, conservative serialized reservations and zero automatic paid retries. See [EVALUATION_REPORT.md](EVALUATION_REPORT.md), [STATUS.md](STATUS.md), [READINESS.md](READINESS.md) and [EMAIL_READINESS.md](EMAIL_READINESS.md). Twilio stays disabled.
 
 ## Meta's role
 
@@ -30,7 +30,7 @@ The configurable Meta model defaults to `muse-spark-1.3`, using the official [Me
 
 Muse Spark interprets questionnaire context and explains the deterministic placement recommendation; extracts final scores and explicitly recorded player stats from a private scoresheet image; explains schedule changes; and selects tools in a bounded league operations workflow. Agent tools can inspect, evaluate balance and save schedule drafts. They cannot approve placements or results, move teams, publish schedules or send messages.
 
-The **Meta AI activity** screen shows genuine server-written provider responses and action receipts. Two actual Muse Spark requests verified questionnaire interpretation and scoresheet recognition; the operations stage awaits explicit human result confirmation. Live inference is paused. [META_VERIFICATION.md](META_VERIFICATION.md) records observed responses and usage. Guardian proofs use [local consistency/reuse screening](DOCUMENT_SCREENING.md), stay private and never go to Meta. No document-authenticity or unrun agent success is claimed.
+The **Meta AI activity** screen shows genuine server-written provider responses and action receipts. Real multistep runs selected inspection, history, readiness, proposal and scheduling tools, including a failed lookup followed by successful recovery. Canonical saved records appear separately from the unchanged model narrative, with a warning for the observed team-name mistake. Guardian proofs use [local consistency/reuse screening](DOCUMENT_SCREENING.md) and never go to Meta. Separate SHA-bound, visibly fictional illustrations were evaluated in an explicitly labeled synthetic Meta experiment; authenticity remains unverified.
 
 Age eligibility, ratings, standings, proposal thresholds, conflict detection and database integrity remain deterministic. The AI integration fails explicitly when unavailable. The manual result path is labeled manual and is never represented as Meta recognition.
 
@@ -67,7 +67,7 @@ The landing page opens a public, read-only reference league with 12 fictional te
 
 All application code, database migrations, workflows, tests, visual assets and documentation in this repository were created starting **October 28, 2026**, during the October 27–November 4 building period. The baseline commit `6865228` contained only the repository README. Dependency libraries are third-party; see their licenses. The court artwork and sample scoresheet are code-created original assets. All demo data is synthetic.
 
-The [official participant guide](https://cerebralvalley.ai/e/meta-ai-developer-hackathon/details) was reviewed on October 28. Submission is due **November 4, 2026, 9:00 PM Eastern (America/Toronto)**. The public repository, live product and three-minute video must identify the new hackathon work. Do not submit this as a completed Meta-powered demo until a real model request is verified.
+The [official participant guide](https://cerebralvalley.ai/e/meta-ai-developer-hackathon/details) was reviewed on October 28. Submission is due **November 4, 2026, 9:00 PM Eastern (America/Toronto)**. Public video publication and final entry submission remain owner decisions. See [SUBMISSION.md](SUBMISSION.md) for prepared form answers.
 
 ## Project documentation
 

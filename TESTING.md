@@ -1,10 +1,10 @@
 # Verification
 
-The current change passes TypeScript, 78 unit tests and 102 real PostgreSQL assertions (65 league + 37 preseason). Updated desktop/mobile guardian journeys exercise local screening, escalation and human decisions. Production-specific build, CI and API/browser results are in STATUS.md. Two genuine Meta perception responses are recorded in META_VERIFICATION.md; agent execution remains protected by the owner's human result-confirmation gate. Mock provider tests do not establish live quality. Git index tests reject force-staged private files.
+The current runtime passes TypeScript and **104 unit tests**. **170 transactional PostgreSQL assertions** passed and rolled back: 65 operations, 37 preseason, four independent-proposal reviews and 64 budget/evidence authorization checks, including explicit timestamp freshness.
 
-For local proof evaluation, run `node scripts/prepare-fraud-experiment.mjs` then `node --import tsx scripts/evaluate-document-screening.mjs`. Both make zero inference requests. The prepared synthetic Meta screening experiment is separate from the eight-request allowance and requires additional explicit authorization to execute. See DOCUMENT_SCREENING.md for observed misses and limits. `scripts/preseason-audit.mjs` now uses invitation links with `send_email:false`; email tests are not repeated.
+These are separate from genuine provider evaluations: six scoresheets (one reused baseline), three questionnaires (one reused baseline), eight generated document illustrations and multistep operations/error recovery. See [EVALUATION_REPORT.md](EVALUATION_REPORT.md). Mocked responses remain contract tests, never model-quality evidence.
 
-## Commands
+## Run checks
 
 ```sh
 npm ci
@@ -12,60 +12,26 @@ npm run typecheck
 npm test
 npm run build
 npm run dev
-# In a second terminal:
 npm run test:e2e
 ```
 
-Playwright uses installed Chrome (`channel: chrome`) and two workers. On machines without Chrome, install the official browser or adjust the channel to an installed Playwright Chromium. `E2E_BASE_URL` selects an explicitly authorized test deployment. Avoid modifying the public reference seed during tests.
+Playwright uses installed Chrome, desktop and iPhone-sized Chromium, with two workers. Physical Safari/camera support is not certified by emulation. Authenticated fixtures and traces stay private; normal visible login is exercised rather than injecting mocked sessions.
 
-## Coverage and evidence
+Run SQL files through authenticated tooling against only Supabase xdmkgoradmbnjofmbojs. They create synthetic users/state inside a transaction and roll back. Finance tests dispatch no provider request; global exhaustion is tested sequentially with row-lock structure verification, not represented as concurrent stress certification.
 
-| Area | Evidence |
-|---|---|
-| Scheduling | Court/team collisions, rest boundaries, unconfirmed slots, infeasibility, byes, division separation, locked historical games, 500-team/250-game round |
-| Eligibility | Exact cutoff, leap day, malformed/future dates, over-age player and guardian consent |
-| Results | Confirmed-only standings, Elo, corrections/replay, duplicate sheet hash, missing scores/stats, wrong AI team names, explicit human review |
-| Approvals | Pending placements, rejected division changes/drafts, one-time publication, schedule revisions and stale proposals |
-| Notifications | Atomic multi-team outbox, no duplicate leases, failed attempts retained; mocked Resend contract checks for idempotency and provider failure |
-| Security | Authenticated tenant isolation, direct writes denied, anonymous mutations denied, public contact/roster/sheet exclusion, private storage visibility |
-| Meta | Mocked strict Responses schema, configured model, `store:false`, missing key, malformed/incomplete responses; **not a live Meta test** |
-| Browser | Public dashboard/privacy plus actual password login, coach registration, admin approval, private photo upload/review/confirmation, schedule publication and coach inbox/read receipts on desktop/mobile emulation |
+## Integration coverage
 
-`tests/database.sql` inserts synthetic users and metadata **inside a rolled-back transaction** and executes application commands with PostgreSQL `authenticated`/`anon` roles and test JWT claims. It validates database authorization and behavior, not Supabase token issuance or an actual image upload. Execute it via authenticated project tooling or `psql` as project administrator; all assertions must pass before the final rollback. The script has been verified to leave zero test users and only the intended public demo league.
+- `scripts/preseason-audit.mjs`: 21 grouped checks with actual signed image uploads, server-local OCR, malformed-byte rejection, guardian capability/Origin restrictions, admin-only proofs, exact and JPEG-recompressed reuse, human resubmission, age restrictions, readiness/opening-weekend scheduling and actual deletion/retention.
+- `tests/e2e/preseason.spec.ts`: administrator setup, coach draft/resume/submission, guardian upload/resubmission, reviewer inspection/approval and scheduling on desktop/mobile.
+- `tests/e2e/authenticated.spec.ts`: registration, approval, original scoresheet review, manual result, standings, rebalancing, revised publication and coach in-app receipt.
+- `tests/e2e/judge-access.spec.ts`: exact temporary synthetic accounts, only their two memberships, denied privileged public-reference reads, coach/admin boundaries, saved Meta evidence and canonical Riverside warning, separate guardian context.
+- Public/signup checks show honest restricted email behavior without sending messages. Restricted actual email receipt/signup/retry tests were completed earlier and are not repeated.
+- Unit coverage includes deterministic ratings/constraints, OCR worker timeout and nested-worker cleanup, pHash recompression/orientation, finance reservation/settlement, no automatic retries, schema failure, identifier-preserving privacy filtering and canonical action presentation.
 
-## Reproduce the authenticated live audit
+## Build and scans
 
-```sh
-# Requires the owner's authenticated Supabase CLI and private .env.local.
-node scripts/prepare-live-audit.mjs
-node scripts/live-audit.mjs
-# PowerShell, for the public production deployment:
-$env:E2E_BASE_URL='https://courtside-ai-one.vercel.app'
-npm run test:e2e
-```
+A fresh isolated build outside OneDrive copies tracked source and installed dependencies, excluding private environment files. It avoids deleting the workspace's cloud-placeholder cache. `scripts/check-ocr-bundle.mjs --isolated` verifies deployed tracing includes the dynamic worker, WASM, language data and transitive packages.
 
-Preparation creates only fictional `.invalid` accounts using the supported Auth Admin API. It obtains the administrative credential in memory through the authenticated CLI and never writes that credential into test fixtures or reports. The runtime document bridge separately uses its server-only environment credential as described in [PRESEASON.md](PRESEASON.md). Random synthetic passwords and isolated tenant IDs stay in ignored, commit-blocked `.local/`. Separate desktop/mobile accounts avoid cross-device global sign-out races. Authenticated tests skip when private fixture credentials are absent, so CI does not need an administrator key. Traces/video are disabled for those tests; request transport errors are sanitized to keep JWTs out of logs.
+`scripts/audit-repository.mjs` scans reachable Git history and tracked source for private paths/configured values/common secrets. `scripts/check-client-secrets.mjs --live-origin` inspects both deployed entry pages and linked client assets. CI repeats the source checks, typecheck, tests, build and OCR trace validation.
 
-`scripts/live-audit.mjs` passed 23 checks against the actual Vercel APIs with normal issued JWTs, genuine private PNG bytes, role denial and rebalancing/publication/inbox behavior. It also asserts new ordinary seasons enforce preseason registration and cannot bypass questionnaire/readiness checks using basic registration. The positive ordinary-season guardian/document/opening-weekend journey is covered by the separate 21-check preseason audit. Both scripts assert Meta is disabled before starting; the operations audit checks the disabled agent response. Private JSON reports contain outcomes rather than credentials.
-
-The browser suite signs in through visible forms; it does not inject a fake session or mock backend responses. Separate production fixtures force the first upload through Vercel. Reruns identify the original image's game by its persisted SHA-256 rather than attaching that same image to a different game; duplicate-image protection remains enforced. All 18 tests passed in production, including UI division-adjustment approval/revised publication, the preseason journey and the judge signup-screen restriction on desktop/mobile. Synthetic tenants are retained for reruns, and the public reference seed stays unchanged.
-
-Live Meta image recognition remains unverified and disabled until owner credit confirmation/authorization. Real Resend smoke/signup/coach delivery and actual Gmail receipt were separately inspected; guardian delivery was observed in Spam. Normal signup confirmation followed the received email link, without an Auth Admin confirmation bypass. The notification retry uses a controlled pre-send network fault and real persisted backoff, followed by an actual provider send and duplicate prevention; it does not pretend Resend had an outage. See [EMAIL_READINESS.md](EMAIL_READINESS.md).
-
-No load test of 500 simultaneous browser users, multi-season ratings materialization, or production disaster recovery has been performed.
-
-`node scripts/rehearse-demo.mjs` reproduces the complete paused-model rehearsal and compares every public reference snapshot before/after. On this OneDrive workspace, a read-only cloud-placeholder build cache caused a later local cleanup failure; the production build was independently verified on Vercel and Linux CI. No unsafe cache removal was needed. Client scanning now uses actual file status for cloud-placeholder directories and can inspect deployed assets using `--live-origin`.
-
-Restricted email testing is now frozen as complete. Use `node scripts/submission-check.mjs` for the submission-only pass: paused preflight, recording evidence gate, 16 read-only public/exact-role checks and credential scans. It keeps the original reference unchanged and does not rerun email delivery or operations mutations. Missing genuine model evidence is explicitly reported as a recording gate. `tests/meta-run-control.test.ts` verifies crash-safe attempt markers, the eight-request bound and rejection of unreviewed/manual-substitute results; all are offline tests.
-
-## Preseason and meaningful Meta preparation
-
-`tests/preseason-database.sql` adds 32 rolled-back assertions for drafts/submissions/overrides, guardian capabilities, blocked shortcuts, latest-document review, real reviewer decisions, age-policy changes, withdrawal, revocation and unforgeable browser-side provider receipts. Its Storage rows are synthetic metadata only.
-
-`node scripts/preseason-audit.mjs` runs 21 checks using the real local app or `E2E_BASE_URL=https://courtside-ai-one.vercel.app`, real Supabase sessions and actual signed PNG uploads. It checks malformed bytes, cross-origin rejection, one-player capability scope, private document access, consent validation, resubmission, duplicates, over-age rejection, expiry/revocation, readiness/opening-weekend connection, stale publication, origin deletion and retention receipts. Reports and synthetic images are kept only under `.local/`. It creates ordinary isolated seasons, not document-verified fake seed rows.
-
-`tests/e2e/preseason.spec.ts` signs in through the visible administrator/coach forms, configures the season, saves/reloads a draft, submits an assessment/roster, opens a guardian invitation in a separate browser context, uploads/resubmits an actual proof, performs explicit reviewer approval, verifies readiness and publishes opening weekend. It runs on desktop and iPhone-sized Chromium alongside the previous 14 tests. Traces/video are disabled to avoid recording capabilities or passwords. Physical iOS/Safari capture is not certified by emulation.
-
-`tests/operations-agent.test.ts` verifies the tool boundary and execution semantics with mocked model context: successful inspection before action, verified-history investigation, deterministic draft invocation, exactly-once mutations, argument rejection, and exclusion of youth identity/guardian data. Meta receipt contract tests exclude hidden reasoning and raw images and require a provider response ID.
-
-The guarded `scripts/verify-meta-live.mjs` is prepared but **must not run until owner-confirmed credits and explicit model-call authorization**. Both an operator flag and enabled local/production configuration are required. No live response or actual tool-selection quality has been claimed from the current tests. See [META_HACKATHON.md](META_HACKATHON.md).
+No simultaneous 500-browser load test, issuer-authentication benchmark, disaster-recovery certification or legal compliance certification is claimed. STATUS.md contains exact final deployed results.

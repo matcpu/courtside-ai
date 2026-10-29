@@ -1,6 +1,6 @@
 # COURTSIDE AI submission draft
 
-Updated October 28, 2026 against the actual [submission form](https://cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit). This document is a draft, not a submitted entry. Final submission is due **November 4, 2026, 9:00 PM Eastern**. The representative must confirm the track, list everyone who worked on the project and personally decide whether to grant the form's publication/promotion permission.
+Updated October 29, 2026. The field mapping below comes from the actual [submission form](https://cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit) inspected on October 28; the October 29 read-only visit returned a signed-out event landing page and did not reverify field labels or validation. This document is a draft, not a submitted entry. The verified public event deadline is **November 4, 2026, 9:00 PM Eastern**. The representative must confirm the track, list every human contributor and decide the form's publication/promotion permission.
 
 ## Form fields
 
@@ -16,7 +16,7 @@ Updated October 28, 2026 against the actual [submission form](https://cerebralva
 
 **Live product:** https://courtside-ai-one.vercel.app/
 
-**3-Minute Demo Video:** Pending actual Meta verification and recording. No placeholder video URL should be submitted.
+**3-Minute Demo Video:** No owner-approved public video URL has been supplied. The local review recording/plan is tracked in STATUS.md and the review package. Do not submit a placeholder or publish the final export without owner approval.
 
 **Most Viral X link:** Leave blank unless the representative independently chooses to publish a qualifying post. No social post has been made.
 
@@ -34,9 +34,9 @@ Updated October 28, 2026 against the actual [submission form](https://cerebralva
 | Project Description | Prepared below, including public demonstration URL |
 | Public GitHub Repository | Public repository supplied |
 | 3-Minute Demo Video | Actual reviewed/public video URL still missing |
-| Describe your use of Meta products to build the submitted project | Two actual perception responses verified; agent awaits human result confirmation |
+| Describe your use of Meta products to build the submitted project | Actual questionnaire, vision and model-selected agent work; synthetic document study and limits documented |
 | Why are Meta's models important to your solution? | Prepared; no unsupported accuracy or impact claims |
-| Provide feedback from your experience using Meta products | Two actual responses documented; agent feedback pending |
+| Provide feedback from your experience using Meta products | Actual successes, observed summary error, tool recovery, bounded stop and document-study miss described below |
 | Provide feedback from your experience using partner technologies. | Verified implementation observations prepared |
 | Publication/promotion permission checkbox | Representative decision; untouched |
 
@@ -46,21 +46,23 @@ Visible labels mark Team Name, Project Description, repository, video, Meta-use 
 
 ## Project Description
 
-Explore the working public demonstration without signup: https://courtside-ai-one.vercel.app/league/northstar-demo . COURTSIDE AI coordinates preseason registration, uncertain division placement, private guardian verification, verified results and feasible schedule revisions. Its Muse Spark integrations interpret contradictory coach questionnaires, turn real scoresheet images into structured facts, and let an operations agent investigate verified history and select tools that save actionable proposals and drafts. Deterministic code enforces eligibility, standings, court availability and scheduling constraints. Administrators retain approval of placements, document decisions, results, division changes and publication. The synthetic application includes private response/action receipts. Temporary synthetic admin/coach walkthrough accounts are available through the representative's secure access packet; email signup is unnecessary. Two genuine Muse Spark responses have verified questionnaire interpretation and image recognition. The operations-agent run remains gated on explicit human result confirmation; it is not yet claimed as verified. Local proof consistency/reuse warnings support human review without sending identity documents to Meta.
+Explore the working public demonstration without signup: https://courtside-ai-one.vercel.app/league/northstar-demo . COURTSIDE AI coordinates preseason registration, uncertain division placement, private guardian verification, confirmed results and feasible schedule revisions. Actual Muse Spark responses interpret team-level questionnaires, recognize scoresheet images and select investigation/action tools that save competitive-adjustment proposals and schedule drafts. Real tool-error recovery and provider/action receipts make the work inspectable. Deterministic code owns age eligibility, ratings, standings and scheduling constraints; people approve placements, original-document decisions, official results, division changes and publication. Guardian proofs use private Storage and local consistency/reuse checks, never a real-document Meta pathway. A separate visibly fictional document experiment explores AI warning signs with explicit misses and authenticity unverified. All demonstrations use synthetic people and leagues. Temporary synthetic admin/coach accounts are available through a secure private packet; unrestricted email signup is unnecessary.
 
 ## Describe your use of Meta products
 
-Muse Spark through the Meta Responses API is integrated in three places: strict structured interpretation of team-level questionnaires, multimodal recognition of actual scoresheet image bytes, and bounded model-selected league operations tools. The agent can inspect a league, investigate verified team history, check aggregate preseason readiness, propose a deterministic competitive adjustment and save a feasible schedule draft. It cannot approve results, approve moves, publish schedules, send messages or access guardian documents. Server-written receipts link actual provider response IDs, configured models, request digests, structured outputs and tool outcomes to saved records.
+Muse Spark through the Meta Responses API performs three primary jobs: structured interpretation of team-level questionnaires, multimodal recognition of actual scoresheet image bytes, and bounded model-selected league operations. The agent inspects a league, investigates confirmed team history, checks aggregate readiness, invokes deterministic competitive-adjustment validation and saves feasible drafts. It cannot approve results, move teams, change eligibility, publish or send messages. Server-written receipts link real model/response IDs, request digests, usage, selected arguments, errors and execution results to saved records. An additional operator-only study evaluates SHA-bound fictional document illustrations; real guardian documents never enter that model input.
 
-**Current qualification:** Credits and one bounded sequence are authorized. Two actual `muse-spark-1.3` responses are saved: a specific contradictory assessment interpretation and accurate Eastside Eagles 78–43 Riverside Ravens image extraction, with no invented player statistics. Agent execution awaits the owner's human result confirmation. Live inference is paused, and no autonomous tool success is claimed yet. See [META_VERIFICATION.md](META_VERIFICATION.md).
+**Observed evidence:** The accounting snapshot contains 32 genuine `muse-spark-1.3` responses: seven for the original connected demonstration, 15 additional image/questionnaire/document evaluations and ten across two agent-recovery runs. The owner-confirmed 78–43 result preceded the original agent; its five selected tool types saved actual proposals and a draft without model approval/publication. The original secondary team-name error remains visible alongside canonical record checks. Model document screening is experimental and missed one of two explicit visual-anomaly checks. [EVALUATION_REPORT.md](EVALUATION_REPORT.md) preserves the exact scope and limitations.
 
 ## Why Meta's models matter
 
-Volunteer administrators face information that deterministic rules alone cannot interpret: inconsistent descriptions of prior competition, photos of handwritten/printed scoresheets and open-ended operational requests that require deciding what to investigate next. The model's intended contribution is to interpret these inputs and choose useful investigation/action tools. It does not calculate authoritative eligibility, ratings or schedules. Successful evaluation must demonstrate accurate image facts, useful uncertainty detection and actual model-selected tools that produce saved, reviewable actions. No accuracy percentage, time saving or user adoption is claimed before measurement.
+Volunteer administrators face inputs that fixed rules alone cannot interpret: inconsistent descriptions of prior competition, variable scoresheet images and operational requests that require deciding what to inspect next. Muse Spark's observed contribution is contextual interpretation, recognition with missing-value/uncertainty handling, and actual tool selection that turns an investigation into saved reviewable actions. Deterministic rules still calculate authoritative eligibility, ratings and schedules. The finite synthetic study supports these examples, not general handwriting recognition, government-document authentication, a time-saving benchmark or measured user adoption.
 
 ## Feedback from using Meta products
 
-The integration was prepared against current image-understanding, strict structured-output and tool-calling documentation. Schema validation, matching function-call IDs, bounded execution and separate actual-response receipts make provider behavior inspectable. Actual placement interpretation took about 8.7 seconds and identified the fixture's concrete conflicts; actual image recognition took about 3.0 seconds and matched both names and final scores. These are two controlled synthetic examples, not a general accuracy or latency benchmark. Agent-selection feedback remains pending protected human review. Provider token receipts are retained; billing dashboard reporting can lag.
+Structured output preserved recorded jersey statistics and nulls in printed and rotated/compressed scoresheets. The obscured-score case returned null; a contradictory period-total case received a specific warning. Questionnaire interpretations identified concrete missing/conflicting evidence. The original agent selected all five tools and saved records, but its final summary mislabeled a secondary team despite correct tool IDs. We preserved that error and added canonical action checks and richer tool labels. In actual recovery tests it corrected failed lookups using league data; one run reached the server bound after saving actions, while a second explicitly narrated the failure and recovery. Eight fictional document cases detected all four text inconsistencies and flagged no suspicion in two benign controls, but only one of two explicit visual-anomaly checks passed. These are small controlled counts, not real-world detection accuracy.
+
+The cumulative snapshot reports 164,392 input and 18,482 output tokens, including reasoning. Conservative uncached-rate estimate: US$0.2840385; a two-times safety ledger debits 0.568077 guard units. These are estimates, not a provider invoice. The last actual credit observation was 149.98 units at 03:30 UTC; it expired and later portal loading could not verify a fresh balance, so inference is paused. The service-only global guard enforces the owner's superseding 120/30 promotional allowance and stops on stale/unverifiable usage. [META_VERIFICATION.md](META_VERIFICATION.md) records the accounting qualifications.
 
 ## Feedback on partner technologies
 
@@ -72,12 +74,12 @@ The starting implementation reference `6865228` contains only README.md and was 
 
 ## Submission blockers
 
-1. Obtain the owner's explicit confirmation of the extracted fictional result, record it through normal review, then complete the remaining authorized agent stage and inspect actual tools/actions. Do not repeat either successful perception call.
-2. Record and review an accessible video of at most three minutes after all primary Meta evidence exists; obtain owner approval before publishing the final video.
+1. Review the consolidated deployed candidate, actual responses/action records, finite evaluation limitations and local recording. Current runtime/test/review status is in STATUS.md; model execution is no longer an unrun prerequisite.
+2. Approve the final video export before public upload, then verify the actual accessible link and duration of at most three minutes. Private synthetic state changes and their required human decisions stay distinct from public video publication.
 3. Confirm accurate track/team/permission choices and obtain owner approval before final submission. Private credentials/capabilities never enter public materials.
 
 Email/domain expansion is **not a hackathon blocker** and is outside the frozen scope. Neither are deferred SMS, delivery webhooks, large-season optimization, referee features or load certification. Public access and preprovisioned private accounts work without unrestricted signup. Private credential distribution itself must be arranged securely if the organizer requests it; the official form does not provide a secret field.
 
 **Eligibility context:** The owner reports that the league-administration concept was disclosed during registration and accepted. No additional organizer discussion is a blocker or authorized task.
 
-See [DEMO.md](DEMO.md), [DEMO_NARRATION.md](DEMO_NARRATION.md), [READINESS.md](READINESS.md) and [FEATURE_AUDIT.md](FEATURE_AUDIT.md). No organizer message, final submission, legal acceptance, billing changes or credit redemption has been performed. The owner authorized only the bounded promotional-credit verification sequence.
+See [DEMO.md](DEMO.md), [DEMO_NARRATION.md](DEMO_NARRATION.md), [READINESS.md](READINESS.md), [FEATURE_AUDIT.md](FEATURE_AUDIT.md) and [EVALUATION_REPORT.md](EVALUATION_REPORT.md). No organizer message, final submission, legal acceptance, billing change or credit redemption has been performed. The owner authorized useful development/evaluation within the cumulative promotional allowance, preserving the reserve; unrestricted public inference is not enabled.
