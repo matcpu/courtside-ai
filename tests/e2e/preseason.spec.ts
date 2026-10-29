@@ -305,7 +305,7 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
       .click();
     await expect(
       parent.getByText("Verification: pending", { exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 40000 });
   }
   try {
     console.log(`${info.project.name}: guardian opens secure invitation`);

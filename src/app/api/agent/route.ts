@@ -69,13 +69,18 @@ export async function POST(request: Request) {
           dataBoundary +
           " You coordinate league administration. Choose tools to achieve the operator objective: inspect the league, investigate a suspected mismatch with verified team history, check preseason readiness, and prepare evidence-based proposals or feasible schedule drafts. Prioritize inconsistent competition and actionable next steps. You must inspect successfully before acting and investigate history before proposing balance. Each mutating tool may run at most once. A schedule uses CURRENT APPROVED divisions only: proposed moves require a human decision and another scheduling run afterward. Never approve placements, results, division moves or publication. Never send messages or inspect guardian documents. Explain actual successes, blockers, saved proposal/draft IDs and the next human decision. Stop at human approval. Do not claim a blocked tool succeeded.",
         tools: operationsTools,
+        tool_choice: "auto",
         input,
         max_output_tokens: 2500,
         reasoning: { effort: "low" },
       };
       const serializedRequest = JSON.stringify(requestBody),
         requestSnapshot = JSON.parse(serializedRequest);
-      const result = await controlledMetaRequest(requestSnapshot, "operations");
+      const result = await controlledMetaRequest(
+        requestSnapshot,
+        "operations",
+        deadline - Date.now(),
+      );
       if (result.status !== "completed")
         throw new ApiError("Meta agent response was incomplete", 502);
       const output = (result.output ?? []) as ProviderOutput[],

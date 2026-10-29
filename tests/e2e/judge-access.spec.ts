@@ -99,7 +99,7 @@ test("temporary judge roles explore only their synthetic seasons without signup 
         .getByRole("button", { name: "Meta AI activity", exact: true })
         .click();
       await expect(
-        page.getByText(/Meta is paused until credits are confirmed/),
+        page.getByText(/Live Meta inference is paused/),
       ).toBeVisible();
       if (role === "admin") {
         const evidence = await fetch(

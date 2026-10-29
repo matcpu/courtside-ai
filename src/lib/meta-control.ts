@@ -35,6 +35,7 @@ export function assertMetaScope(
 export async function controlledMetaRequest(
   request: Record<string, unknown>,
   feature: MetaFeature,
+  remainingMilliseconds?: number,
 ) {
   const run = process.env.META_CONTROLLED_RUN;
   if (!run || !/^[a-f0-9]{10}$/.test(run))
@@ -106,7 +107,15 @@ export async function controlledMetaRequest(
         "Content-Type": "application/json",
       },
       body: serialized,
-      signal: AbortSignal.timeout(feature === "operations" ? 20000 : 55000),
+      signal: AbortSignal.timeout(
+        Math.max(
+          1,
+          Math.min(
+            remainingMilliseconds ?? 55000,
+            feature === "operations" ? 20000 : 55000,
+          ),
+        ),
+      ),
     });
     if (!response.ok)
       throw new ApiError(
