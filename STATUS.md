@@ -26,13 +26,14 @@ Six visibly synthetic illustrations were evaluated locally: consistent fields ha
 
 - 78 unit tests and TypeScript passed, including real local OCR, no-retry guards, scope restrictions and authoritative rules.
 - 102 transactional PostgreSQL assertions passed and rolled back: 65 operations + 37 preseason, including private derived-screening access, mandatory human approval and escalation history.
-- 21 actual preseason API/file checks passed locally, including signed uploads, OCR matches, resubmission, role/privacy restrictions, exact duplicates, over-age rejection, opening-weekend readiness and deletion/retention. Expanded assertions for screening escalation/derived deletion are checked again during deployment verification.
-- The updated guardian–coach–administrator browser journey passed on desktop and iPhone-sized Chromium, including visible screening and escalation before human review. Physical Safari/camera capture is not certified by emulation.
-- Build, CI, deployment and final scans are recorded below once complete. Earlier baseline: 18 production browser checks, 21 preseason/23 operations API checks, repository/client scans and temporary judge access. Restricted email tests were accepted complete and remain unchanged.
+- 21 actual preseason API/file checks passed locally and against the latest production deployment, including signed uploads, real OCR matches, unauthorized/forged screening denial, exact duplicates, escalation history, resubmission, over-age rejection, opening-weekend readiness and deletion/retention. Deleted originals retain zero hashes or screening features, including under the migrated historical deletion policy.
+- The updated guardian–coach–administrator journey and exact temporary judge-role access passed on desktop and iPhone-sized Chromium in production. Together with 14 public/signup-screen checks, 18 browser checks passed across scoped runs; both private journeys were rechecked after the final packaging fix. Physical Safari/camera capture is not certified by emulation.
+- Fresh isolated production build and OCR deployment-trace check passed. [Linux CI passed](https://github.com/matcpu/courtside-ai/actions/runs/40807977199). Reachable Git history and 10 deployed client assets/both entry pages passed configured-secret scans. Three disabled-Meta checks preserve the two genuine receipts and unchanged public fingerprint. Restricted email tests remain complete and were not repeated.
+- Supabase's advisor found no new database security issue. The existing Auth [leaked-password protection warning](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) remains; no paid upgrade or general real-user rollout was performed.
 
 ## Deployment
 
-Previous production runtime: 6f806c4, Ready as dpl_5pKoduCWESyCNcVAZ8x37xwvjWT9. The screening/control change is being validated for deployment to the same project and stable aliases. No sending domain, email expansion or automatic GitHub authorization was added.
+Runtime source **8922f89** is Ready as **dpl_6ym7ZAyTiL72FZjKgJx1mpvPX1By**, serving both existing stable aliases, including https://courtside-ai-one.vercel.app/. Initial clean-install and dynamic-worker tracing failures were repaired and the actual deployed OCR journey retested successfully. Later documentation commits do not require another runtime deployment. No sending domain, email expansion or automatic GitHub authorization was added.
 
 ## Submission gates
 
