@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { ApiError } from "./server";
+import { controlledMetaRequest, type MetaFeature } from "./meta-control";
 export const metaModel = () => process.env.META_MODEL || "muse-spark-1.3";
 export const metaIsEnabled = () =>
   Boolean(process.env.MODEL_API_KEY) && process.env.META_API_ENABLED === "true";
@@ -11,7 +12,7 @@ export type MetaReceipt = {
   response: unknown;
 };
 export function metaReceipt(
-  provider: { id?: string; model?: string },
+  provider: { id?: string; model?: string; usage?: unknown; status?: string },
   request: unknown,
   response: unknown,
 ): MetaReceipt {
@@ -26,7 +27,13 @@ export function metaReceipt(
     request_digest: createHash("sha256")
       .update(JSON.stringify(request))
       .digest("hex"),
-    response,
+    response:
+      provider.usage && response && typeof response === "object"
+        ? {
+            ...response,
+            _provider: { usage: provider.usage, status: provider.status },
+          }
+        : response,
   };
 }
 /** Verified against dev.meta.ai Responses and structured-output reference, 2026-10-28. */
@@ -35,6 +42,7 @@ export async function metaJSON<T>(
   instructions: string,
   input: unknown,
   onReceipt?: (receipt: MetaReceipt) => void | Promise<void>,
+  feature?: MetaFeature,
 ): Promise<T> {
   const key = process.env.MODEL_API_KEY;
   if (!key)
@@ -44,7 +52,7 @@ export async function metaJSON<T>(
     );
   if (!metaIsEnabled())
     throw new ApiError(
-      "Meta requests are disabled while credits are pending. No API call was made.",
+      "Meta requests are disabled. No API call was made.",
       503,
     );
   const jsonSchema = z.toJSONSchema(schema);
@@ -63,36 +71,14 @@ export async function metaJSON<T>(
       },
     },
     max_output_tokens: 4000,
+    reasoning: { effort: "low" },
   };
-  let response: Response;
-  try {
-    response = await fetch("https://api.meta.ai/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(55000),
-    });
-  } catch {
+  if (!feature)
     throw new ApiError(
-      "Meta request timed out. No league records were changed.",
-      502,
+      "This model action is outside the controlled verification",
+      403,
     );
-  }
-  if (!response.ok)
-    throw new ApiError(
-      response.status === 401
-        ? "Meta API authentication failed"
-        : response.status === 402
-          ? "Meta account needs billing or participant credits"
-          : response.status === 429
-            ? "Meta rate limit reached. Try again later."
-            : "Meta could not complete this request",
-      502,
-    );
-  const value = await response.json();
+  const value = await controlledMetaRequest(requestBody, feature);
   if (value.status !== "completed")
     throw new ApiError(
       "Meta returned an incomplete response. Human review is required.",

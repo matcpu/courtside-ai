@@ -19,6 +19,7 @@ import {
 import { recordMetaEvidence, redactCoachContext } from "@/lib/meta-evidence";
 import { operationsTools, executeOperationTool } from "@/lib/operations-agent";
 import { draftSchedule } from "../schedule/route";
+import { assertMetaScope, controlledMetaRequest } from "@/lib/meta-control";
 export const maxDuration = 60;
 type ProviderOutput = {
   type: string;
@@ -41,9 +42,10 @@ export async function POST(request: Request) {
     admin(await snapshot(context.client, league));
     if (!metaIsEnabled())
       throw new ApiError(
-        "Meta requests are disabled while credits are pending. No API call was made.",
+        "Meta requests are disabled. No API call was made.",
         503,
       );
+    assertMetaScope("operations", league, context.user.id);
     const started = await context.client.rpc("record_workflow", {
       p_league: league,
       p_run: null,
@@ -69,26 +71,11 @@ export async function POST(request: Request) {
         tools: operationsTools,
         input,
         max_output_tokens: 2500,
+        reasoning: { effort: "low" },
       };
       const serializedRequest = JSON.stringify(requestBody),
         requestSnapshot = JSON.parse(serializedRequest);
-      const response = await fetch("https://api.meta.ai/v1/responses", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.MODEL_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: serializedRequest,
-        signal: AbortSignal.timeout(
-          Math.max(1000, Math.min(20000, deadline - Date.now())),
-        ),
-      });
-      if (!response.ok)
-        throw new ApiError(
-          `Meta agent request failed (${response.status}). Saved actions remain in the audit log.`,
-          502,
-        );
-      const result = await response.json();
+      const result = await controlledMetaRequest(requestSnapshot, "operations");
       if (result.status !== "completed")
         throw new ApiError("Meta agent response was incomplete", 502);
       const output = (result.output ?? []) as ProviderOutput[],

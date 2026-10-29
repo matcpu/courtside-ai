@@ -1,6 +1,19 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   poweredByHeader: false,
+  serverExternalPackages: [
+    "tesseract.js",
+    "tesseract.js-core",
+    "@tesseract.js-data/eng",
+    "sharp",
+  ],
+  outputFileTracingIncludes: {
+    "/api/guardian": [
+      "./node_modules/tesseract.js/src/**/*",
+      "./node_modules/tesseract.js-core/**/*",
+      "./node_modules/@tesseract.js-data/eng/**/*",
+    ],
+  },
   async headers() {
     return [
       {

@@ -18,6 +18,7 @@ import {
   type MetaReceipt,
 } from "@/lib/meta";
 import { recordMetaEvidence } from "@/lib/meta-evidence";
+import { assertMetaScope } from "@/lib/meta-control";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
@@ -69,10 +70,13 @@ export async function POST(request: Request) {
       away = s.teams.find((t) => t.id === game.away_team_id)!.name;
     if (b.mode === "meta" && !metaIsEnabled())
       throw new ApiError(
-        "Meta scoresheet recognition is paused until credits are confirmed. No API call was made.",
+        "Meta scoresheet recognition is paused. No API call was made.",
         503,
       );
-    if (b.mode === "meta") await reserveAI(client, b.league, "scoresheet");
+    if (b.mode === "meta") {
+      assertMetaScope("scoresheet", b.league, user.id);
+      await reserveAI(client, b.league, "scoresheet");
+    }
     let receipt: MetaReceipt | undefined;
     const extraction =
       b.mode === "meta"
@@ -99,6 +103,7 @@ export async function POST(request: Request) {
             (r) => {
               receipt = r;
             },
+            "scoresheet",
           )
         : b.extraction;
     if (!extraction) throw new ApiError("Manual extraction is required");

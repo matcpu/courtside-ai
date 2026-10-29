@@ -62,6 +62,12 @@ reset role;
 select set_config('request.jwt.claims','{"sub":"bb000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
 do $$declare l uuid:=current_setting('test.preseason')::uuid;did uuid:=current_setting('test.document')::uuid;s jsonb;begin
+ s:=public.document_screening(l,did);
+ perform pg_temp.ok('legacy proof screening is explicitly unable to assess',s->>'status'='unable_to_assess' and s->>'authenticity'='unverified');
+ perform pg_temp.ok('screening never exposes image fingerprints',not(s ? 'perceptualHash') and (s->>'humanReviewRequired')::boolean);
+ perform public.document_screening(l,did,'escalate','Synthetic original needs another authorized human inspection');
+ perform pg_temp.ok('escalation retains mandatory pending human decision',public.preseason_snapshot(l)#>>'{players,0,verification_status}'='pending');
+ perform pg_temp.ok('escalation is recorded in reviewer history',exists(select 1 from jsonb_array_elements(public.preseason_snapshot(l)->'reviews') rv where rv->>'decision'='escalated'));
  perform pg_temp.ok('basic age shortcut disabled',pg_temp.denied(format('select public.league_command(%L,''verify_player'',%L::jsonb)',l,jsonb_build_object('player_id',current_setting('test.player'))),'Document review is required'));
  perform pg_temp.ok('administrator must open original before approval',pg_temp.denied(format('select public.preseason_command(%L,''review_document'',%L::jsonb)',l,jsonb_build_object('document_id',did,'decision','approved','reason','Synthetic readable proof verified','document_checked',true,'duplicate_acknowledged',false)),'Open the private document'));
  perform public.preseason_command(l,'open_document',jsonb_build_object('document_id',did));
@@ -77,6 +83,7 @@ do $$declare l uuid:=current_setting('test.preseason')::uuid;did uuid:=current_s
  perform public.preseason_command(l,'review_document',jsonb_build_object('document_id',did,'decision','approved','reason','Re-reviewed synthetic proof under restored age eligibility policy','document_checked',true,'duplicate_acknowledged',false));
  perform set_config('request.jwt.claims','{"sub":"bb000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
  perform pg_temp.ok('outsider cannot inspect private preseason',pg_temp.denied(format('select public.preseason_snapshot(%L)',l),'access denied'));
+ perform pg_temp.ok('outsider cannot inspect derived screening',pg_temp.denied(format('select public.document_screening(%L,%L)',l,did),'reviewer required'));
  perform pg_temp.ok('outsider cannot obtain private document path',pg_temp.denied(format('select public.preseason_command(%L,''open_document'',%L::jsonb)',l,jsonb_build_object('document_id',did)),'access denied'));
 end $$;
 reset role;

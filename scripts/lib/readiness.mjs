@@ -12,6 +12,10 @@ if (
 )
   throw new Error("Unexpected readiness target");
 export const env = parse(readFileSync(".env.local"));
+if (process.env.META_VERIFICATION_LOCAL === "true") {
+  assert.equal(origin, "http://127.0.0.1:3000");
+  env.META_API_ENABLED = "true";
+}
 assert.equal(
   env.NEXT_PUBLIC_SUPABASE_URL,
   "https://xdmkgoradmbnjofmbojs.supabase.co",

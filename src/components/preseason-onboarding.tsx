@@ -21,6 +21,7 @@ import {
   Users,
 } from "lucide-react";
 import type { PreseasonData, PreseasonQuestionnaire } from "@/lib/preseason";
+import { DocumentScreeningPanel } from "./document-screening-panel";
 type Props = {
   league: string;
   api: (path: string, options?: RequestInit) => Promise<any>;
@@ -822,7 +823,7 @@ export function PreseasonOnboarding({
                 <p>
                   {metaEnabled
                     ? "Ask Meta to interpret the questionnaire and identify uncertain or inconsistent evidence."
-                    : "Prepared integration · paused until credits are confirmed. No model response has been recorded for this assessment."}
+                    : "Live inference is paused. No model response has been recorded for this assessment."}
                 </p>
               )}
               <Button
@@ -1173,6 +1174,12 @@ export function PreseasonOnboarding({
                       </small>
                     </div>
                   )}
+                  <DocumentScreeningPanel
+                    league={league}
+                    document={doc.id}
+                    api={api}
+                    onChanged={load}
+                  />
                   <form
                     className="form-grid"
                     onSubmit={async (e) => {

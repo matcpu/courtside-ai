@@ -1,12 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { metaJSON, metaReceipt } from "../src/lib/meta";
+import { metaJSON as rawMetaJSON, metaReceipt } from "../src/lib/meta";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+const metaJSON: typeof rawMetaJSON = (schema, instructions, input, receipt) =>
+  rawMetaJSON(schema, instructions, input, receipt, "scoresheet");
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
 describe("Meta Responses API contract (mock provider)", () => {
-  beforeEach(() => vi.stubEnv("META_API_ENABLED", "true"));
+  beforeEach(() => {
+    vi.stubEnv("META_API_ENABLED", "true");
+    vi.stubEnv("META_CONTROLLED_RUN", "123456abcd");
+    vi.stubEnv(
+      "META_JOURNAL_ROOT",
+      mkdtempSync(join(tmpdir(), "courtside-meta-test-")),
+    );
+  });
   it("never calls Meta with a saved key while requests are disabled", async () => {
     vi.stubEnv("MODEL_API_KEY", "unit-test-only");
     vi.stubEnv("META_API_ENABLED", "false");
@@ -39,6 +51,9 @@ describe("Meta Responses API contract (mock provider)", () => {
     const fetch = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
+          id: "mock-contract-response",
+          model: "muse-spark-1.3",
+          usage: { input_tokens: 120, output_tokens: 30 },
           status: "completed",
           output: [
             {
@@ -75,6 +90,9 @@ describe("Meta Responses API contract (mock provider)", () => {
       vi.fn().mockResolvedValue(
         new Response(
           JSON.stringify({
+            id: "mock-contract-response",
+            model: "muse-spark-1.3",
+            usage: { input_tokens: 120, output_tokens: 30 },
             status: "completed",
             output: [
               {
@@ -102,7 +120,7 @@ describe("Meta Responses API contract (mock provider)", () => {
     );
     await expect(
       metaJSON(z.object({ score: z.number() }), "Read", "image"),
-    ).rejects.toThrow("incomplete");
+    ).rejects.toThrow("uncertain");
   });
   it("records only parsed output and provider identity, excluding hidden reasoning and raw image bytes", async () => {
     vi.stubEnv("MODEL_API_KEY", "unit-test-only");
@@ -113,6 +131,7 @@ describe("Meta Responses API contract (mock provider)", () => {
           JSON.stringify({
             id: "mock-response-contract-only",
             model: "muse-spark-1.3",
+            usage: { input_tokens: 120, output_tokens: 30 },
             status: "completed",
             output: [
               { type: "reasoning", content: "hidden reasoning excluded" },
@@ -141,7 +160,12 @@ describe("Meta Responses API contract (mock provider)", () => {
       expect.objectContaining({
         model: "muse-spark-1.3",
         response_id: "mock-response-contract-only",
-        response: { score: 78 },
+        response: expect.objectContaining({
+          score: 78,
+          _provider: expect.objectContaining({
+            usage: { input_tokens: 120, output_tokens: 30 },
+          }),
+        }),
         request_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
     );

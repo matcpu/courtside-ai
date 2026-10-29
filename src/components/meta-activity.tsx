@@ -69,9 +69,9 @@ export function MetaActivity({
       </div>
       {!enabled && (
         <div className="notice">
-          Meta is paused until credits are confirmed. No live response is
-          implied by these prepared capabilities. Contract-test fixtures never
-          appear as model evidence.
+          Live Meta inference is paused. Saved actual provider responses remain
+          available below. Contract-test fixtures never appear as model
+          evidence.
         </div>
       )}
       <div className="preseason-fields">
@@ -112,7 +112,7 @@ export function MetaActivity({
             <p className="small-muted">
               {enabled
                 ? "Provider calls enabled by configuration"
-                : "Integration prepared · live verification pending"}
+                : "Inference paused · inspect saved evidence below"}
             </p>
           </section>
         ))}

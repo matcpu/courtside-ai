@@ -1,6 +1,6 @@
 # Product completion audit — October 28, 2026
 
-Scope: every feature in the original COURTSIDE AI request. **Working** means exercised against the real Supabase project; it does not mean unlimited production scale or every possible scenario. **Partial** identifies the exact missing behavior. Provider contract tests are not live provider verification. No billable Meta calls are authorized until the owner confirms credits.
+Scope: every feature in the original COURTSIDE AI request. **Working** means exercised against the real Supabase project; it does not mean unlimited production scale or every possible scenario. **Partial** identifies the exact missing behavior. Provider contract tests are not live provider verification. The owner authorized one bounded promotional-credit run. Two real perception calls passed; the operations stage awaits explicit human result confirmation. See META_VERIFICATION.md.
 
 ## Feature-by-feature assessment
 
@@ -8,15 +8,15 @@ Scope: every feature in the original COURTSIDE AI request. **Working** means exe
 |---|---|---|
 | League creation and season configuration | Working: preseason setup editor for opening date, cutoff, category/tier age ranges, deadlines, registration status, roster limits and retention | No season rollover or archive workflow |
 | Team registration | Working: real coach login, questionnaire submission, persistence and administrator approval; desktop/mobile browser walkthrough | Invitations require an existing confirmed account; no invitation-email onboarding |
-| Coach skill assessment | Working comprehensive assessment, save/resume drafts, submission revisions, record/margin/continuity rubric, explanation, confidence and inconsistency flags | Self-reported evidence is not independently verified; Meta interpretation is prepared but paused |
+| Coach skill assessment | Working comprehensive assessment, save/resume drafts, submission revisions, record/margin/continuity rubric, explanation, confidence and inconsistency flags | Self-reported evidence is not independently verified; Actual Meta interpretation passed on the contradictory synthetic submission; inference is paused again |
 | Initial competitive placement | Working: administrator approval/override with explanation and questionnaire-revision binding; coach cannot approve | Rubric is an MVP operational policy, not a calibrated scouting model |
-| Player roster and age eligibility | Working real-file guardian invitation/upload/consent, administrator original-document review, age/duplicate flags, approve/reject/resubmission, history, withdrawal and deletion | Tested with synthetic proofs only; no issuer authentication, biometric checks or independent guardianship validation |
+| Player roster and age eligibility | Working real-file guardian consent/upload and human original review; local OCR consistency, deterministic age/exact reuse, experimental similarity and TD3 checksums; escalation, resubmission and derived-data deletion | Synthetic tests only; no issuer authentication or general forgery detector. Similarity misses some recompressions and can flag shared layouts; see DOCUMENT_SCREENING.md |
 | Guardian onboarding | Working mobile-friendly one-player expiring/revocable invitation portal; pending/approved/resubmission status, no account bypass or public youth data | Invitation possession and guardian identity attestation are not independent identity proof; automated email delivery needs Resend |
 | Team preseason readiness | Working questionnaire → placement → submitted roster → every active player consented/document-approved/currently age-eligible; SQL and scheduler enforce opening weekend and readiness | Existing historical/demo leagues are explicitly legacy mode until configured; seed rosters are never represented as document-verified |
 | Gym/court availability | Working: administrator creates courts and confirmed time blocks; unconfirmed/out-of-window scheduling rejected | No permit approval process or recurring-calendar editor |
 | Automated game scheduling | Working deterministic round-robin round, court/team collision/rest checks, confirmed availability, opening-date and preseason-readiness gates; DB independently validates drafts/publication | One replacement round at a time; no whole-season optimizer, team blackout calendar, referee constraints, travel fairness or concurrent-user load certification |
 | Scoresheet photo upload | Working: actual PNG uploaded/downloaded from private Storage through real coach/admin sessions; duplicate hash blocked; mobile upload exercised | Physical iOS/Safari camera capture and image-retention cleanup remain untested |
-| AI scoresheet extraction | Partial: strict structured Meta image adapter, validation and uncertainty contract tests | **Disabled by owner instruction. No live Meta recognition or key-validity request has been made.** Manual upload/review works and is labeled manual |
+| AI scoresheet extraction | Working on one actual controlled image: strict structured Meta adapter, actual response receipt and exact image comparison; broader image quality remains unvalidated | Actual Muse Spark recognition matched the prepared 78–43 image, with no unrecorded stats; human result confirmation remains pending. Inference paused |
 | Result validation and corrections | Working: original photo review, names/scores/stat validation, human confirmation, correction reason, immutable history and Elo replay; unauthorized coach confirmation denied | No league dispute/appeal workflow |
 | Standings and competitive ratings | Working: only confirmed results count; Elo recomputes after corrections; division filter | No historical division-membership standings or season rollover |
 | Player statistics | Working persistence and private display of explicitly recorded jersey-level rows; SQL tests cover correction replacement, null preservation and opponent privacy | No player profiles, imported box-score mapping or awards; sample photo intentionally contains no individual statistics |
@@ -33,7 +33,7 @@ Scope: every feature in the original COURTSIDE AI request. **Working** means exe
 | Weekly/monthly league insights | Partial: verified dashboard totals and balance evidence | No scheduled reporting or period summaries |
 | Player recognition/awards | Not implemented (P2) | Must use verified, explicitly recorded stats when added |
 | Meaningful Meta agent orchestration | Prepared: model chooses inspection/history/readiness/proposal/draft tools, with bounded execution, mutation limits and protected approvals | Paused; actual autonomous model choices and provider effectiveness remain unverified |
-| Visible Meta evidence | Prepared: private activity screen, server-only actual-response receipts, exact request digests, parsed output and resulting actions; browser-forgery test passes | No live model evidence exists yet; test fixtures are never shown as provider responses |
+| Visible Meta evidence | Working for two actual responses: private server-only receipts, request digests, usage and structured output; browser-forgery test passes | Operations is pending. Test fixtures never populate provider evidence |
 
 ## Security and production boundaries
 
@@ -64,6 +64,6 @@ Verification counts, deployed revision and final live results are recorded in [S
 
 ## Three highest-priority submission tasks
 
-1. **After the owner confirms credits:** enable Meta deliberately, verify the eligible configured model, run real questionnaire/image/agent requests and record their actual outputs and human approvals. Until then `META_API_ENABLED=false` remains enforced.
-2. Resolve the official anti-project eligibility ambiguity with organizers; the current league-administration scope does not itself establish approval. No organizer communication has been sent.
+1. Obtain explicit human confirmation of the actual 78–43 extraction, then complete only the remaining authorized agent stage. Keep inference paused between stages and after completion.
+2. Capture and inspect actual model-selected tools, resulting records and subsequent human approvals; do not claim operations success before it runs. The owner reports concept disclosure/registration acceptance, so further organizer discussion is not a gate.
 3. Record the genuine three-minute model demonstration, verify its public link, confirm track/team/permission choices and finish submission. Public browsing and temporary synthetic role logins are verified without unrestricted signup. Restricted email testing is complete; domain expansion and deferred production features are not hackathon blockers.

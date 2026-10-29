@@ -334,14 +334,33 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
         exact: true,
       }),
     ).toBeVisible();
-    let review = page
-      .locator(".preseason-review")
-      .filter({
-        has: page.getByRole("heading", {
-          name: `${playerName} · birth certificate`,
-          exact: true,
-        }),
-      });
+    let review = page.locator(".preseason-review").filter({
+      has: page.getByRole("heading", {
+        name: `${playerName} · birth certificate`,
+        exact: true,
+      }),
+    });
+    await review
+      .getByRole("button", { name: "Inspect screening findings", exact: true })
+      .click();
+    await expect(
+      review.getByText(/Authenticity remains unverified/),
+    ).toBeVisible();
+    await expect(
+      review.getByText(/Local OCR: name match; birth date match/),
+    ).toBeVisible();
+    await review
+      .getByLabel("Additional-review escalation reason", { exact: true })
+      .fill(
+        "Synthetic reviewer requests a second inspection before a final human eligibility decision",
+      );
+    await review
+      .getByRole("button", {
+        name: "Escalate for additional review",
+        exact: true,
+      })
+      .click();
+    await expect(review.getByText(/Escalation recorded/)).toBeVisible();
     await review
       .getByRole("button", { name: "Open private proof of age", exact: true })
       .click();
@@ -375,14 +394,12 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
     await page
       .getByRole("button", { name: "Refresh preseason", exact: true })
       .click();
-    review = page
-      .locator(".preseason-review")
-      .filter({
-        has: page.getByRole("heading", {
-          name: `${playerName} · birth certificate`,
-          exact: true,
-        }),
-      });
+    review = page.locator(".preseason-review").filter({
+      has: page.getByRole("heading", {
+        name: `${playerName} · birth certificate`,
+        exact: true,
+      }),
+    });
     await review
       .getByRole("button", { name: "Open private proof of age", exact: true })
       .click();
@@ -417,11 +434,9 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
     await expect(
       parent.getByText("Verification: approved", { exact: true }),
     ).toBeVisible();
-    const ready = page
-      .getByRole("row")
-      .filter({
-        has: page.getByRole("button", { name: teamName, exact: true }),
-      });
+    const ready = page.getByRole("row").filter({
+      has: page.getByRole("button", { name: teamName, exact: true }),
+    });
     await expect(ready.getByText("Ready", { exact: true })).toBeVisible();
     // The other ready team uses the same genuine APIs and signed-upload bridge;
     // only this test's first player uses the complete visible parent journey.

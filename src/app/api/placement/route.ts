@@ -13,6 +13,7 @@ import {
   type MetaReceipt,
 } from "@/lib/meta";
 import { recordMetaEvidence, redactCoachContext } from "@/lib/meta-evidence";
+import { assertMetaScope } from "@/lib/meta-control";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
@@ -22,9 +23,10 @@ export async function POST(request: Request) {
         .parse(await body(request));
     if (!metaIsEnabled())
       throw new ApiError(
-        "Meta placement interpretation is paused until credits are confirmed. No API call was made.",
+        "Meta placement interpretation is paused. No API call was made.",
         503,
       );
+    assertMetaScope("placement", b.league, user.id);
     const { data, error } = await client.rpc("preseason_snapshot", {
       p_league: b.league,
     });
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
       (r) => {
         receipt = r;
       },
+      "placement",
     );
     if (!receipt) throw new ApiError("No provider evidence was returned", 502);
     const evidence = await recordMetaEvidence(

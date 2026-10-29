@@ -570,7 +570,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
               {health?.meta
                 ? "Muse Spark is connected. Ready to coordinate your next workflow."
                 : health?.metaConfigured
-                  ? "Meta key saved. Requests are paused while credits are pending."
+                  ? "Meta key saved. Live inference is paused; saved evidence remains available."
                   : "Connect Meta to unlock your league operations agent."}
             </p>
             <button

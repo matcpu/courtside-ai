@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { ApiError, body, db, fail } from "@/lib/server";
+import { screenAgeDocument } from "@/lib/document-screening";
 import {
   documentStorage,
   invitationHash,
@@ -181,10 +182,14 @@ export async function POST(request: NextRequest) {
       throw new ApiError("Upload the document before submitting");
     const bytes = Buffer.from(await uploaded.data.arrayBuffer()),
       sha256 = validateAgeImage(bytes, uploaded.data.type);
+    const screening = await screenAgeDocument(bytes, {
+      name: current.child.name,
+      birthDate: current.child.birth_date,
+    });
     const saved = await service.rpc("finalize_age_upload", {
       p_hash: hash,
       p_document: p.document_id,
-      p_payload: { ...p, sha256 },
+      p_payload: { ...p, sha256, screening },
     });
     if (saved.error)
       throw new ApiError(

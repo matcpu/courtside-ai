@@ -60,11 +60,14 @@ async function request(
   );
   return { value, response };
 }
-await step("Meta inference remains off and the live database is available", async () => {
-  const { value } = await request(null, "/api/health", { method: "GET" });
-  assert.equal(value.meta, false);
-  assert.equal(value.database, true);
-});
+await step(
+  "Meta inference remains off and the live database is available",
+  async () => {
+    const { value } = await request(null, "/api/health", { method: "GET" });
+    assert.equal(value.meta, false);
+    assert.equal(value.database, true);
+  },
+);
 for (const role of ["admin", "coach", "outsider"]) {
   const c = createClient(
       env.NEXT_PUBLIC_SUPABASE_URL,
@@ -262,9 +265,9 @@ async function guardian(player) {
   const invite = await command("coach", "invite_guardian", {
     player_id: player,
     email: "guardian@example.invalid",
-    send_email: true,
+    send_email: false,
   });
-  assert.ok(["not_configured", "suppressed"].includes(invite.emailState));
+  assert.equal(invite.emailState, "not_requested");
   const token = new URLSearchParams(
     new URL(invite.invitationUrl).hash.slice(1),
   ).get("invite");
@@ -366,6 +369,19 @@ await step(
     assert.equal(status.status, "pending");
     assert.equal(status.child.name, "Fictional A Player");
     assert.ok(!JSON.stringify(status).includes("storage_path"));
+    const screening = (
+      await request(
+        "admin",
+        `/api/document-screening?league=${league}&document=${docA.document_id}`,
+        { method: "GET" },
+      )
+    ).value;
+    assert.equal(screening.authenticity, "unverified");
+    assert.equal(screening.humanReviewRequired, true);
+    assert.equal(screening.ageEligible, true);
+    assert.equal(screening.checks.name, "match");
+    assert.equal(screening.checks.birthDate, "match");
+    assert.ok(!JSON.stringify(screening).includes("perceptualHash"));
   },
 );
 await step(
@@ -374,6 +390,18 @@ await step(
     const coachSnapshot = await snapshot("coach");
     assert.deepEqual(coachSnapshot.documents, []);
     assert.ok(!JSON.stringify(coachSnapshot).includes("guardian_name"));
+    for (const role of ["coach", "outsider", null])
+      await request(
+        role,
+        `/api/document-screening?league=${league}&document=${docA.document_id}`,
+        { method: "GET", status: role ? 403 : 401 },
+      );
+    const forged = await clients.coach.rpc("finalize_age_upload", {
+      p_hash: "not-a-capability",
+      p_document: docA.document_id,
+      p_payload: { screening: { status: "no_specific_issue" } },
+    });
+    assert.ok(forged.error, "Browser clients cannot forge screening outputs");
     assert.equal(
       (await snapshot()).documents.find((d) => d.id === docA.document_id)
         .guardian_name,
@@ -473,6 +501,33 @@ await step(
       status: 403,
     });
     docB = await submitProof(parentB, pngs[0]);
+    const screening = (
+      await request(
+        "admin",
+        `/api/document-screening?league=${league}&document=${docB.document_id}`,
+        { method: "GET" },
+      )
+    ).value;
+    assert.ok(screening.exactDuplicates >= 1);
+    assert.equal(screening.status, "review_required");
+    await request("admin", "/api/document-screening", {
+      data: {
+        league,
+        document: docB.document_id,
+        reason:
+          "Exact reuse across fictional players requires another authorized human review",
+      },
+    });
+    assert.equal(
+      (await snapshot()).players.find((p) => p.id === players[1])
+        .verification_status,
+      "pending",
+    );
+    assert.ok(
+      (await snapshot()).reviews.some(
+        (r) => r.document_id === docB.document_id && r.decision === "escalated",
+      ),
+    );
     const s = await snapshot();
     assert.ok(
       s.documents.find((d) => d.id === docB.document_id).duplicate_document,
@@ -655,6 +710,22 @@ await step(
     assert.equal(
       s.documents.find((d) => d.id === docB.document_id).guardian_name,
       null,
+    );
+    const derived = await service
+      .from("age_documents")
+      .select("screening,visual_hash,sha256")
+      .eq("id", docB.document_id)
+      .single();
+    assert.equal(derived.error, null);
+    assert.deepEqual(derived.data, {
+      screening: null,
+      visual_hash: null,
+      sha256: null,
+    });
+    await request(
+      "admin",
+      `/api/document-screening?league=${league}&document=${docB.document_id}`,
+      { method: "GET", status: 403 },
     );
     assert.ok(
       s.reviews.some(
