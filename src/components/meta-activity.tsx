@@ -9,6 +9,12 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { AgentActionReceipts } from "./agent-action-receipts";
+import {
+  operationMessage,
+  operationRunTrace,
+  type AgentEvidenceContext,
+} from "@/lib/agent-evidence";
 type Evidence = {
   id: string;
   feature: string;
@@ -28,6 +34,7 @@ export function MetaActivity({
   onPlacement,
   onScoresheet,
   onAgent,
+  actionContext,
 }: {
   league: string;
   api: (path: string, options?: RequestInit) => Promise<any>;
@@ -36,6 +43,7 @@ export function MetaActivity({
   onPlacement: () => void;
   onScoresheet: () => void;
   onAgent: () => void;
+  actionContext: AgentEvidenceContext;
 }) {
   const [data, setData] = useState<{
       model: string;
@@ -157,6 +165,13 @@ export function MetaActivity({
                   Linked record: <code>{e.object_id}</code>
                 </p>
                 <h3>Structured output / answer</h3>
+                {e.feature === "operations" && (
+                  <AgentActionReceipts
+                    message={operationMessage(e.response)}
+                    trace={operationRunTrace(data.evidence, e.object_id)}
+                    context={actionContext}
+                  />
+                )}
                 <pre>{JSON.stringify(e.response, null, 2)}</pre>
                 {e.tool_calls.length > 0 && (
                   <>

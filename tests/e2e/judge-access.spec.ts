@@ -117,6 +117,32 @@ test("temporary judge roles explore only their synthetic seasons without signup 
               name: "No live Meta evidence recorded",
             }),
           ).toBeVisible();
+        await page
+          .getByLabel("Switch league")
+          .selectOption(fixture.operations.league);
+        const operations = await fetch(
+          `${origin}/api/evidence?league=${fixture.operations.league}`,
+          { headers },
+        ).then((r) => r.json());
+        const final = operations.evidence.find(
+          (e: { response_id: string }) =>
+            e.response_id === "resp_6ae2bedc8c80d9be196847f9",
+        );
+        if (final) {
+          const receipt = page
+            .locator("details")
+            .filter({ hasText: final.response_id });
+          await receipt.locator("summary").click();
+          await expect(
+            receipt.getByText(/the saved proposal belongs to Riverside Ravens/),
+          ).toBeVisible();
+          await expect(
+            receipt.getByText("Riverside Ravens", { exact: true }),
+          ).toBeVisible();
+          await expect(
+            receipt.getByText(/Current record: approved/).first(),
+          ).toBeVisible();
+        }
       } else
         await expect(
           page.getByText(

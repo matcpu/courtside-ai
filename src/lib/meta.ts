@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createHash } from "node:crypto";
 import { ApiError } from "./server";
 import { controlledMetaRequest, type MetaFeature } from "./meta-control";
+import { metaBudgetRPC, type MetaBudgetContext } from "./meta-budget";
 export const metaModel = () => process.env.META_MODEL || "muse-spark-1.3";
 export const metaIsEnabled = () =>
   Boolean(process.env.MODEL_API_KEY) && process.env.META_API_ENABLED === "true";
@@ -43,6 +44,7 @@ export async function metaJSON<T>(
   input: unknown,
   onReceipt?: (receipt: MetaReceipt) => void | Promise<void>,
   feature?: MetaFeature,
+  context?: MetaBudgetContext,
 ): Promise<T> {
   const key = process.env.MODEL_API_KEY;
   if (!key)
@@ -78,7 +80,12 @@ export async function metaJSON<T>(
       "This model action is outside the controlled verification",
       403,
     );
-  const value = await controlledMetaRequest(requestBody, feature);
+  const value = await controlledMetaRequest(
+    requestBody,
+    feature,
+    undefined,
+    context,
+  );
   if (value.status !== "completed")
     throw new ApiError(
       "Meta returned an incomplete response. Human review is required.",
@@ -96,11 +103,19 @@ export async function metaJSON<T>(
   try {
     parsed = schema.parse(JSON.parse(text));
   } catch {
+    await metaBudgetRPC("annotate", {
+      response_id: value.id,
+      validation: "schema_validation_failed",
+    });
     throw new ApiError(
       "Meta returned data that failed structured validation. No official result was recorded.",
       422,
     );
   }
+  await metaBudgetRPC("annotate", {
+    response_id: value.id,
+    validation: "schema_validated",
+  });
   if (onReceipt) await onReceipt(metaReceipt(value, requestBody, parsed));
   return parsed;
 }

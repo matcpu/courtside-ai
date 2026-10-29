@@ -19,6 +19,7 @@ import {
 } from "@/lib/meta";
 import { recordMetaEvidence } from "@/lib/meta-evidence";
 import { assertMetaScope } from "@/lib/meta-control";
+import { scoresheetInstructions } from "@/lib/meta-prompts";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
@@ -73,6 +74,8 @@ export async function POST(request: Request) {
         "Meta scoresheet recognition is paused. No API call was made.",
         503,
       );
+    if (s.scoresheets.some((sheet) => sheet.sha256 === sha256))
+      throw new ApiError("This exact image is already submitted. Inspect its saved evidence; no model call was made.",409);
     if (b.mode === "meta") {
       assertMetaScope("scoresheet", b.league, user.id);
       await reserveAI(client, b.league, "scoresheet");
@@ -82,8 +85,7 @@ export async function POST(request: Request) {
       b.mode === "meta"
         ? await metaJSON(
             extractionSchema,
-            dataBoundary +
-              " Read the final result from the scoresheet image. Return exactly the names as visible, final scores, confidence and warnings. If a field is unreadable, return null and explain. Include only explicitly recorded player stats; an empty players array means not recorded. Do not infer missing statistics or use the expected fixture to invent team names.",
+            scoresheetInstructions,
             [
               {
                 role: "user",
@@ -104,6 +106,7 @@ export async function POST(request: Request) {
               receipt = r;
             },
             "scoresheet",
+            { league: b.league, actor: user.id },
           )
         : b.extraction;
     if (!extraction) throw new ApiError("Manual extraction is required");

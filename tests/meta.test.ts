@@ -5,7 +5,15 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 const metaJSON: typeof rawMetaJSON = (schema, instructions, input, receipt) =>
-  rawMetaJSON(schema, instructions, input, receipt, "scoresheet");
+  rawMetaJSON(schema, instructions, input, receipt, "scoresheet", {
+    league: "synthetic-league",
+    actor: "synthetic-admin",
+  });
+vi.mock("../src/lib/meta-budget", () => ({
+  metaBudgetRPC: vi.fn(async (action) =>
+    action === "reserve" ? { id: "mock-reservation" } : { settled: true },
+  ),
+}));
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -115,12 +123,19 @@ describe("Meta Responses API contract (mock provider)", () => {
       vi
         .fn()
         .mockResolvedValue(
-          new Response(JSON.stringify({ status: "incomplete" })),
+          new Response(
+            JSON.stringify({
+              id: "mock-incomplete",
+              model: "muse-spark-1.3",
+              status: "incomplete",
+              usage: { input_tokens: 100, output_tokens: 10 },
+            }),
+          ),
         ),
     );
     await expect(
       metaJSON(z.object({ score: z.number() }), "Read", "image"),
-    ).rejects.toThrow("uncertain");
+    ).rejects.toThrow("incomplete");
   });
   it("records only parsed output and provider identity, excluding hidden reasoning and raw image bytes", async () => {
     vi.stubEnv("MODEL_API_KEY", "unit-test-only");

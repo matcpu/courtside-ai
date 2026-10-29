@@ -58,6 +58,8 @@ import {
 import { Button } from "./ui/button";
 import { PreseasonOnboarding } from "./preseason-onboarding";
 import { MetaActivity } from "./meta-activity";
+import { AgentActionReceipts } from "./agent-action-receipts";
+import { toolReceiptState } from "@/lib/agent-evidence";
 
 type View =
   | "Overview"
@@ -290,6 +292,8 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
     [correction, setCorrection] = useState(""),
     [imageUrl, setImageUrl] = useState(""),
     [agentResult, setAgentResult] = useState<{
+      actor: string;
+      league: string;
       message: string;
       trace: { tool: string; outcome: unknown }[];
     } | null>(null);
@@ -351,6 +355,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
         setLeagues([]);
         setSheet(null);
         setImageUrl("");
+        setAgentResult(null);
       }
     });
     fetch("/api/health")
@@ -1068,6 +1073,12 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                   api={api}
                   isAdmin={!!isAdmin}
                   enabled={health?.meta ?? false}
+                  actionContext={{
+                    teams: s?.teams ?? [],
+                    divisions: s?.divisions ?? [],
+                    proposals: s?.proposals ?? [],
+                    versions: s?.versions ?? [],
+                  }}
                   onPlacement={() => changeView("Preseason Onboarding")}
                   onScoresheet={() => changeView("Scoresheets")}
                   onAgent={() =>
@@ -2598,6 +2609,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                   busy={busy}
                   submit="Create league"
                   onSubmit={async (f) => {
+                    setAgentResult(null);
                     await act(async () => {
                       const result = await api("/api/league", {
                         method: "POST",
@@ -2722,7 +2734,11 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                           objective: f.get("objective"),
                         }),
                       });
-                      setAgentResult(result);
+                      setAgentResult({
+                        ...result,
+                        actor: session?.user.id ?? "",
+                        league: selected,
+                      });
                     }, "Agent workflow recorded. Review proposed changes before approval.");
                   }}
                 >
@@ -2736,21 +2752,45 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                     />
                   </Field>
                 </Form>
-                {agentResult && (
-                  <div className="agent-results">
-                    <p>{agentResult.message}</p>
-                    {agentResult.trace.map((t, i) => (
-                      <details key={i}>
-                        <summary>
-                          <Check size={14} />
-                          {t.tool}
-                        </summary>
-                        <pre>{JSON.stringify(t.outcome, null, 2)}</pre>
-                      </details>
-                    ))}
-                    <Badge tone="orange">Human approval required</Badge>
-                  </div>
-                )}
+                {agentResult &&
+                  agentResult.actor === session?.user.id &&
+                  agentResult.league === selected && (
+                    <div className="agent-results">
+                      <AgentActionReceipts
+                        message={agentResult.message}
+                        trace={agentResult.trace}
+                        context={{
+                          teams: s?.teams ?? [],
+                          divisions: s?.divisions ?? [],
+                          proposals: s?.proposals ?? [],
+                          versions: s?.versions ?? [],
+                        }}
+                      />
+                      <h3>Original model narrative</h3>
+                      <p>{agentResult.message}</p>
+                      {agentResult.trace.map((t, i) => (
+                        <details key={i}>
+                          <summary>
+                            {toolReceiptState(t.outcome) === "blocked" ? (
+                              <CircleHelp size={14} />
+                            ) : toolReceiptState(t.outcome) === "recorded" ? (
+                              <Check size={14} />
+                            ) : (
+                              <CircleHelp size={14} />
+                            )}
+                            {t.tool} ·{" "}
+                            {toolReceiptState(t.outcome) === "blocked"
+                              ? "Blocked / failed"
+                              : toolReceiptState(t.outcome) === "recorded"
+                                ? "Execution result recorded"
+                                : "Outcome unverified"}
+                          </summary>
+                          <pre>{JSON.stringify(t.outcome, null, 2)}</pre>
+                        </details>
+                      ))}
+                      <Badge tone="orange">Human approval required</Badge>
+                    </div>
+                  )}
               </>
             )}
           </section>

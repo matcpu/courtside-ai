@@ -30,9 +30,4 @@ export async function recordMetaEvidence(
     );
   return data;
 }
-export function redactCoachContext(value: string) {
-  return value
-    .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, "[email removed]")
-    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, "[date removed]")
-    .replace(/(?:\+?\d[\s().-]*){10,}/g, "[phone removed]");
-}
+export { redactCoachContext } from "./meta-privacy";

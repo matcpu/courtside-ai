@@ -175,7 +175,21 @@ export async function executeOperationTool(
   if (used.has(name)) throw new Error("This mutating tool already ran");
   used.add(name);
   await deps.propose();
-  return (await deps.snapshot()).proposals.filter(
-    (p) => p.status === "pending",
-  );
+  const current = await deps.snapshot();
+  return current.proposals
+    .filter((p) => p.status === "pending")
+    .map((p) => ({
+      ...p,
+      teamName:
+        current.teams.find((team) => team.id === p.team_id)?.name ?? null,
+      fromDivision:
+        current.divisions.find((division) => division.id === p.from_division_id)
+          ?.name ?? null,
+      toDivision:
+        current.divisions.find((division) => division.id === p.to_division_id)
+          ?.name ?? null,
+      investigationSource: used.has(`inspect_team_history:${p.team_id}`)
+        ? "Team history inspected by a model-selected tool in this run"
+        : "Additional deterministic candidate; individual history has not been inspected in this run",
+    }));
 }

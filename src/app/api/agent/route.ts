@@ -39,7 +39,8 @@ export async function POST(request: Request) {
       .object({ league: z.uuid(), objective: z.string().min(5).max(1000) })
       .parse(await body(request));
     league = b.league;
-    admin(await snapshot(context.client, league));
+    const initialSnapshot = await snapshot(context.client, league);
+    admin(initialSnapshot);
     if (!metaIsEnabled())
       throw new ApiError(
         "Meta requests are disabled. No API call was made.",
@@ -56,18 +57,21 @@ export async function POST(request: Request) {
       throw new ApiError("Could not start an auditable operations run", 500);
     run = started.data;
     const input: unknown[] = [
-        { role: "user", content: redactCoachContext(b.objective) },
+        {
+          role: "user",
+          content: `League data revision: ${initialSnapshot.league.data_revision}. Operator objective: ${redactCoachContext(b.objective)}`,
+        },
       ],
       used = new Set<string>(),
-      deadline = Date.now() + 48000;
-    for (let turn = 0; turn < 6 && Date.now() < deadline; turn++) {
+      deadline = Date.now() + 50000;
+    for (let turn = 0; turn < 8 && Date.now() < deadline; turn++) {
       await reserveAI(context.client, league, "agent_turn");
       const requestBody = {
         model: metaModel(),
         store: false,
         instructions:
           dataBoundary +
-          " You coordinate league administration. Choose tools to achieve the operator objective: inspect the league, investigate a suspected mismatch with verified team history, check preseason readiness, and prepare evidence-based proposals or feasible schedule drafts. Prioritize inconsistent competition and actionable next steps. You must inspect successfully before acting and investigate history before proposing balance. Each mutating tool may run at most once. A schedule uses CURRENT APPROVED divisions only: proposed moves require a human decision and another scheduling run afterward. Never approve placements, results, division moves or publication. Never send messages or inspect guardian documents. Explain actual successes, blockers, saved proposal/draft IDs and the next human decision. Stop at human approval. Do not claim a blocked tool succeeded.",
+          " You coordinate league administration. Choose tools to achieve the operator objective: inspect the league, investigate a suspected mismatch with verified team history, check preseason readiness, and prepare evidence-based proposals or feasible schedule drafts. Prioritize inconsistent competition and actionable next steps. You must inspect successfully before acting and investigate history before proposing balance. Each mutating tool may run at most once. A schedule uses CURRENT APPROVED divisions only: proposed moves require a human decision and another scheduling run afterward. Never approve placements, results, division moves or publication. Never send messages or inspect guardian documents. Preserve literal identifiers supplied by the operator; never substitute a placeholder or another UUID. Use canonical teamName/fromDivision/toDivision from actual proposal results, always associated with their returned IDs; do not reconstruct names from memory. Distinguish individually investigated teams from additional deterministic candidates. Batch independent inspections when useful. Be concise and do not repeat full league listings. Finish with at most 200 words citing actual successes, blocked actions, saved IDs and the next human decision. Stop at human approval. Do not claim a blocked tool succeeded.",
         tools: operationsTools,
         tool_choice: "auto",
         input,
@@ -80,6 +84,7 @@ export async function POST(request: Request) {
         requestSnapshot,
         "operations",
         deadline - Date.now(),
+        { league, actor: context.user.id },
       );
       if (result.status !== "completed")
         throw new ApiError("Meta agent response was incomplete", 502);

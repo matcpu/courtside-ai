@@ -10,6 +10,7 @@ const config: NextConfig = {
   outputFileTracingIncludes: {
     "/api/guardian": [
       "./node_modules/tesseract.js/src/**/*",
+      "./node_modules/tesseract.js/package.json",
       "./node_modules/tesseract.js-core/**/*",
       "./node_modules/@tesseract.js-data/eng/**/*",
       // The OCR worker is loaded dynamically. Trace its transitive runtime

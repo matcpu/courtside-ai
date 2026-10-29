@@ -14,6 +14,7 @@ import {
 } from "@/lib/meta";
 import { recordMetaEvidence, redactCoachContext } from "@/lib/meta-evidence";
 import { assertMetaScope } from "@/lib/meta-control";
+import { placementInstructions } from "@/lib/meta-prompts";
 export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
@@ -44,8 +45,7 @@ export async function POST(request: Request) {
     let receipt: MetaReceipt | undefined;
     const interpretation = await metaJSON(
       placementInterpretation,
-      dataBoundary +
-        " Interpret the coach assessment as self-reported preseason evidence. Identify contradictions, implausible combinations, uncertainty and specific follow-up questions. Compare prior league/division context and coach preference with the deterministic rubric. Give an explained suggested tier, but never approve placement or assess an individual child. Your confidence measures evidential support, not verified truth. Only team-level questionnaire fields are provided; never request documents or youth identity data.",
+      placementInstructions,
       JSON.stringify({
         questionnaire: {
           ...answer,
@@ -59,6 +59,7 @@ export async function POST(request: Request) {
         receipt = r;
       },
       "placement",
+      { league: b.league, actor: user.id },
     );
     if (!receipt) throw new ApiError("No provider evidence was returned", 502);
     const evidence = await recordMetaEvidence(

@@ -113,7 +113,8 @@ describe("model-selected operations tools (mock model contract, not provider evi
       used,
       d,
     );
-    expect(proposals).toEqual(s.proposals);
+    expect(proposals).toEqual(s.proposals.map(p=>expect.objectContaining(p)));
+    expect(proposals).toEqual(expect.arrayContaining([expect.objectContaining({teamName:null,investigationSource:"Additional deterministic candidate; individual history has not been inspected in this run"})]));
     expect(d.propose).toHaveBeenCalledTimes(1);
     await expect(
       executeOperationTool("propose_balance", "{}", used, d),

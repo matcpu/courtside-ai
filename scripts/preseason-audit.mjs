@@ -3,6 +3,7 @@ import { parse } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
+import sharp from "sharp";
 const origin = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
 if (
   !["http://127.0.0.1:3000", "https://courtside-ai-one.vercel.app"].includes(
@@ -283,7 +284,11 @@ async function guardian(player) {
 async function submitProof(
   parent,
   bytes,
-  { consent = true, expectedStatus = consent ? 200 : 400 } = {},
+  {
+    consent = true,
+    expectedStatus = consent ? 200 : 400,
+    mime = "image/png",
+  } = {},
 ) {
   const reserved = (
     await request(null, "/api/guardian", {
@@ -293,7 +298,7 @@ async function submitProof(
         payload: {
           invitation_id: parent.invitation_id,
           document_type: "birth_certificate",
-          mime: "image/png",
+          mime,
         },
       },
     })
@@ -304,7 +309,7 @@ async function submitProof(
   )
     .storage.from("youth-documents")
     .uploadToSignedUrl(reserved.path, reserved.uploadToken, bytes, {
-      contentType: "image/png",
+      contentType: mime,
       cacheControl: "0",
     });
   assert.equal(uploaded.error, null, "Actual signed upload must succeed");
@@ -552,6 +557,33 @@ await step(
       decision: "resubmission",
       reason:
         "Proof names another fictional player; upload matching synthetic proof",
+      document_checked: true,
+      duplicate_acknowledged: false,
+    });
+    // Same fictional proof, different encoding/bytes. This exercises actual
+    // upload/processing/query behavior instead of manufacturing stored hashes.
+    const recompressed = await sharp(pngs[0]).jpeg({ quality: 75 }).toBuffer();
+    docB = await submitProof(parentB, recompressed, { mime: "image/jpeg" });
+    const recompressedScreening = (
+      await request(
+        "admin",
+        `/api/document-screening?league=${league}&document=${docB.document_id}`,
+        { method: "GET" },
+      )
+    ).value;
+    assert.equal(recompressedScreening.exactDuplicates, 0);
+    assert.ok(
+      recompressedScreening.possibleSimilarDocuments >= 1,
+      "A recompressed copy must be flagged by real private similarity matching",
+    );
+    assert.equal("perceptualHash" in recompressedScreening, false);
+    assert.equal("differenceHash" in recompressedScreening, false);
+    await command("admin", "open_document", { document_id: docB.document_id });
+    await command("admin", "review_document", {
+      document_id: docB.document_id,
+      decision: "resubmission",
+      reason:
+        "Recompressed synthetic proof still names another fictional player; similarity warning reviewed and a matching proof requested",
       document_checked: true,
       duplicate_acknowledged: false,
     });

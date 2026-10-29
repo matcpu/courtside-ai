@@ -1,6 +1,5 @@
 import sharp from "sharp";
-import { join } from "node:path";
-import { createWorker } from "tesseract.js";
+import { recognizeLocalImage } from "./local-ocr";
 export type Finding = {
   code: string;
   source: "deterministic" | "local_ocr";
@@ -18,8 +17,15 @@ export type DocumentScreening = {
     birthDate: "match" | "mismatch" | "unknown";
     mrz: "valid_checksums" | "invalid_checksums" | "not_supported";
   };
-  image?: { width: number; height: number; contrast: number };
+  image?: {
+    width: number;
+    height: number;
+    contrast: number;
+    aspectRatio: number;
+  };
+  visualHashVersion?: 2;
   perceptualHash?: string;
+  differenceHash?: string;
 };
 const normalize = (v: string) =>
   v
@@ -168,6 +174,41 @@ export function hashDistance(a: string, b: string) {
     (v) => v === "1",
   ).length;
 }
+const dctCosines = Array.from({ length: 8 }, (_, frequency) =>
+  Array.from(
+    { length: 32 },
+    (_, position) =>
+      Math.cos(((2 * position + 1) * frequency * Math.PI) / 64) *
+      (frequency === 0 ? Math.SQRT1_2 : 1),
+  ),
+);
+/** 64 low-frequency DCT bits from a 32×32 grayscale thumbnail. This measures
+ * whole-image appearance, never identity or document authenticity. */
+export function perceptualHash32(grayscale: Uint8Array) {
+  if (grayscale.length !== 32 * 32)
+    throw new Error("Perceptual hashing requires a 32×32 grayscale thumbnail");
+  const horizontal = Array.from({ length: 32 }, () => new Float64Array(8));
+  for (let y = 0; y < 32; y++)
+    for (let u = 0; u < 8; u++)
+      for (let x = 0; x < 32; x++)
+        horizontal[y][u] += grayscale[y * 32 + x] * dctCosines[u][x];
+  const coefficients: number[] = [];
+  for (let v = 0; v < 8; v++)
+    for (let u = 0; u < 8; u++) {
+      let coefficient = 0;
+      for (let y = 0; y < 32; y++)
+        coefficient += horizontal[y][u] * dctCosines[v][y];
+      coefficients.push(Math.abs(coefficient) < 1e-8 ? 0 : coefficient);
+    }
+  // The DC term is excluded from the median, so overall brightness does not
+  // determine the low-frequency thresholds. Its bit remains in the 64-bit hash.
+  const lowFrequencies = coefficients.slice(1).sort((a, b) => a - b);
+  const median = lowFrequencies[Math.floor(lowFrequencies.length / 2)];
+  let hash = 0n;
+  for (const coefficient of coefficients)
+    hash = (hash << 1n) | (coefficient > median ? 1n : 0n);
+  return hash.toString(16).padStart(16, "0");
+}
 /** Image and OCR bytes stay in this server process/worker; no remote OCR or Meta. */
 export async function screenAgeDocument(
   bytes: Buffer,
@@ -186,9 +227,6 @@ export async function screenAgeDocument(
       "Perceptual similarity is an experimental review hint; shared layouts can collide and edited/cropped images may be missed.",
     ],
   };
-  let worker: Awaited<ReturnType<typeof createWorker>> | undefined,
-    timer: ReturnType<typeof setTimeout> | undefined,
-    cancelled = false;
   try {
     const image = sharp(bytes, {
       limitInputPixels: 16_000_000,
@@ -199,10 +237,15 @@ export async function screenAgeDocument(
     const metadata = await image.metadata(),
       stats = await image.clone().greyscale().stats();
     const contrast = stats.channels[0].stdev;
+    const width = metadata.autoOrient?.width ?? metadata.width ?? 0,
+      height = metadata.autoOrient?.height ?? metadata.height ?? 0;
     base.image = {
-      width: metadata.width ?? 0,
-      height: metadata.height ?? 0,
+      width,
+      height,
       contrast: Math.round(contrast * 10) / 10,
+      aspectRatio: height
+        ? Math.round((width / height) * 1_000_000) / 1_000_000
+        : 0,
     };
     const pixels = await image
       .clone()
@@ -215,7 +258,15 @@ export async function screenAgeDocument(
       for (let x = 0; x < 8; x++)
         hash =
           (hash << 1n) | (pixels[y * 9 + x] > pixels[y * 9 + x + 1] ? 1n : 0n);
-    base.perceptualHash = hash.toString(16).padStart(16, "0");
+    base.differenceHash = hash.toString(16).padStart(16, "0");
+    const thumbnail = await image
+      .clone()
+      .resize(32, 32, { fit: "fill" })
+      .greyscale()
+      .raw()
+      .toBuffer();
+    base.perceptualHash = perceptualHash32(thumbnail);
+    base.visualHashVersion = 2;
     if (Math.min(base.image.width, base.image.height) < 300 || contrast < 12) {
       base.findings.push({
         code: "poor_image_quality",
@@ -225,41 +276,17 @@ export async function screenAgeDocument(
       });
       return base;
     }
-    const deadline = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error("Local OCR deadline")), 18000);
-    });
-    const task = (async () => {
-      worker = await createWorker("eng", 1, {
-        langPath: join(
-          process.cwd(),
-          "node_modules/@tesseract.js-data/eng/4.0.0",
-        ),
-        workerPath: join(
-          process.cwd(),
-          "node_modules/tesseract.js/src/worker-script/node/index.js",
-        ),
-        corePath: join(process.cwd(), "node_modules/tesseract.js-core"),
-        cacheMethod: "none",
-        logger: () => {},
-        errorHandler: () => {},
-      });
-      if (cancelled) {
-        await worker.terminate();
-        throw new Error("Local OCR cancelled");
-      }
-      const normalized = await image
-        .clone()
-        .resize({
-          width: 1600,
-          height: 1600,
-          fit: "inside",
-          withoutEnlargement: true,
-        })
-        .png()
-        .toBuffer();
-      return worker.recognize(normalized);
-    })();
-    const { data } = await Promise.race([task, deadline]);
+    const normalized = await image
+      .clone()
+      .resize({
+        width: 1600,
+        height: 1600,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .png()
+      .toBuffer();
+    const data = await recognizeLocalImage(normalized);
     Object.assign(
       base,
       assessDocumentText(data.text, expected, data.confidence),
@@ -273,9 +300,5 @@ export async function screenAgeDocument(
         "The image could not be decoded or local OCR did not complete within its bounded processing window. Inspect the original or request a clearer submission.",
     });
     return base;
-  } finally {
-    cancelled = true;
-    if (timer) clearTimeout(timer);
-    if (worker) await worker.terminate().catch(() => {});
   }
 }
