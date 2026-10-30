@@ -157,9 +157,7 @@ export function PreseasonRoster({
               Date.parse(i.expires_at) > Date.now(),
           );
           const progress = verificationProgress(p, Boolean(activeInvitation));
-          const canInvite =
-            p.verification_status !== "approved" &&
-            p.verification_status !== "pending";
+          const canInvite = p.verification_status !== "approved";
           return (
             <article
               className="panel"

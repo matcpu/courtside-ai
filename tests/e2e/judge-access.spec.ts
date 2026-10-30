@@ -91,6 +91,31 @@ test("temporary judge roles explore only their synthetic seasons without signup 
             exact: true,
           }),
         ).toHaveCount(0);
+      if (role === "coach") {
+        await page
+          .getByLabel("Preseason team", { exact: true })
+          .selectOption(fixture.preseason.team);
+        await page
+          .getByRole("button", {
+            name: "Manage roster & guardian links",
+            exact: true,
+          })
+          .click();
+        await expect(
+          page.getByText("Under administrator review", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.getByText("Manage or replace guardian invitation", {
+            exact: true,
+          }),
+        ).toBeVisible();
+        await expect(
+          page.getByRole("button", {
+            name: "Open private proof of age",
+            exact: true,
+          }),
+        ).toHaveCount(0);
+      }
       if (info.project.name === "mobile")
         await page
           .getByRole("button", { name: "Open navigation", exact: true })
