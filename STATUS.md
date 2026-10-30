@@ -1,6 +1,16 @@
-# Status — October 29, 2026 Eastern
+# Status — October 30, 2026 Eastern
 
-Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Runtime source **69e006d025417f9eaaa62a3a72909381937371dd** is Ready as **dpl_3848BEZeBbTh8VFmmdM8bUampmQ1**, serving both existing aliases. [Linux CI passed](https://github.com/matcpu/courtside-ai/actions/runs/40819537953). Source: [matcpu/courtside-ai](https://github.com/matcpu/courtside-ai). Supabase remains xdmkgoradmbnjofmbojs.
+Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Runtime source **19d91fd600ed59cd4390fcf7ef0487ed86b392d1** is Ready as **dpl_EUdCfzSFenE3ngfFzYVw1qdAwjrx**. The stable public origin was tested after deployment. [Linux CI passed](https://github.com/matcpu/courtside-ai/actions/runs/41097184247). Source: [matcpu/courtside-ai](https://github.com/matcpu/courtside-ai). Supabase remains xdmkgoradmbnjofmbojs.
+
+## October 30 verification experience update
+
+The existing coach → guardian → administrator journey is now discoverable from Preseason Onboarding. Team selection, roster/invitation navigation and the administrator queue are prominent. Adding a player focuses their status card; invitations, copying and replacement confirmation stay with that player, including while review is pending. Roster progress explains minimum size, submission and scheduling blockers. A generated link is distinguished from an actual email delivery.
+
+Guardians can select an image or request a camera capture, inspect a local preview and see validation, real upload/processing stages and resubmission reasons. Supported files remain JPEG/PNG/WebP up to 6 MB; PDF/HEIC are explicitly unsupported. Opening the original loads reviewer screening findings automatically. Human inspection, reasons, attestations and existing server permissions still determine eligibility. Legacy seasons explain unenforced readiness and require explicit acknowledgment before enabling it; seeded players are never relabeled as verified.
+
+Validation: **108 unit tests**, TypeScript, a fresh isolated production build and **37 rolled-back preseason SQL assertions** passed. The complete updated synthetic browser journey passed on the deployed application in desktop and mobile Chromium: add player, invite, upload/consent, original inspection, screening, resubmission, approval, coach status, readiness and opening-weekend scheduling. Both legacy confirmation and ordinary enforced-season behavior were exercised. The final pending-review link-management adjustment received a separate production desktop/mobile judge-role regression. Physical iOS camera behavior remains unverified. Exact role-by-role buttons are documented in [PRESEASON.md](PRESEASON.md).
+
+The production health check reports a working database and disabled Meta inference. No Meta calls or emails were sent for this update. The public reference fingerprint is unchanged; deployed client assets contain no configured private credentials. Existing private Storage, tenant authorization, consent, retention and deletion controls were reused. Video files and recording sessions were not changed.
 
 ## Actual Meta work
 
@@ -30,7 +40,7 @@ Eight immutable generated illustrations were separately evaluated with Meta: 4/4
 
 The main fictional guardian submitted proof and consent through the real mobile form. Verification is pending an administrator decision. Placement/readiness approval is not fabricated. Both guardian/reviewer and opening-weekend workflows are independently exercised in isolated synthetic test seasons.
 
-## Verification
+## Earlier October 29 verification baseline
 
 - TypeScript and **104 unit tests** passed.
 - **170 real transactional SQL assertions** passed and rolled back: 65 operations, 37 preseason, four independent proposal reviews and 64 finance/evidence/timestamp checks. Finance contract tests made zero provider calls.
