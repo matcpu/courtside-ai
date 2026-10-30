@@ -171,7 +171,7 @@ export function GuardianVerification() {
           of age directly to authorized league reviewers.
         </p>
         {loading && <p role="status">Opening your private invitation…</p>}
-        {error && (
+        {error && !state?.can_submit && (
           <div className="notice notice-error" role="alert">
             {error}
           </div>
@@ -287,6 +287,11 @@ export function GuardianVerification() {
                   supported devices. All development/demo uploads must be
                   synthetic and clearly marked.
                 </p>
+                {error && (
+                  <div className="notice notice-error" role="alert">
+                    {error}
+                  </div>
+                )}
                 {file && preview && (
                   <div className="guardian-proof-preview">
                     <h3>Check your selected document</h3>

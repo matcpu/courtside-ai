@@ -134,7 +134,7 @@ export function PreseasonRoster({
           variant="secondary"
           disabled={
             busy ||
-            deadlinePassed ||
+            (Boolean(data.settings.enabled) && deadlinePassed) ||
             (Boolean(data.settings.enabled) && roster.length >= maximum)
           }
         >
