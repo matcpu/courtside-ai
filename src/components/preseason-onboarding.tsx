@@ -14,14 +14,13 @@ import {
   CheckCheck,
   ClipboardCheck,
   FileImage,
-  Link as LinkIcon,
   LoaderCircle,
   ShieldCheck,
   Sparkles,
-  Users,
 } from "lucide-react";
 import type { PreseasonData, PreseasonQuestionnaire } from "@/lib/preseason";
 import { DocumentScreeningPanel } from "./document-screening-panel";
+import { PreseasonRoster } from "./preseason-roster";
 type Props = {
   league: string;
   api: (path: string, options?: RequestInit) => Promise<any>;
@@ -37,15 +36,17 @@ type Props = {
 };
 function Section({
   title,
+  id,
   description,
   children,
 }: {
   title: string;
+  id?: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="panel preseason-section">
+    <section id={id} className="panel preseason-section">
       <div className="panel-heading">
         <div>
           <h2>{title}</h2>
@@ -88,18 +89,23 @@ export function PreseasonOnboarding({
     [loading, setLoading] = useState(true),
     [notice, setNotice] = useState(""),
     [error, setError] = useState(false),
-    [invitation, setInvitation] = useState<{
-      url: string;
-      expires: string;
-      email: string;
-    } | null>(null),
+    [policyEnabled, setPolicyEnabled] = useState<boolean | null>(null),
     [preview, setPreview] = useState<{ id: string; url: string } | null>(null);
   const form = useRef<HTMLFormElement>(null);
+  const jumpTo = (id: string) => {
+    const target = document.getElementById(id);
+    if (target instanceof HTMLDetailsElement) target.open = true;
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const load = useCallback(async () => {
     try {
       setData(await api(`/api/preseason?league=${league}`));
     } catch {
       setData(null);
+      setNotice(
+        "Preseason could not load. Refresh preseason or check your league access.",
+      );
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -140,8 +146,6 @@ export function PreseasonOnboarding({
     ageCategories = [
       ...new Set(allDivisions.map((d) => d.age_category ?? "U14")),
     ];
-  const roster =
-    data?.players.filter((p) => p.team_id === team && p.active) ?? [];
   const save = async (submit: boolean) => {
     if (!form.current) return;
     const f = new FormData(form.current),
@@ -231,17 +235,30 @@ export function PreseasonOnboarding({
         <div>
           <b>One preseason journey. Human review where it matters.</b>
           <p>
-            Coach assessment → placement approval → guardian proof and consent →
-            document review → scheduling readiness. Proof-of-age documents are
-            never sent to Meta.
+            Add player → Invite guardian → Upload proof → Review document →
+            Verify eligibility → Ready to schedule. Coaches manage the roster
+            and private links. Guardians upload proof and consent; league
+            administrators inspect originals and decide. Proofs never go to
+            Meta.
           </p>
         </div>
       </div>
       {data && !data.settings.enabled && (
         <div className="notice notice-error">
-          Legacy mode: this season does not enforce document readiness.
-          Administrators can enable preseason requirements below. Demo seed
-          records are not document-verified.
+          <b>
+            Historical / legacy season - verification is not required for
+            scheduling.
+          </b>
+          <p>
+            You can still invite guardians and review documents, but historical
+            seed records have not been document-verified. Their old roster
+            checks are not proof of age.
+          </p>
+          <p>
+            {data.role === "admin"
+              ? "For an upcoming season, open Configure verification requirements, set age ranges, deadlines and minimum roster size, enable Enforce preseason readiness before scheduling, then confirm and save. This can block new drafts until teams complete verification; it does not rewrite the published schedule."
+              : "Ask your league administrator to configure preseason requirements for the upcoming season. You cannot enable the league policy or approve identity documents."}
+          </p>
         </div>
       )}
       {!!metrics.length && (
@@ -254,9 +271,64 @@ export function PreseasonOnboarding({
           ))}
         </div>
       )}
+      {data && (
+        <section
+          className="panel preseason-section"
+          aria-label="Preseason workflow navigation"
+        >
+          <h2>Choose your team, then follow the verification steps</h2>
+          <Field label="Preseason team">
+            <select
+              value={team}
+              onChange={(e) => {
+                setTeam(e.target.value);
+              }}
+            >
+              <option value="">Register a new team</option>
+              {data?.teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <p>
+            {selected
+              ? "Your selected team's roster and guardian links are below the assessment. Jump directly to the next task."
+              : "Select an existing team to manage players, or register a new team with the assessment below."}
+          </p>
+          <div className="inline-actions">
+            <Button
+              variant="secondary"
+              disabled={!selected}
+              onClick={() => jumpTo("preseason-roster")}
+            >
+              Manage roster & guardian links
+            </Button>
+            {data.role === "admin" && (
+              <Button
+                variant="secondary"
+                onClick={() => jumpTo("preseason-document-queue")}
+              >
+                Review age documents (
+                {data.documents.filter((d) => d.status === "submitted").length})
+              </Button>
+            )}
+            {data.role === "admin" && (
+              <Button
+                variant="ghost"
+                onClick={() => jumpTo("season-eligibility-settings")}
+              >
+                Configure verification requirements
+              </Button>
+            )}
+          </div>
+        </section>
+      )}
       {data?.role === "admin" && (
         <details
           className="panel preseason-settings"
+          id="season-eligibility-settings"
           open={data.settings.registration_status === "draft"}
         >
           <summary>
@@ -299,9 +371,30 @@ export function PreseasonOnboarding({
                 name="enabled"
                 type="checkbox"
                 defaultChecked={Boolean(data.settings.enabled)}
+                onChange={(e) => setPolicyEnabled(e.target.checked)}
               />{" "}
               Enforce preseason readiness before scheduling
             </label>
+            <p>
+              New ordinary seasons require verification by default. Enabling it
+              here requires submitted questionnaires and rosters, approved
+              placements, guardian consent and human-approved age documents
+              before new scheduling. Seeded history is never converted into
+              document approval.
+            </p>
+            {policyEnabled !== null &&
+              policyEnabled !== Boolean(data.settings.enabled) && (
+                <label className="checkbox-label policy-confirmation">
+                  <input
+                    name="confirm_policy_change"
+                    type="checkbox"
+                    required
+                  />{" "}
+                  I understand this changes future scheduling eligibility, may
+                  block new drafts, and does not verify seeded players or change
+                  published fixtures.
+                </label>
+              )}
             <div className="two-fields">
               <Field label="Season name">
                 <input
@@ -550,7 +643,11 @@ export function PreseasonOnboarding({
                             : "text-orange"
                         }
                       >
-                        {r.eligible_for_scheduling ? "Ready" : "Blocked"}
+                        {!data.settings.enabled
+                          ? "Legacy scheduling"
+                          : r.eligible_for_scheduling
+                            ? "Ready"
+                            : "Blocked"}
                       </b>
                       <small>{r.blockers.join(" · ")}</small>
                     </td>
@@ -565,22 +662,6 @@ export function PreseasonOnboarding({
         title="Coach assessment and placement"
         description="Save a draft, return later, then submit a comprehensive assessment. A league administrator owns the final placement."
       >
-        <Field label="Preseason team">
-          <select
-            value={team}
-            onChange={(e) => {
-              setTeam(e.target.value);
-              setInvitation(null);
-            }}
-          >
-            <option value="">Register a new team</option>
-            {data?.teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </Field>
         <form
           className="form-grid"
           ref={form}
@@ -899,211 +980,20 @@ export function PreseasonOnboarding({
         )}
       </Section>
       {selected && data && (
-        <Section
-          title="Roster and guardian invitations"
-          description="Coaches enter the roster. The guardian provides consent and proof. Only administrators inspect documents."
-        >
-          <form
-            className="form-grid"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              await act(
-                () =>
-                  api("/api/league", {
-                    method: "POST",
-                    body: JSON.stringify({
-                      league,
-                      action: "add_player",
-                      payload: {
-                        team_id: team,
-                        display_name: f.get("display_name"),
-                        jersey: f.get("jersey"),
-                        birth_date: f.get("birth_date"),
-                        guardian_consent: false,
-                      },
-                    }),
-                  }),
-                "Player added. Create a private guardian invitation next.",
-              );
-            }}
-          >
-            <div className="preseason-fields">
-              <Field label="Player name (synthetic for demo)">
-                <input name="display_name" required maxLength={100} />
-              </Field>
-              <Field label="Jersey number">
-                <input name="jersey" required maxLength={4} />
-              </Field>
-              <Field label="Declared birth date">
-                <input name="birth_date" type="date" required />
-              </Field>
-            </div>
-            <Button variant="secondary" disabled={busy}>
-              <Users size={16} /> Add preseason player
-            </Button>
-          </form>
-          <div className="preseason-roster">
-            {roster.map((p) => (
-              <article className="panel" key={p.id}>
-                <div className="panel-heading">
-                  <div>
-                    <h3>
-                      #{p.jersey} {p.display_name}
-                    </h3>
-                    <p>
-                      Declared DOB {p.birth_date} · Age {p.age} at cutoff
-                    </p>
-                  </div>
-                  <span
-                    className={`badge ${p.verification_status === "approved" ? "badge-green" : "badge-orange"}`}
-                  >
-                    {p.verification_status}
-                  </span>
-                </div>
-                {!p.age_eligible && (
-                  <p className="text-orange">
-                    Outside current division age range; administrator approval
-                    is blocked.
-                  </p>
-                )}
-                {p.duplicate_identity && (
-                  <p className="text-orange">
-                    Possible duplicate roster identity. Administrator review
-                    required.
-                  </p>
-                )}
-                {p.verification_status !== "approved" && (
-                  <form
-                    className="form-grid"
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const f = new FormData(e.currentTarget);
-                      const saved = await act(
-                        () =>
-                          command("invite_guardian", {
-                            player_id: p.id,
-                            email: f.get("guardian_email") || "",
-                            send_email: f.get("send_email") === "on",
-                          }),
-                        "Private invitation created. Share the link only with the expected guardian.",
-                      );
-                      if (saved)
-                        setInvitation({
-                          url: saved.invitationUrl,
-                          expires: saved.expires_at,
-                          email: saved.emailState,
-                        });
-                    }}
-                  >
-                    <Field
-                      label={`Guardian email for ${p.display_name} (optional)`}
-                    >
-                      <input
-                        name="guardian_email"
-                        type="email"
-                        placeholder="guardian@example.invalid"
-                      />
-                    </Field>
-                    <label className="checkbox-label">
-                      <input name="send_email" type="checkbox" /> Send
-                      invitation email if configured
-                    </label>
-                    <Button variant="secondary" size="sm" disabled={busy}>
-                      <LinkIcon size={14} /> Create guardian invitation
-                    </Button>
-                  </form>
-                )}
-                <div className="inline-actions">
-                  {data.invitations
-                    .filter(
-                      (i) =>
-                        i.player_id === p.id &&
-                        !i.revoked_at &&
-                        +new Date(i.expires_at) > Date.now(),
-                    )
-                    .map((i) => (
-                      <Button
-                        key={i.id}
-                        size="sm"
-                        variant="ghost"
-                        disabled={busy}
-                        onClick={() =>
-                          void act(
-                            () =>
-                              command("revoke_invitation", {
-                                invitation_id: i.id,
-                              }),
-                            "Invitation revoked. Existing sessions can no longer access it.",
-                          )
-                        }
-                      >
-                        Revoke invitation
-                      </Button>
-                    ))}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() =>
-                      void act(
-                        () => command("withdraw_player", { player_id: p.id }),
-                        "Player withdrawn from the active roster; submit the roster again.",
-                      )
-                    }
-                  >
-                    Withdraw from roster
-                  </Button>
-                </div>
-              </article>
-            ))}
-          </div>
-          {invitation && (
-            <div className="preseason-invite">
-              <h3>Private guardian link</h3>
-              <p>
-                Expires {new Date(invitation.expires).toLocaleString()}. Email:{" "}
-                {invitation.email.replaceAll("_", " ")}. A copied link works
-                independently of email delivery.
-              </p>
-              <Field label="New guardian invitation link">
-                <input readOnly value={invitation.url} />
-              </Field>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(invitation.url);
-                    setNotice("Private invitation link copied.");
-                  } catch {
-                    setNotice("Select the private link and copy it directly.");
-                  }
-                }}
-              >
-                Copy private invitation link
-              </Button>
-              <p>
-                Keep this link private. Only a hash is stored; creating another
-                link revokes earlier invitations.
-              </p>
-            </div>
-          )}
-          <Button
-            disabled={busy || !roster.length}
-            onClick={() =>
-              void act(
-                () => command("submit_roster", { team_id: team }),
-                "Roster submitted. Scheduling stays blocked until every active player is approved.",
-              )
-            }
-          >
-            <ClipboardCheck size={16} /> Submit roster for preseason review
-          </Button>
-        </Section>
+        <PreseasonRoster
+          key={team}
+          league={league}
+          team={selected}
+          data={data}
+          busy={busy}
+          api={api}
+          command={command}
+          act={act}
+        />
       )}
       {data?.role === "admin" && (
         <Section
+          id="preseason-document-queue"
           title="Administrator document verification queue"
           description="Open the original, compare the child's name and date of birth, check guardian consent, and record a reasoned human decision. Age calculations cannot replace this review."
         >
@@ -1179,6 +1069,7 @@ export function PreseasonOnboarding({
                     document={doc.id}
                     api={api}
                     onChanged={load}
+                    autoLoad={preview?.id === doc.id}
                   />
                   <form
                     className="form-grid"
@@ -1249,8 +1140,11 @@ export function PreseasonOnboarding({
                 )),
           ) && (
             <p className="small-muted">
-              No pending documents. A guardian must submit genuine file bytes
-              before a review appears here.
+              No documents awaiting review. Coaches add a player and choose
+              Invite guardian to verify age in Roster and guardian invitations.
+              The guardian uploads proof through that private link; a pending
+              review appears here after submission. A declared birth date alone
+              creates no document to inspect.
             </p>
           )}
           <details>

@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ShieldCheck, CheckCheck, Upload, LockKeyhole } from "lucide-react";
+import {
+  ShieldCheck,
+  CheckCheck,
+  Upload,
+  LockKeyhole,
+  Camera,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { browserSupabase } from "@/lib/supabase";
 type GuardianState = {
@@ -23,7 +29,36 @@ export function GuardianVerification() {
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [file, setFile] = useState<File | null>(null),
+    [preview, setPreview] = useState(""),
+    [uploadStage, setUploadStage] = useState("");
+  useEffect(() => {
+    if (!file) {
+      setPreview("");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  function chooseFile(selected: File | undefined) {
+    setError("");
+    setNotice("");
+    if (!selected) return;
+    if (
+      !selected.size ||
+      selected.size > 6 * 1024 * 1024 ||
+      !["image/jpeg", "image/png", "image/webp"].includes(selected.type)
+    ) {
+      setFile(null);
+      setError(
+        "Choose a JPEG, PNG or WebP image under 6 MB. PDF and HEIC files are not supported; export a supported image or take a photo.",
+      );
+      return;
+    }
+    setFile(selected);
+  }
   async function api(action?: string, payload: unknown = {}) {
     const response = await fetch(
       "/api/guardian",
@@ -69,8 +104,7 @@ export function GuardianVerification() {
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!state) return;
-    const f = new FormData(e.currentTarget),
-      file = f.get("proof") as File;
+    const f = new FormData(e.currentTarget);
     setBusy(true);
     setError("");
     setNotice("");
@@ -83,11 +117,13 @@ export function GuardianVerification() {
         throw new Error(
           "Choose a JPEG, PNG or WebP proof-of-age photo under 6 MB.",
         );
+      setUploadStage("Preparing a secure private upload…");
       const reserved = await api("reserve_upload", {
         invitation_id: state.invitation_id,
         document_type: f.get("document_type"),
         mime: file.type,
       });
+      setUploadStage("Uploading your document privately…");
       const uploaded = await browserSupabase()
         .storage.from("youth-documents")
         .uploadToSignedUrl(reserved.path, reserved.uploadToken, file, {
@@ -96,6 +132,9 @@ export function GuardianVerification() {
         });
       if (uploaded.error)
         throw new Error("The private upload failed. Please retry.");
+      setUploadStage(
+        "Upload received. Checking the image and recording consent; this may take a few moments…",
+      );
       await api("submit", {
         invitation_id: state.invitation_id,
         document_id: reserved.document_id,
@@ -105,6 +144,7 @@ export function GuardianVerification() {
         confirmed_details: f.get("confirmed") === "on",
       });
       setState(await api());
+      setFile(null);
       setNotice(
         "Proof and consent submitted. An authorized league administrator must now review them.",
       );
@@ -112,6 +152,7 @@ export function GuardianVerification() {
       setError((e as Error).message);
     } finally {
       setBusy(false);
+      setUploadStage("");
     }
   };
   return (
@@ -172,11 +213,24 @@ export function GuardianVerification() {
               </p>
             </div>
             {state.can_submit ? (
-              <form className="form-grid" onSubmit={submit}>
+              <form className="form-grid" onSubmit={submit} aria-busy={busy}>
+                <h2>
+                  {state.status === "resubmission"
+                    ? "Send a replacement document"
+                    : "Upload proof and provide consent"}
+                </h2>
+                {state.status === "resubmission" && (
+                  <p className="notice">
+                    Read the league review reason above, then choose a new
+                    image. Your previous submission is kept in the review
+                    history; it cannot be silently replaced or approved.
+                  </p>
+                )}
                 <label className="field">
                   <span>Guardian full name</span>
                   <input
                     name="guardian_name"
+                    disabled={busy}
                     autoComplete="name"
                     required
                     minLength={2}
@@ -185,14 +239,14 @@ export function GuardianVerification() {
                 </label>
                 <label className="field">
                   <span>Relationship to child</span>
-                  <select name="relationship" required>
+                  <select name="relationship" required disabled={busy}>
                     <option value="parent">Parent</option>
                     <option value="legal guardian">Legal guardian</option>
                   </select>
                 </label>
                 <label className="field">
                   <span>Proof of age type</span>
-                  <select name="document_type" required>
+                  <select name="document_type" required disabled={busy}>
                     {state.allowed_document_types.map((t) => (
                       <option key={t} value={t}>
                         {t.replaceAll("_", " ")}
@@ -205,31 +259,107 @@ export function GuardianVerification() {
                   <input
                     name="proof"
                     type="file"
-                    required
+                    required={!file}
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={busy}
+                    onChange={(e) => chooseFile(e.currentTarget.files?.[0])}
+                  />
+                </label>
+                <label className="field guardian-camera">
+                  <span>
+                    <Camera size={16} /> Take a photo with your camera (where
+                    supported)
+                  </span>
+                  <input
+                    type="file"
                     accept="image/jpeg,image/png,image/webp"
                     capture="environment"
+                    disabled={busy}
+                    onChange={(e) => chooseFile(e.currentTarget.files?.[0])}
                   />
                 </label>
                 <p className="form-note">
                   Photo of an accepted birth certificate, passport or government
                   ID. Make the child's name and date of birth readable. Cover
                   unrelated identification numbers and addresses. JPEG, PNG or
-                  WebP · maximum 6 MB. All development/demo uploads must be
+                  WebP · maximum 6 MB. PDFs and HEIC are not supported. Choose
+                  an existing image above or use the separate camera option on
+                  supported devices. All development/demo uploads must be
                   synthetic and clearly marked.
                 </p>
+                {file && preview && (
+                  <div className="guardian-proof-preview">
+                    <h3>Check your selected document</h3>
+                    <p>
+                      {file.name} · {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
+                    <img
+                      src={preview}
+                      alt="Selected proof of age preview"
+                      onError={() => {
+                        setFile(null);
+                        setError(
+                          "This image could not be previewed. Choose an undamaged JPEG, PNG or WebP image.",
+                        );
+                      }}
+                    />
+                    <p>
+                      Make sure the full name and date of birth are readable.
+                      Selecting a file does not submit it.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        setFile(null);
+                        document
+                          .querySelectorAll<HTMLInputElement>(
+                            'input[type="file"]',
+                          )
+                          .forEach((input) => {
+                            input.value = "";
+                          });
+                      }}
+                    >
+                      Remove selected document
+                    </Button>
+                  </div>
+                )}
                 <label className="checkbox-label">
-                  <input name="confirmed" type="checkbox" required /> I confirm
-                  the recorded name and date of birth are correct and match the
-                  proof. If incorrect, I will contact the coach before
+                  <input
+                    name="confirmed"
+                    type="checkbox"
+                    required
+                    disabled={busy}
+                  />{" "}
+                  I confirm the recorded name and date of birth are correct and
+                  match the proof. If incorrect, I will contact the coach before
                   submitting.
                 </label>
                 <label className="checkbox-label">
-                  <input name="consent" type="checkbox" required /> I am the
-                  parent or legal guardian. I consent to the league collecting
-                  and reviewing this proof solely for age eligibility, retaining
-                  it for the stated period, and keeping the decision audit.
+                  <input
+                    name="consent"
+                    type="checkbox"
+                    required
+                    disabled={busy}
+                  />{" "}
+                  I am the parent or legal guardian. I consent to the league
+                  collecting and reviewing this proof solely for age
+                  eligibility, retaining it for the stated period, and keeping
+                  the decision audit.
                 </label>
-                <Button disabled={busy}>
+                {uploadStage && (
+                  <div role="status" className="guardian-upload-progress">
+                    <progress aria-label="Secure document submission progress" />
+                    <p>{uploadStage}</p>
+                    <p>
+                      Keep this page open. Verification stays pending until an
+                      administrator decides.
+                    </p>
+                  </div>
+                )}
+                <Button disabled={busy || !file}>
                   <Upload size={16} />
                   {busy
                     ? "Uploading securely…"
@@ -297,6 +427,7 @@ export function GuardianVerification() {
                 variant="ghost"
                 onClick={async () => {
                   await fetch("/api/guardian", { method: "DELETE" });
+                  setFile(null);
                   setState(null);
                   setNotice(
                     "Private session closed. Reopen your invitation to return.",

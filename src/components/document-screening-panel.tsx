@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { DocumentScreening } from "@/lib/document-screening";
 import { Button } from "./ui/button";
 type Report = DocumentScreening & {
@@ -17,16 +17,36 @@ export function DocumentScreeningPanel({
   document,
   api,
   onChanged,
+  autoLoad = false,
 }: {
   league: string;
   document: string;
   api: (path: string, options?: RequestInit) => Promise<any>;
   onChanged: () => Promise<void>;
+  autoLoad?: boolean;
 }) {
   const [report, setReport] = useState<Report | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [reason, setReason] = useState("");
+  const load = useCallback(async () => {
+    setBusy(true);
+    setError("");
+    try {
+      setReport(
+        await api(
+          `/api/document-screening?league=${league}&document=${document}`,
+        ),
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }, [api, league, document]);
+  useEffect(() => {
+    if (autoLoad) void load();
+  }, [autoLoad, load]);
   return (
     <section
       className="preseason-section"
@@ -36,8 +56,11 @@ export function DocumentScreeningPanel({
       <p>
         Local processing and deterministic checks support the reviewer. No proof
         document is sent to Meta. A clear screening result never guarantees
-        authenticity.
+        authenticity. Inconsistencies can suggest a possible alteration, but
+        this screen cannot confirm forgery. Request resubmission or escalate
+        uncertainty for human review.
       </p>
+      {busy && <p role="status">Loading screening findings…</p>}
       <Button
         variant="secondary"
         disabled={busy}

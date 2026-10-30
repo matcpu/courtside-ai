@@ -229,6 +229,19 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
     }),
   ).toHaveCount(0);
   await page
+    .getByRole("button", {
+      name: "Manage roster & guardian links",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Submit roster for preseason review",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await expect(page.getByText(/Add 1 more player/)).toBeVisible();
+  await page
     .getByLabel("Player name (synthetic for demo)", { exact: true })
     .fill(playerName);
   await page.getByLabel("Jersey number", { exact: true }).fill("17");
@@ -241,6 +254,12 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
   await expect(
     page.getByRole("heading", { name: `#17 ${playerName}`, exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByText("Invitation not sent", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: `#17 ${playerName}`, exact: true }),
+  ).toBeFocused();
   await page
     .getByRole("button", {
       name: "Submit roster for preseason review",
@@ -254,10 +273,18 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
     ),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Create guardian invitation", exact: true })
+    .getByRole("button", { name: "Invite guardian to verify age", exact: true })
     .click();
   await expect(
     page.getByLabel("New guardian invitation link", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", {
+      name: `Private guardian link for ${playerName}`,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Awaiting guardian submission", { exact: true }),
   ).toBeVisible();
   const invite = await page
     .getByLabel("New guardian invitation link", { exact: true })
@@ -285,12 +312,34 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
       .getByLabel("Guardian full name", { exact: true })
       .fill("Fictional Guardian");
     await parent
-      .getByLabel("Proof of age photo", { exact: true })
+      .getByLabel(
+        info.project.name === "mobile"
+          ? "Take a photo with your camera (where supported)"
+          : "Proof of age photo",
+        { exact: true },
+      )
       .setInputFiles({
         name: "synthetic-proof.png",
         mimeType: "image/png",
         buffer: image,
       });
+    await expect(
+      parent.getByAltText("Selected proof of age preview", { exact: true }),
+    ).toBeVisible();
+    expect(
+      await parent
+        .getByLabel("Proof of age photo", { exact: true })
+        .getAttribute("capture"),
+    ).toBeNull();
+    await expect(
+      parent.getByLabel("Take a photo with your camera (where supported)", {
+        exact: true,
+      }),
+    ).toHaveAttribute("capture", "environment");
+    await parent.screenshot({
+      path: `.local/age-verification-${info.project.name}-preview.png`,
+      fullPage: true,
+    });
     await parent
       .getByRole("checkbox", { name: /I confirm the recorded name/ })
       .check();
@@ -304,16 +353,41 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
       })
       .click();
     await expect(
+      parent.getByRole("progressbar", {
+        name: "Secure document submission progress",
+      }),
+    ).toBeVisible();
+    await expect(
       parent.getByText("Verification: pending", { exact: true }),
     ).toBeVisible({ timeout: 40000 });
   }
   try {
     console.log(`${info.project.name}: guardian opens secure invitation`);
-    await parent.goto(invite);
+    await parent.goto(invite).catch(() => {
+      throw new Error(
+        "Synthetic guardian page did not open; private capability redacted",
+      );
+    });
     await expect(
       parent.getByRole("heading", { name: playerName, exact: true }),
     ).toBeVisible();
     expect(new URL(parent.url()).hash.length === 0).toBe(true);
+    await parent
+      .getByLabel("Proof of age photo", { exact: true })
+      .setInputFiles({
+        name: "synthetic.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("%PDF synthetic unsupported fixture"),
+      });
+    await expect(
+      parent.getByRole("alert").filter({ hasText: "PDF and HEIC" }),
+    ).toContainText("PDF and HEIC files are not supported");
+    await expect(
+      parent.getByRole("button", {
+        name: "Submit proof and guardian consent",
+        exact: true,
+      }),
+    ).toBeDisabled();
     await uploadParent();
     await logout();
     await login("admin");
@@ -410,6 +484,9 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
           .evaluate((img: HTMLImageElement) => img.naturalWidth),
       )
       .toBeGreaterThan(0);
+    await expect(
+      review.getByText(/Local OCR: name match; birth date match/),
+    ).toBeVisible();
     await review
       .getByLabel(`Review decision for ${playerName}`, { exact: true })
       .selectOption("approved");
@@ -438,6 +515,33 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
       has: page.getByRole("button", { name: teamName, exact: true }),
     });
     await expect(ready.getByText("Ready", { exact: true })).toBeVisible();
+    await logout();
+    await login("coach");
+    await page
+      .getByLabel("Preseason team", { exact: true })
+      .selectOption({ label: teamName });
+    await page
+      .getByRole("button", {
+        name: "Manage roster & guardian links",
+        exact: true,
+      })
+      .click();
+    await expect(page.getByText("Age verified", { exact: true })).toBeVisible();
+    await page.screenshot({
+      path: `.local/age-verification-${info.project.name}-coach.png`,
+      fullPage: true,
+    });
+    await expect(
+      page.getByText("Ready to schedule", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Open private proof of age",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await logout();
+    await login("admin");
     // The other ready team uses the same genuine APIs and signed-upload bridge;
     // only this test's first player uses the complete visible parent journey.
     const answer = {
@@ -592,6 +696,73 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
     expect(
       await parent.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    const legacy = await call("/api/demo", {});
+    await page.reload();
+    await menu();
+    await expect(
+      page.getByLabel("Switch league").locator(`option[value="${legacy.id}"]`),
+    ).toHaveCount(1);
+    await page.getByLabel("Switch league").selectOption(legacy.id);
+    await nav("Preseason Onboarding");
+    await expect(
+      page.getByText(
+        /Historical \/ legacy season .*verification is not required for scheduling\./,
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await page
+      .getByRole("button", {
+        name: "Configure verification requirements",
+        exact: true,
+      })
+      .click();
+    const enforce = page.getByRole("checkbox", {
+      name: "Enforce preseason readiness before scheduling",
+      exact: true,
+    });
+    await expect(enforce).not.toBeChecked();
+    await enforce.check();
+    const acknowledgement = page.getByRole("checkbox", {
+      name: /I understand this changes future scheduling eligibility/,
+    });
+    await expect(acknowledgement).toBeVisible();
+    await page
+      .getByRole("button", { name: "Save season rules", exact: true })
+      .click();
+    expect(
+      await acknowledgement.evaluate(
+        (el: HTMLInputElement) => el.validity.valueMissing,
+      ),
+    ).toBe(true);
+    await acknowledgement.check();
+    await page
+      .getByRole("button", { name: "Save season rules", exact: true })
+      .click();
+    await expect(
+      page.getByText(
+        "Season rules saved. Age-rule changes require renewed administrator review.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        /Historical \/ legacy season .*verification is not required for scheduling\./,
+        { exact: true },
+      ),
+    ).toHaveCount(0);
+    const legacySnapshot = await call(`/api/preseason?league=${legacy.id}`);
+    expect(legacySnapshot.settings.enabled).toBe(true);
+    expect(
+      legacySnapshot.players.filter(
+        (p: { verification_status: string }) =>
+          p.verification_status === "approved",
+      ),
+    ).toHaveLength(0);
+    expect(
+      legacySnapshot.readiness.every(
+        (r: { eligible_for_scheduling: boolean }) => !r.eligible_for_scheduling,
       ),
     ).toBe(true);
     expect(errors).toEqual([]);

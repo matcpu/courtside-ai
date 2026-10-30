@@ -2239,6 +2239,60 @@ td small {
 .preseason-invite .button {
   margin: 12px 0;
 }
+.verification-progress,
+.verification-empty,
+.policy-confirmation {
+  padding: 16px;
+  margin: 16px 0;
+  background: #f2f6eb;
+  border: 1px solid #d8e4c9;
+  border-radius: 8px;
+}
+.guardian-invite-options {
+  margin: 16px 0;
+}
+.guardian-invite-options summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.preseason-invite {
+  overflow-wrap: anywhere;
+}
+.preseason-invite input {
+  min-width: 0;
+  width: 100%;
+}
+.guardian-proof-preview {
+  padding: 14px;
+  border: 1px solid #d8e4c9;
+  border-radius: 8px;
+  background: #f5f7f2;
+  overflow-wrap: anywhere;
+}
+.guardian-proof-preview img {
+  display: block;
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+.guardian-upload-progress progress {
+  width: 100%;
+  accent-color: #245e48;
+}
+.guardian-camera span {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.guardian-card input[type="file"] {
+  max-width: 100%;
+  min-width: 0;
+}
+#preseason-roster,
+#preseason-document-queue,
+#season-eligibility-settings {
+  scroll-margin-top: 24px;
+}
 .preseason-review {
   padding: 20px;
   margin-bottom: 18px;
