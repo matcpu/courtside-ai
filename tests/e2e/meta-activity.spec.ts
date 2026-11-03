@@ -32,6 +32,8 @@ test("saved Meta evidence has working entry points without starting inference", 
   ).toBeVisible();
   await expect(page.getByText(/Live AI processing is paused/)).toBeVisible();
   await expect(page.locator(".ai-capability")).toHaveCount(3);
+  // Evaluation envelopes must not be misrepresented as primary score extractions.
+  await expect(page.locator(".ai-score")).toHaveCount(1);
   await expect(
     page.getByRole("button", { name: "Start a new AI run", exact: true }),
   ).toBeDisabled();

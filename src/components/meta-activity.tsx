@@ -72,7 +72,7 @@ function Answer({
           </span>
         </p>
       </div>
-      {e.feature.includes("scoresheet") ? (
+      {e.feature === "scoresheet" ? (
         <>
           <h3>What Meta read</h3>
           <p>
@@ -111,7 +111,7 @@ function Answer({
             </ul>
           )}
         </>
-      ) : e.feature.includes("placement") ? (
+      ) : e.feature === "placement" ? (
         <>
           <h3>What Meta interpreted</h3>
           <p>
