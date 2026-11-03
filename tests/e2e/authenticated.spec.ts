@@ -10,13 +10,18 @@ test("real coach and administrator operate a private synthetic season", async ({
   page,
 }, info) => {
   test.skip(
-    !existsSync(".local/live-audit.json"),
+    !existsSync(process.env.E2E_AUDIT_FILE ?? ".local/live-audit.json"),
     "Run prepare-live-audit.mjs first.",
   );
   test.setTimeout(240000);
   page.setDefaultTimeout(20000);
   page.setDefaultNavigationTimeout(30000);
-  const state = JSON.parse(readFileSync(".local/live-audit.json", "utf8"));
+  const state = JSON.parse(
+    readFileSync(
+      process.env.E2E_AUDIT_FILE ?? ".local/live-audit.json",
+      "utf8",
+    ),
+  );
   const accounts = {
     admin: state.accounts[`${info.project.name}_admin`],
     coach: state.accounts[`${info.project.name}_coach`],
@@ -50,7 +55,7 @@ test("real coach and administrator operate a private synthetic season", async ({
   };
   // A separate production tenant forces an actual upload through Vercel,
   // rather than reusing a photo already submitted to the local server.
-  const fixtureFile = `.local/authenticated-${info.project.name}${origin.startsWith("https://") ? "-production" : ""}.json`;
+  const fixtureFile = `.local/authenticated-${info.project.name}${origin.startsWith("https://") ? "-production" : ""}${process.env.E2E_AUDIT_FILE ? "-release" : ""}.json`;
   const fixture = existsSync(fixtureFile)
     ? JSON.parse(readFileSync(fixtureFile, "utf8"))
     : { league: (await post("/api/demo", {})).id };
@@ -310,6 +315,7 @@ test("real coach and administrator operate a private synthetic season", async ({
   await expect(
     page.getByRole("heading", { name: /Draft schedule/ }),
   ).toBeVisible();
+  if (process.env.E2E_NO_PUBLISH === "true") return;
   await page
     .getByRole("button", { name: "Approve & publish", exact: true })
     .first()

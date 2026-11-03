@@ -124,7 +124,7 @@ test("temporary judge roles explore only their synthetic seasons without signup 
         .getByRole("button", { name: "Meta AI activity", exact: true })
         .click();
       await expect(
-        page.getByText(/Live Meta inference is paused/),
+        page.getByText(/Live AI processing is paused/),
       ).toBeVisible();
       if (role === "admin") {
         const evidence = await fetch(
@@ -139,7 +139,7 @@ test("temporary judge roles explore only their synthetic seasons without signup 
         else
           await expect(
             page.getByRole("heading", {
-              name: "No live Meta evidence recorded",
+              name: "No saved Meta responses in this season",
             }),
           ).toBeVisible();
         await page
@@ -155,9 +155,33 @@ test("temporary judge roles explore only their synthetic seasons without signup 
         );
         if (final) {
           const receipt = page
-            .locator("details")
+            .locator(".history-list > details")
             .filter({ hasText: final.response_id });
-          await receipt.locator("summary").click();
+          await page
+            .getByRole("button", {
+              name: "Explore saved agent run",
+              exact: true,
+            })
+            .click();
+          await expect(receipt).toHaveAttribute("open", "");
+          await expect(
+            receipt.getByRole("heading", {
+              name: "Inspect the league",
+              exact: true,
+            }),
+          ).toBeVisible();
+          await expect(
+            receipt.getByRole("heading", {
+              name: "Prepare a schedule draft",
+              exact: true,
+            }),
+          ).toBeVisible();
+          await expect(
+            page.getByRole("button", {
+              name: "Start a new AI run",
+              exact: true,
+            }),
+          ).toBeDisabled();
           await expect(
             receipt.getByText(/the saved proposal belongs to Riverside Ravens/),
           ).toBeVisible();

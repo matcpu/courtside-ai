@@ -1082,7 +1082,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                   onPlacement={() => changeView("Preseason Onboarding")}
                   onScoresheet={() => changeView("Scoresheets")}
                   onAgent={() =>
-                    isAdmin ? setModal("agent") : changeView("Settings")
+                    isAdmin ? setModal("agent") : changeView("Schedule")
                   }
                 />
               )}

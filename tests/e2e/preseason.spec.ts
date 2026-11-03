@@ -8,13 +8,18 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
   browser,
 }, info) => {
   test.skip(
-    !existsSync(".local/live-audit.json"),
+    !existsSync(process.env.E2E_AUDIT_FILE ?? ".local/live-audit.json"),
     "Prepare isolated audit accounts first.",
   );
   test.setTimeout(300000);
   page.setDefaultTimeout(20000);
   const env = parse(readFileSync(".env.local")),
-    state = JSON.parse(readFileSync(".local/live-audit.json", "utf8"));
+    state = JSON.parse(
+      readFileSync(
+        process.env.E2E_AUDIT_FILE ?? ".local/live-audit.json",
+        "utf8",
+      ),
+    );
   const accounts = {
     admin: state.accounts[`${info.project.name}_preseason_admin`],
     coach: state.accounts[`${info.project.name}_preseason_coach`],
@@ -672,19 +677,21 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
     await expect(
       page.getByRole("heading", { name: /Draft schedule/ }),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "Approve & publish", exact: true })
-      .click();
-    await expect(
-      page.getByRole("heading", { name: /Draft schedule/ }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: "Published fixtures", exact: true }),
-    ).toBeVisible();
+    if (process.env.E2E_NO_PUBLISH !== "true") {
+      await page
+        .getByRole("button", { name: "Approve & publish", exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: /Draft schedule/ }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("heading", { name: "Published fixtures", exact: true }),
+      ).toBeVisible();
+    }
     await nav("Meta AI activity");
     await expect(
       page.getByRole("heading", {
-        name: "No live Meta evidence recorded",
+        name: "No saved Meta responses in this season",
         exact: true,
       }),
     ).toBeVisible();

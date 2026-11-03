@@ -22,14 +22,12 @@ export function AgentActionReceipts({
     >
       <h3>Action receipts · deterministic record check</h3>
       <p>
-        Names and current status below come from the authorized league records.
-        Model narrative remains unchanged and can contain mistakes. This limited
-        check is not a complete validation of every sentence.
+        These names and statuses come from saved league records. Compare them
+        with the original model explanation, which can contain mistakes.
       </p>
       <p className="small-muted">
-        These are current saved actions for this operations run. Each provider
-        turn's own selected calls and actual results remain in its original
-        receipt.
+        A proposed move needs administrator approval. A draft needs a separate
+        publication decision. Original tool outcomes remain available below.
       </p>
       {warnings.length > 0 && (
         <div className="notice notice-error" role="status">
