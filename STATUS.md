@@ -1,4 +1,26 @@
-# Status — October 30, 2026 Eastern
+# Status — November 3, 2026 Eastern
+
+Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Current runtime **21861ba7e10ecb6575c69ec9a4dc2916fc4504b0** is Ready as **dpl_AZE3ohKoLeEUPQh2hodeEeVLeAZA**. [Linux CI passed](https://github.com/matcpu/courtside-ai/actions/runs/41725660671). The final copy/shape correction keeps evaluation envelopes separate from primary scoresheet extractions. Supabase remains xdmkgoradmbnjofmbojs; no infrastructure or billing changed.
+
+## Final release pass
+
+Meta AI activity now presents three benefit-focused cards, a restrained paused notice, working saved-run actions, readable score/placement summaries and a chronological tool-outcome timeline. Tool failures and unverified outcomes remain explicit. Current canonical proposals, saved human approvals and original model-name warnings remain distinct from model prose. Original outputs, arguments, identifiers and request digests are expandable. New inference remains disabled. Coaches get an authorized schedule action rather than an inaccessible administrator action. Loading/error states discard outdated requests. Muted text contrast is improved throughout the existing green identity.
+
+**112 unit tests**, TypeScript and an isolated production build passed. **106 PostgreSQL assertions** passed and rolled back (65 operations, 37 preseason, four independent-proposal decisions). The production release passed **22 browser cases** across desktop/mobile, including the fresh captured desktop preseason journey, normal mobile onboarding, public/signup/role checks, genuine saved evidence and primary-versus-evaluation presentation. A further **21 real API/file checks** passed: signed uploads, malformed bytes, privacy, resubmission, duplicate/recompressed images, consent/age, expiry/revocation, readiness, deletion and retention. New schedule publication was deliberately withheld; publication and notification/read-receipt behavior were verified in rolled-back SQL and previously recorded results rather than publishing another schedule. Early local failures during transient database connectivity were rechecked successfully after the database checks finished.
+
+The public reference fingerprint is unchanged. Production health confirms Supabase connectivity and paused Meta. Client-secret scanning passed. The exact synthetic judge roles work; their guardian invitation was refreshed privately without email. The packet stays in ignored `.local/judge-access.md`; refresh again before handoff if expired. Existing safety, authorization, consent and retention rules remain in force. All new inputs were synthetic. No Meta inference, email delivery, real-youth decision or external message was initiated.
+
+## Video and owner handoff
+
+The November 3 release edit uses fresh genuine recordings of the updated deployed application. It includes actual draft/submission, invitation creation, mobile image preview/consent/upload, original inspection, screening, courts/readiness/drafts, a new synthetic scoresheet upload and separate genuine saved Meta results. Separate synthetic examples are labeled. The original model naming error remains visible; the main revised schedule remains unpublished.
+
+The review cut is **audio pending**, 170 seconds at 1920×1080 H.264/AAC, saved to `C:\Users\matti\Downloads\courtside-ai-release-audio-pending.mp4`. It uses a silent AAC track, not a placeholder narrator. The owner's seven recordings are required before final audio synchronization or any claim of a completed narrated video. Recording scripts and exact input slots are in DEMO_NARRATION.md and RECORDING_RUNBOOK.md. No robotic voice is used. Video publication, the actual public video URL, accurate team/track/promotion choices and final entry submission remain owner decisions. No upload or submission has occurred.
+
+Prior recordings and earlier evidence are preserved below as historical context. Deferred physical iOS camera certification, broad email delivery, issuer authentication and production-scale recovery remain outside verified scope and are not new submission requirements.
+
+---
+
+# October 30 historical verification baseline
 
 Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Runtime source **19d91fd600ed59cd4390fcf7ef0487ed86b392d1** is Ready as **dpl_EUdCfzSFenE3ngfFzYVw1qdAwjrx**. The stable public origin was tested after deployment. [Linux CI passed](https://github.com/matcpu/courtside-ai/actions/runs/41097184247). Source: [matcpu/courtside-ai](https://github.com/matcpu/courtside-ai). Supabase remains xdmkgoradmbnjofmbojs.
 

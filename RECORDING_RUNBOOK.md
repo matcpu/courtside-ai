@@ -1,32 +1,27 @@
-# Final three-minute recording workflow
+# Founder video — release recording and audio handoff
 
-All three primary Meta jobs have genuine receipts. Capture saved timestamped outputs with inference paused; no new model call is needed for retakes. The owner-approved result and two moves are recorded. **Main revised schedule v3 remains unpublished for owner review.**
+The updated review cut is `C:\Users\matti\Downloads\courtside-ai-release-audio-pending.mp4`, 170 seconds, 1920×1080 H.264/AAC. It is explicitly audio pending, with a silent AAC track. Do not use Microsoft David or another synthetic narrator. Earlier review videos are preserved and are not the current release edit.
 
-The canonical timeline is [submission/recording-plan.json](submission/recording-plan.json); narration is in [DEMO_NARRATION.md](DEMO_NARRATION.md). The local review draft is private. Do not publicly upload it or submit the entry before owner approval.
+## Seven scenes and voice slots
 
-## Prepare
+| Scene | Time | Recording name | Product evidence |
+|---|---|---|---|
+| Founder motivation | 0:00–0:14 | 01-founder | Working overview and Meta capability cards |
+| Coach onboarding | 0:14–0:44 | 02-onboarding | Actual typing, experience/tier selection, draft and submission; separately labeled saved Muse interpretation |
+| Guardian verification | 0:44–1:13 | 03-age-verification | Current roster/invitation, selected synthetic proof preview, consent, secure processing, original inspection and local warnings |
+| Courts and scheduling | 1:13–1:32 | 04-scheduling | Confirmed court time, same preseason readiness and generated unpublished draft |
+| Scoresheet intelligence | 1:32–2:01 | 05-scoresheets | Actual new upload in a separate fixture; genuine saved 78–43 recognition, prior human confirmation and standings |
+| Operations agent | 2:01–2:36 | 06-agent | Genuine selected tools with readable outcomes, actual approved moves, canonical-name warning, revised unpublished schedule |
+| Closing | 2:36–2:50 | 07-closing | Current application and product URL |
 
-1. Run `node scripts/recording-preflight.mjs --check-evidence`. It verifies all three actual capabilities, the completed original sequence, paused inference and unchanged public reference.
-2. Use separate administrator, coach and guardian contexts. Log in before capture. Remove the guardian invitation fragment before filming. Never capture credentials, environment files, mailbox addresses, signed proof URLs or unrelated tabs.
-3. Capture 1920×1080 desktop views and a 390×844 guardian view. All leagues, players and proofs are visibly fictional. Distinguish upcoming preseason from historical legacy inputs.
-4. Preserve saved approvals and original evidence. A previously completed action can be shown with its timestamp or original clip; never stage another click as the original decision.
+Place seven recordings in `C:\Users\matti\Downloads\COURTSIDE AI Narration`. WAV is preferred; M4A/MP3 are acceptable. Matching .txt scripts and a JSON timeline are already in that folder. Speak naturally, retain complete words and original takes, with a short quiet lead-in/tail and no background music. DEMO_NARRATION.md contains the approved founder wording, exact opening, agent ending and closing.
 
-## Seven chapters
+When the recordings arrive: inspect durations and audio, clean noise gently, normalize levels, align each scene and adjust its cuts to the natural delivery. Retain originals. Recheck the entire final H.264/AAC export, transitions, every important interaction, audio synchronization and the total duration under three minutes. Remove the audio-pending badge only after actual founder audio is present and verified.
 
-| Time | Actual screens/actions | Required disclosure |
-|---|---|---|
-| 0:00–0:18 | Signed-out public Overview and schedule; private preseason overview | Working public access without signup; separate private synthetic seasons |
-| 0:18–0:45 | Submitted contradictory questionnaire and actual placement receipt | Model interpretation differs from deterministic rubric and human placement approval |
-| 0:45–1:00 | Guardian mobile consent/proof status and authorized review queue | Private proof, local warnings, authenticity unverified; no guardian documents sent to Meta |
-| 1:00–1:32 | Original 78–43 image, actual extraction/vision receipt and saved human confirmation | No invented player stats; owner confirmed before agent |
-| 1:32–2:25 | Actual selected tools, history/readiness, linked proposals/draft and model answer | Timestamped saved inference, canonical Riverside warning; errors are not successful actions |
-| 2:25–2:48 | Saved owner approvals; deterministic v3 five-game redraft and two byes | v3 is unpublished. Existing coach notifications, if shown, belong to the earlier published version |
-| 2:48–3:00 | Actual receipts and pending-review schedule | Human publication and final submission remain owner decisions |
+## Provenance and release safety
 
-The optional recovery scene uses a separate labeled synthetic season: a blocked lookup, then successful investigation/proposal/draft and a final model summary acknowledging the failure. Do not conflate its records with the main league.
+All new footage was captured from the deployed application in this release pass. Raw sources and timing/fixture records remain privately in ignored `.local/release-video`. Current real file uploads and human synthetic decisions used isolated test seasons. No new Meta inference or paid retries were made. Saved, timestamped outputs are explicitly distinguished from new interactions. Different synthetic examples are labeled and are not presented as one causal transaction. No operating-system picker is fabricated. Do not expose credentials, invitation capabilities, signed URLs, environment files, private packets or real child records.
 
-## Export and inspect
+The main Meta demonstration's two moves have earlier owner approvals. Its revised schedule v3 remains unpublished. The recording does not replay an approval click as the earlier decision. Inference, email expansion and publication remain disabled/restricted as recorded in STATUS.md. Inspect original response/audit details privately when needed; keep raw JSON out of the main visual story.
 
-The locally supported draft uses narrated WebM with readable captions and authentic application captures. A final distribution copy may use MP4/H.264 after owner review. Keep the complete duration, including cards, at or below 180 seconds. Review the exported file's duration, audio, legibility, privacy and every claimed outcome.
-
-A reviewed public video URL must eventually be tested signed out and entered in the official video field. That public upload and form submission are intentionally pending owner approval. Restricted email testing remains complete; never send additional messages for footage.
+A final owner-approved public video URL still has to be tested signed out and inserted in the official form. Do not upload the video or submit the entry without owner authorization.

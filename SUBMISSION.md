@@ -1,6 +1,6 @@
 # COURTSIDE AI submission draft
 
-Updated October 29, 2026. The field mapping below comes from the actual [submission form](https://cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit) inspected on October 28; the October 29 read-only visit returned a signed-out event landing page and did not reverify field labels or validation. This document is a draft, not a submitted entry. The verified public event deadline is **November 4, 2026, 9:00 PM Eastern**. The representative must confirm the track, list every human contributor and decide the form's publication/promotion permission.
+Updated November 3, 2026. The November 3 public read-only check again returned the event landing page, confirming November 4 at 9:00 PM ET; it did not expose the authenticated form fields. The field mapping remains the last actually inspected form, not a newly verified form schema. The field mapping below comes from the actual [submission form](https://cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit) inspected on October 28; the October 29 read-only visit returned a signed-out event landing page and did not reverify field labels or validation. This document is a draft, not a submitted entry. The verified public event deadline is **November 4, 2026, 9:00 PM Eastern**. The representative must confirm the track, list every human contributor and decide the form's publication/promotion permission.
 
 ## Form fields
 

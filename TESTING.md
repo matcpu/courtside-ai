@@ -1,6 +1,6 @@
 # Verification
 
-The current runtime passes TypeScript and **104 unit tests**. **170 transactional PostgreSQL assertions** passed and rolled back: 65 operations, 37 preseason, four independent-proposal reviews and 64 budget/evidence authorization checks, including explicit timestamp freshness.
+The current runtime passes TypeScript and **112 unit tests**. The November 3 pass rechecked 106 transactional SQL assertions and 22 production browser cases plus 21 real API/file checks; see STATUS.md for scope. The following 170-assertion total is the earlier broader baseline. **170 transactional PostgreSQL assertions** passed and rolled back: 65 operations, 37 preseason, four independent-proposal reviews and 64 budget/evidence authorization checks, including explicit timestamp freshness.
 
 These are separate from genuine provider evaluations: six scoresheets (one reused baseline), three questionnaires (one reused baseline), eight generated document illustrations and multistep operations/error recovery. See [EVALUATION_REPORT.md](EVALUATION_REPORT.md). Mocked responses remain contract tests, never model-quality evidence.
 
@@ -35,3 +35,7 @@ A fresh isolated build outside OneDrive copies tracked source and installed depe
 `scripts/audit-repository.mjs` scans reachable Git history and tracked source for private paths/configured values/common secrets. `scripts/check-client-secrets.mjs --live-origin` inspects both deployed entry pages and linked client assets. CI repeats the source checks, typecheck, tests, build and OCR trace validation.
 
 No simultaneous 500-browser load test, issuer-authentication benchmark, disaster-recovery certification or legal compliance certification is claimed. STATUS.md contains exact final deployed results.
+
+## Safe release rehearsals
+
+Set `E2E_AUDIT_FILE` to an ignored synthetic account file to avoid mutating another rehearsal's fixtures. `E2E_NO_PUBLISH=true` exercises draft generation and approval controls while withholding schedule publication. The authenticated browser test intentionally stops at that boundary; SQL transactions still cover publication, outbox and read receipts and then roll back. Read-only judge/evidence tests keep the canonical private fixture intact. Never treat a UI health stub in the deterministic-scheduling regression as a model response or dispatch authorization.

@@ -1,6 +1,8 @@
-# Product completion audit — October 29, 2026
+# Product completion audit — November 3, 2026
 
 Scope: every feature in the original COURTSIDE AI request. **Working** means exercised against the real Supabase project or, for model quality, the actual provider cases stated below. It does not mean unlimited production scale or general accuracy. **Partial** identifies the exact limitation. The three core Meta capabilities have genuine provider responses and actual action receipts; extra image/questionnaire/document cases and tool-error recovery were evaluated. [EVALUATION_REPORT.md](EVALUATION_REPORT.md) preserves successes and misses. [META_VERIFICATION.md](META_VERIFICATION.md) records the current cumulative 120/30 promotional-credit safeguard, replacing the historical eight-request limit.
+
+Latest release: saved Meta capability entry points, readable tool/outcome summaries and expandable original evidence are verified on desktop/mobile. Current verification counts and runtime are in STATUS.md. No new model inference or general accuracy claim was added.
 
 ## Feature-by-feature assessment
 
