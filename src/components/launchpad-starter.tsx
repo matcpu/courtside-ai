@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import {
+  AtSign,
   ArrowUpRight,
   Check,
   Clipboard,
   ExternalLink,
   Globe2,
-  Instagram,
   Megaphone,
   ShieldCheck,
 } from "lucide-react";
@@ -60,7 +60,7 @@ export function LaunchpadStarter({ snapshot }: { snapshot: Snapshot }) {
 
       <div className="launchpad-two-up">
         <section className="launchpad-feature">
-          <div className="launchpad-heading"><Instagram size={24} /><div><h3>Social name ideas</h3><p>Suggestions only. Instagram availability must be checked on the platform.</p></div></div>
+          <div className="launchpad-heading"><AtSign size={24} /><div><h3>Social name ideas</h3><p>Suggestions only. Instagram availability must be checked on the platform.</p></div></div>
           <div className="launchpad-picks">
             {ideas.handles.map((handle) => <div key={handle}><code>@{handle}</code><button type="button" onClick={() => void copy(handle, "Username")} aria-label={`Copy username ${handle}`}><Clipboard size={15}/></button></div>)}
           </div>
