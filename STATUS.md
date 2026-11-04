@@ -1,3 +1,13 @@
+# Launchpad release preparation — November 4, 2026 Eastern
+
+`codex/organizer-setup` is being pushed for a review PR against `main`, without merging or deploying. Runtime implementation remains `3f64ce8`; release preparation adds documentation only. PR #1's helper bodies match after formatting, its three original tests are retained, there is one website route/conditional fallback, and no ordered migration was added. The new PR is the combined candidate; do not independently merge both PRs.
+
+[LAUNCHPAD_RELEASE.md](LAUNCHPAD_RELEASE.md) records the synthetic-only hosted acceptance matrix, approval boundaries, exact migration/rollout/rollback order and remaining release gates. The pending proposal must be promoted and the local loader adjusted to apply it exactly once before any hosted rollout. Local tests are not hosted Supabase certification. GitHub CI results must be verified on the actual final PR head.
+
+Vercel was checked read-only: this existing project has no Git repository link and Git-created deployments are disabled. No hosted migration/data change, deployment, merge, video edit, provider inference, messaging, DNS/purchase or billing change occurred. **GO for review/CI; NO-GO for production enablement until hosted acceptance and explicit authorization.**
+
+---
+
 # Launchpad review — November 4, 2026 Eastern — NOT DEPLOYED
 
 Branch `codex/organizer-setup` is an isolated owner-review candidate. PR [#1](https://github.com/matcpu/courtside-ai/pull/1) was inspected at `43414f9` and its website route, starter, identity/social helpers and tests were reused. It remains unmerged. No hosted migration, deployment, video change, domain purchase/DNS, social account action, email expansion, billing change or Meta inference occurred.
