@@ -2235,9 +2235,17 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                       </Panel>
                       <Panel
                         title="Public league site"
-                        subtitle="Public data excludes player identities, documents and coach contact information."
+                        subtitle="A league-branded website powered by your approved schedules, teams and results. Private player information stays private."
                       >
                         <div className="inline-actions">
+                          <a
+                            href={`/league/${s.league.slug}/website`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="button button-secondary"
+                          >
+                            <ExternalLink size={15} /> Open branded website
+                          </a>
                           <Button
                             variant="secondary"
                             disabled={busy}
@@ -2265,6 +2273,11 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                             Close public access
                           </Button>
                         </div>
+                        <p className="form-note">
+                          Your branded website is available when public access is enabled.
+                          It displays only league-approved public information and updates
+                          automatically as results and published fixtures change.
+                        </p>
                       </Panel>
                       <Panel
                         title="Audit trail"
