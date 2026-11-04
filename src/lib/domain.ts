@@ -199,6 +199,7 @@ export type Player = {
   birth_date: string;
   guardian_consent: boolean;
   eligibility_status: string;
+  verification_status?: string;
 };
 export type Snapshot = {
   statistics: {

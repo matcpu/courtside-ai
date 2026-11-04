@@ -5,6 +5,9 @@ import { randomUUID, randomBytes } from "node:crypto";
 import { localDatabase, asUser, organizer } from "./lib/local-database.mjs";
 import { newSetup } from "../src/lib/launchpad.ts";
 const db = await localDatabase();
+const objects = new Map(),
+  storageTokens = new Map();
+const serviceKey = "synthetic-local-storage-service-only";
 const users = new Map(),
   sessions = new Map();
 const password = "SyntheticPreview!2099";
@@ -32,6 +35,7 @@ const call = (user, action, p) =>
   asUser(db, user.id, (tx) => organizer(tx, action, p));
 const base = {
   ...newSetup(),
+  allowedDocumentTypes: ["birth_certificate", "passport", "government_id"],
   name: "Toronto Community Hoops",
   season: "Spring 2099 · Synthetic Preview",
   city: "Toronto",
@@ -107,14 +111,24 @@ const rpcNames = new Set([
   "public_leagues",
   "my_leagues",
   "create_demo",
+  "guardian_gateway",
+  "document_maintenance",
+  "finalize_age_upload",
+  "document_screening",
 ]);
 const server = http.createServer(async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "http://127.0.0.1:3301");
+  const allowedOrigins = new Set([
+    "http://127.0.0.1:3301",
+    "http://localhost:3301",
+  ]);
+  if (allowedOrigins.has(req.headers.origin))
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+  res.setHeader("Vary", "Origin");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "authorization,apikey,content-type,x-client-info,x-supabase-api-version",
+    "authorization,apikey,content-type,x-client-info,x-supabase-api-version,x-upsert,cache-control",
   );
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") {
@@ -130,12 +144,97 @@ const server = http.createServer(async (req, res) => {
     const actor = sessions.get(
       req.headers.authorization?.replace(/^Bearer /, ""),
     );
-    let raw = "";
+    const chunks = [];
+    let length = 0;
     for await (const chunk of req) {
-      raw += chunk;
-      if (raw.length > 1000000) throw Error("Preview body too large");
+      length += chunk.length;
+      if (length > 7 * 1024 * 1024) throw Error("Preview body too large");
+      chunks.push(chunk);
     }
-    const p = raw ? JSON.parse(raw) : {};
+    const bytes = Buffer.concat(chunks);
+    const isService = req.headers.authorization === "Bearer " + serviceKey;
+    if (url.pathname.startsWith("/storage/v1/")) {
+      const path = url.pathname
+        .replace(
+          /^\/storage\/v1\/object\/(?:upload\/sign|sign|authenticated)\//,
+          "",
+        )
+        .replace(/^\/storage\/v1\/object\//, "");
+      if (
+        req.method === "POST" &&
+        /\/(upload\/sign|sign)\//.test(url.pathname)
+      ) {
+        if (!isService) return json({ message: "Private storage" }, 403);
+        const token = randomBytes(24).toString("hex");
+        const upload = url.pathname.includes("/upload/sign/");
+        storageTokens.set(token, {
+          path,
+          upload,
+          expires: Date.now() + (upload ? 7200000 : 60000),
+        });
+        return json(
+          upload
+            ? { url: `/object/upload/sign/${path}?token=${token}`, token }
+            : { signedURL: `/object/sign/${path}?token=${token}` },
+        );
+      }
+      const capability = storageTokens.get(url.searchParams.get("token"));
+      const signed =
+        capability?.path === path && capability.expires > Date.now();
+      if (req.method === "PUT" && url.pathname.includes("/upload/sign/")) {
+        if (!signed || !capability.upload)
+          return json({ message: "Invalid upload capability" }, 403);
+        let content = bytes,
+          mime = req.headers["content-type"];
+        if (mime?.includes("multipart/form-data")) {
+          const form = await new Response(bytes, {
+            headers: { "Content-Type": mime },
+          }).formData();
+          const file = [...form.values()].find((v) => typeof v !== "string");
+          if (!file) return json({ message: "Missing image" }, 400);
+          content = Buffer.from(await file.arrayBuffer());
+          mime = file.type;
+        }
+        if (objects.has(path))
+          return json({ message: "Object already exists" }, 409);
+        objects.set(path, { bytes: content, mime });
+        const [bucket, ...parts] = path.split("/");
+        await db.query(
+          "insert into storage.objects(bucket_id,name,metadata) values($1,$2,$3)",
+          [
+            bucket,
+            parts.join("/"),
+            JSON.stringify({ mimetype: mime, size: content.length }),
+          ],
+        );
+        return json({ Key: path });
+      }
+      if (req.method === "GET") {
+        if (!isService && (!signed || capability.upload))
+          return json({ message: "Private storage" }, 403);
+        const item = objects.get(path);
+        if (!item) return json({ message: "Not found" }, 404);
+        res.writeHead(200, {
+          "Content-Type": item.mime,
+          "Cache-Control": "private, no-store",
+        });
+        return res.end(item.bytes);
+      }
+      if (req.method === "DELETE" && isService) {
+        const p = JSON.parse(bytes.toString());
+        const bucket = url.pathname.split("/").at(-1);
+        for (const name of p.prefixes ?? []) {
+          objects.delete(bucket + "/" + name);
+          await db.query(
+            "delete from storage.objects where bucket_id=$1 and name=$2",
+            [bucket, name],
+          );
+        }
+        return json([]);
+      }
+      return json({ message: "Private storage" }, 403);
+    }
+    const p = bytes.length ? JSON.parse(bytes.toString()) : {};
     if (url.pathname === "/__preview")
       return json({
         synthetic: true,
@@ -237,7 +336,7 @@ const server = http.createServer(async (req, res) => {
               values,
             )
           ).rows,
-        actor ? "authenticated" : "anon",
+        isService ? "service_role" : actor ? "authenticated" : "anon",
       );
       return json(array ? result : result[0].result);
     }

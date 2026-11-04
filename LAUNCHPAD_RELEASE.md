@@ -1,8 +1,17 @@
 # Launchpad release gate and hosted acceptance plan
 
-Prepared November 4, 2026 Eastern. **NO-GO for production enablement until the gates below pass. GO for PR review and CI.** No step in this plan authorizes a hosted migration, deployment, real message, model inference, purchase or publication. The targeted repair changes the database concurrency guard and HTTP conflict guidance only; no new product feature is added. The verified repair commit is recorded below.
+Prepared November 4, 2026 Eastern. **NO-GO for production enablement until the gates below pass. GO for PR review and CI.** No step in this plan authorizes a hosted migration, deployment, real message, model inference, purchase or publication. The original concurrency repair is preserved. The current review candidate also implements the requested Preseason UX redesign and explicit document policy; see the checkpoint below.
 
-## Verified repair checkpoint
+## Current Preseason UX checkpoint
+
+[PRESEASON_UX_REVIEW.md](PRESEASON_UX_REVIEW.md) records the three-section journey, explicit document selection, declaration-only human review, screenshots and verification limits. TypeScript/production builds with flags on/off, 128 unit tests, 295 WASM SQL/schema/upgrade assertions, 152 native PostgreSQL assertions and 20 desktop/mobile browser cases passed locally. Counts overlap across engines. Hosted acceptance remains outstanding; CI must be checked on this candidate's final head.
+
+The unchanged Launchpad migration is followed by `20261104183226_preseason_document_policy.sql` (canonical LF SHA-256 `8b267aff86594e0f76b20cec87c87283bdbac5c82e3f3fdc0f73f29dc0502c1a`). These are **two ordered migrations**, each loaded once. No hosted migration has been applied. Review/approve both exact files before hosted acceptance; never apply an old proposal separately. Existing saved document choices and rules survive the upgrade. Existing linked drafts whose safety baseline predates the new policy fail closed and require fresh review.
+
+Extend the hosted matrix to test required-proof and declaration-only modes, their transitions, missing proof selection, a second child's invitation in the same tab, mid-upload policy changes, resubmission, human declaration decisions, raw-object denial and the actual opening-weekend scheduler. A declaration approval must never appear as document verification. Preseason must also work with both organizer flags off, without a disabled-feature configuration link.
+
+## Historical verified repair checkpoint
+
 
 - Implementation repair commit: `c3f9ce9bd3351bc991567ec1a6a193e13fd63200`.
 - Migration: `supabase/migrations/20261104164024_organizer_launchpad.sql`.
@@ -18,7 +27,7 @@ PR #1 was inspected at `43414f96ec7eba6ff4f0ca6d6dc1b5abf7495d1f`. This branch i
 - One canonical `/league/[slug]/website` route. It selects a published configured theme when enabled and otherwise retains the original redacted-snapshot website. `/league/[slug]` remains the existing portal.
 - One Launchpad navigation entry. `LaunchpadStarter` is the schema-free fallback; `Launchpad` is the expanded workspace. They are mutually exclusive, not two visible dashboards. Legacy website CSS is namespaced to avoid collisions with configurable themes.
 - Exactly one implementation each of `launchIdentity` and `launchSocialKit`; semantic comparison to PR #1 passed. The expanded helpers reuse these functions. All three original tests are retained in `tests/launchpad-starter.test.ts`; the separate new tests cover expanded behavior.
-- Exactly one ordered, locally verified migration: `supabase/migrations/20261104164024_organizer_launchpad.sql`, generated with pinned CLI 2.122.0. The proposal file and conditional proposal loader are removed. No hosted migration is applied. PR #1 itself has no schema migration.
+- One ordered, locally verified Launchpad migration (followed by the policy migration in the current checkpoint): `supabase/migrations/20261104164024_organizer_launchpad.sql`, generated with pinned CLI 2.122.0. The proposal file and conditional proposal loader are removed. No hosted migration is applied. PR #1 itself has no schema migration.
 
 This PR is the combined release candidate and supersedes PR #1's implementation. Do not independently merge both. Leave PR #1 open until the owner reviews the replacement; close it as superseded only with the owner's decision. Nothing has been merged during preparation.
 
@@ -73,8 +82,8 @@ Use actual browser-issued JWTs and hosted Data API/Storage responses for these c
 ## Exact release order after owner approval
 
 1. **Approve the combined PR content and resolve PR #1 supersession.** Require green CI on the final SHA. Do not merge either PR yet solely because local tests passed.
-2. **Review the already generated migration and exact repair SHA/checksum.** `20261104164024_organizer_launchpad.sql` is the sole Launchpad migration. Do not regenerate/reapply a second copy. Local/native test setup loads ordered migrations only and has passed repeated clean bootstrap, RLS and permissions checks. Require all local checks and GitHub CI on the final repaired head. The CLI remains repository-pinned at 2.122.0; no hosted `db push` or `apply_migration` has run.
-3. **Approve and apply the hosted migration explicitly to `xdmkgoradmbnjofmbojs` only**, with organizer flags off and the prior application still serving. Verify the additive objects, RLS/grants and advisors. Do not push unrelated pending migrations or use an unscoped/default project target.
+2. **Review the already generated migration and exact repair SHA/checksum.** `20261104164024_organizer_launchpad.sql` is the sole Launchpad migration; the current candidate also requires the subsequent `20261104183226_preseason_document_policy.sql` migration, in that order. Do not regenerate/reapply a second copy. Local/native test setup loads ordered migrations only and has passed repeated clean bootstrap, RLS and permissions checks. Require all local checks and GitHub CI on the final repaired head. The CLI remains repository-pinned at 2.122.0; no hosted `db push` or `apply_migration` has run.
+3. **Approve and apply the two reviewed hosted migrations in order explicitly to `xdmkgoradmbnjofmbojs` only**, with organizer flags off and the prior application still serving. Verify the additive objects, RLS/grants and advisors. Do not push unrelated pending migrations or use an unscoped/default project target.
 4. **Approve the hosted acceptance runtime and synthetic fixtures**, then execute the matrix above. Use the existing hosting project and no billable features; if a protected hosted runtime cannot be provided without changing the production app, stop for a distinct deployment authorization. Never treat this document as that authorization.
 5. **Review evidence and obtain final merge/deployment authorization.** Only after hosted acceptance passes, merge the combined candidate once, close PR #1 as superseded by owner decision, and deploy the exact verified SHA through the existing Vercel workflow. Keep model inference, unrestricted messaging, SMS and billing changes off.
 6. **Enable the larger feature only on the verified schema/runtime.** Set server `ORGANIZER_SETUP_ENABLED=true` and build-time `NEXT_PUBLIC_ORGANIZER_SETUP_ENABLED=true` together and produce the approved build. Recheck signed-out reference access, an approved synthetic owner/coach journey, site draft/publication separation and audit history. Actual league website publication remains an individual administrator action; schedule publication remains separate.

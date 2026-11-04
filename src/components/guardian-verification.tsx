@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ShieldCheck, CheckCheck, Upload, LockKeyhole } from "lucide-react";
 import { ImageCapture } from "./image-capture";
+import { proofLabel } from "./document-policy-fields";
 import { Button } from "./ui/button";
 import { browserSupabase } from "@/lib/supabase";
 type GuardianState = {
@@ -17,14 +18,17 @@ type GuardianState = {
   allowed_document_types: string[];
   review_reason: string | null;
   can_submit: boolean;
+  proof_required?: boolean;
 };
 export function GuardianVerification() {
   const opening = useRef<Promise<GuardianState> | null>(null);
+  const sessionVersion = useRef(0);
   const [state, setState] = useState<GuardianState | null>(null),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
+    [documentType, setDocumentType] = useState(""),
     [file, setFile] = useState<File | null>(null),
     [cameraBusy, setCameraBusy] = useState(false),
     [uploadStage, setUploadStage] = useState("");
@@ -46,38 +50,82 @@ export function GuardianVerification() {
     return result;
   }
   useEffect(() => {
-    let active = true;
-    if (!opening.current) {
-      const params = new URLSearchParams(window.location.hash.slice(1)),
-        token = params.get("invite");
-      window.history.replaceState(null, "", window.location.pathname);
-      opening.current = api(
-        token ? "exchange" : undefined,
-        token ? { token } : {},
+    let active = true,
+      generation = 0;
+    const open = () => {
+      const token = new URLSearchParams(window.location.hash.slice(1)).get(
+        "invite",
       );
-    }
-    (async () => {
-      try {
-        const data = await opening.current!;
-        if (active) setState(data);
-      } catch (e) {
-        if (active) setError((e as Error).message);
-      } finally {
-        if (active) setLoading(false);
+      if (token) {
+        window.history.replaceState(null, "", window.location.pathname);
+        setState(null);
+        setFile(null);
+        setDocumentType("");
+        setError("");
+        setNotice("");
       }
-    })();
+      if (!opening.current || token)
+        opening.current = api(
+          token ? "exchange" : undefined,
+          token ? { token } : {},
+        );
+      const current = ++generation;
+      sessionVersion.current++;
+      setLoading(true);
+      opening.current
+        .then((data) => {
+          if (active && current === generation) setState(data);
+        })
+        .catch((e) => {
+          if (active && current === generation) setError((e as Error).message);
+        })
+        .finally(() => {
+          if (active && current === generation) setLoading(false);
+        });
+    };
+    open();
+    const onInvite = () => {
+      if (new URLSearchParams(window.location.hash.slice(1)).has("invite"))
+        open();
+    };
+    window.addEventListener("hashchange", onInvite);
     return () => {
       active = false;
+      window.removeEventListener("hashchange", onInvite);
     };
   }, []);
+  const permittedTypes = state?.allowed_document_types.join("|") ?? "";
+  useEffect(() => {
+    setDocumentType("");
+    setFile(null);
+  }, [state?.invitation_id, state?.proof_required, permittedTypes]);
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!state) return;
     const f = new FormData(e.currentTarget);
+    const version = sessionVersion.current;
     setBusy(true);
     setError("");
     setNotice("");
     try {
+      if (state.proof_required === false) {
+        await api("submit_declaration", {
+          invitation_id: state.invitation_id,
+          consent: f.get("consent") === "on",
+          confirmed_details: f.get("confirmed") === "on",
+        });
+        if (version !== sessionVersion.current) return;
+        const refreshed = await api();
+        if (version !== sessionVersion.current) return;
+        setState(refreshed);
+        setFile(null);
+        setNotice(
+          "Guardian confirmation submitted for a human eligibility decision. No document was collected or verified.",
+        );
+        return;
+      }
+      if (!documentType || !state.allowed_document_types.includes(documentType))
+        throw new Error("Choose the document type you are submitting.");
       if (
         !file?.size ||
         file.size > 6 * 1024 * 1024 ||
@@ -89,9 +137,10 @@ export function GuardianVerification() {
       setUploadStage("Preparing a secure private upload…");
       const reserved = await api("reserve_upload", {
         invitation_id: state.invitation_id,
-        document_type: f.get("document_type"),
+        document_type: documentType,
         mime: file.type,
       });
+      if (version !== sessionVersion.current) return;
       setUploadStage("Uploading your document privately…");
       const uploaded = await browserSupabase()
         .storage.from("youth-documents")
@@ -99,6 +148,7 @@ export function GuardianVerification() {
           contentType: file.type,
           cacheControl: "0",
         });
+      if (version !== sessionVersion.current) return;
       if (uploaded.error)
         throw new Error("The private upload failed. Please retry.");
       setUploadStage(
@@ -112,13 +162,16 @@ export function GuardianVerification() {
         consent: f.get("consent") === "on",
         confirmed_details: f.get("confirmed") === "on",
       });
-      setState(await api());
+      if (version !== sessionVersion.current) return;
+      const refreshed = await api();
+      if (version !== sessionVersion.current) return;
+      setState(refreshed);
       setFile(null);
       setNotice(
         "Proof and consent submitted. An authorized league administrator must now review them.",
       );
     } catch (e) {
-      setError((e as Error).message);
+      if (version === sessionVersion.current) setError((e as Error).message);
     } finally {
       setBusy(false);
       setUploadStage("");
@@ -136,8 +189,9 @@ export function GuardianVerification() {
         <p className="eyebrow">SECURE PRESEASON VERIFICATION</p>
         <h1>A safe start to the season.</h1>
         <p>
-          Confirm your child's details, provide guardian consent and send proof
-          of age directly to authorized league reviewers.
+          Confirm your child's details and provide consent directly to the
+          league. If your league requires proof of age, submit one permitted
+          document for private review.
         </p>
         {loading && <p role="status">Opening your private invitation…</p>}
         {error && !state?.can_submit && (
@@ -161,9 +215,14 @@ export function GuardianVerification() {
                 Recorded date of birth: <b>{state.child.birth_date}</b>
               </p>
               <span
-                className={`badge ${state.status === "approved" ? "badge-green" : "badge-orange"}`}
+                className={`badge ${["approved", "declaration_approved"].includes(state.status) ? "badge-green" : "badge-orange"}`}
               >
-                Verification: {state.status}
+                {state.proof_required !== false &&
+                state.allowed_document_types.length === 0
+                  ? "Your league has not selected its accepted proof-of-age documents yet. Ask your coach to contact the administrator, then refresh this page. No upload is available until the policy is configured."
+                  : state.status === "declaration_approved"
+                    ? "Eligibility approved · declaration only"
+                    : `Verification: ${state.status}`}
               </span>
               {state.review_reason && (
                 <p>
@@ -174,68 +233,100 @@ export function GuardianVerification() {
             <div className="info-banner">
               <LockKeyhole size={22} />
               <p>
-                Only authorized league administrators can open this proof.
-                Coaches see progress, not the document. No facial recognition or
-                Meta AI processing is used. Stored copies are deleted under the
-                league's {state.retention_days}-day retention policy; the
-                eligibility decision and audit history remain.
+                {state.proof_required === false ? (
+                  <>
+                    This league does not collect documents. Guardian
+                    confirmation and a human eligibility decision are still
+                    required. The consent and decision audit remain private to
+                    the league. No facial recognition or Meta processing is
+                    used.
+                  </>
+                ) : (
+                  <>
+                    Only authorized league administrators can open this proof.
+                    Coaches see progress, not the document. No facial
+                    recognition or Meta AI processing is used. Stored copies are
+                    deleted under the league’s {state.retention_days}-day
+                    retention policy; the eligibility decision and audit history
+                    remain.
+                  </>
+                )}
               </p>
             </div>
             {state.can_submit ? (
               <form className="form-grid" onSubmit={submit} aria-busy={busy}>
                 <h2>
-                  {state.status === "resubmission"
-                    ? "Send a replacement document"
-                    : "Upload proof and provide consent"}
+                  {state.proof_required === false
+                    ? "Confirm details and provide consent"
+                    : state.status === "resubmission"
+                      ? "Send a replacement document"
+                      : "Upload proof and provide consent"}
                 </h2>
-                {state.status === "resubmission" && (
-                  <p className="notice">
-                    Read the league review reason above, then choose a new
-                    image. Your previous submission is kept in the review
-                    history; it cannot be silently replaced or approved.
-                  </p>
+                {state.status === "resubmission" &&
+                  state.proof_required !== false && (
+                    <p className="notice">
+                      Read the league review reason above, then choose a new
+                      image. Your previous submission is kept in the review
+                      history; it cannot be silently replaced or approved.
+                    </p>
+                  )}
+                {state.proof_required !== false && (
+                  <>
+                    <label className="field">
+                      <span>Guardian full name</span>
+                      <input
+                        name="guardian_name"
+                        disabled={busy}
+                        autoComplete="name"
+                        required
+                        minLength={2}
+                        maxLength={100}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Relationship to child</span>
+                      <select name="relationship" required disabled={busy}>
+                        <option value="parent">Parent</option>
+                        <option value="legal guardian">Legal guardian</option>
+                      </select>
+                    </label>
+                    <fieldset className="guardian-proof-choice">
+                      <legend>Which one document are you submitting?</legend>
+                      <p className="form-note">
+                        Your league accepts only the options below.
+                      </p>
+                      <div className="policy-choices">
+                        {state.allowed_document_types.map((type) => (
+                          <label className="checkbox-label" key={type}>
+                            <input
+                              type="radio"
+                              name="document_type"
+                              value={type}
+                              required
+                              disabled={busy}
+                              checked={documentType === type}
+                              onChange={() => setDocumentType(type)}
+                            />
+                            {proofLabel(type)}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <ImageCapture
+                      kind="document"
+                      value={file}
+                      onChange={(next) => {
+                        setFile(next);
+                        setError("");
+                        setNotice("");
+                      }}
+                      disabled={busy}
+                      onBusyChange={setCameraBusy}
+                      inputLabel="Proof of age photo"
+                      previewAlt="Selected proof of age preview"
+                    />
+                  </>
                 )}
-                <label className="field">
-                  <span>Guardian full name</span>
-                  <input
-                    name="guardian_name"
-                    disabled={busy}
-                    autoComplete="name"
-                    required
-                    minLength={2}
-                    maxLength={100}
-                  />
-                </label>
-                <label className="field">
-                  <span>Relationship to child</span>
-                  <select name="relationship" required disabled={busy}>
-                    <option value="parent">Parent</option>
-                    <option value="legal guardian">Legal guardian</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Proof of age type</span>
-                  <select name="document_type" required disabled={busy}>
-                    {state.allowed_document_types.map((t) => (
-                      <option key={t} value={t}>
-                        {t.replaceAll("_", " ")}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <ImageCapture
-                  kind="document"
-                  value={file}
-                  onChange={(next) => {
-                    setFile(next);
-                    setError("");
-                    setNotice("");
-                  }}
-                  disabled={busy}
-                  onBusyChange={setCameraBusy}
-                  inputLabel="Proof of age photo"
-                  previewAlt="Selected proof of age preview"
-                />
                 {error && (
                   <div className="notice notice-error" role="alert">
                     {error}
@@ -248,9 +339,9 @@ export function GuardianVerification() {
                     required
                     disabled={busy}
                   />{" "}
-                  I confirm the recorded name and date of birth are correct and
-                  match the proof. If incorrect, I will contact the coach before
-                  submitting.
+                  I confirm the recorded name and date of birth are correct
+                  {state.proof_required !== false ? " and match the proof" : ""}
+                  . If incorrect, I will contact the coach before submitting.
                 </label>
                 <label className="checkbox-label">
                   <input
@@ -259,10 +350,10 @@ export function GuardianVerification() {
                     required
                     disabled={busy}
                   />{" "}
-                  I am the parent or legal guardian. I consent to the league
-                  collecting and reviewing this proof solely for age
-                  eligibility, retaining it for the stated period, and keeping
-                  the decision audit.
+                  I am the parent or legal guardian. I consent to the league{" "}
+                  {state.proof_required === false
+                    ? "reviewing these declared details solely for eligibility and keeping the consent and decision audit."
+                    : "collecting and reviewing this proof solely for age eligibility, retaining it for the stated period, and keeping the decision audit."}
                 </label>
                 {uploadStage && (
                   <div role="status" className="guardian-upload-progress">
@@ -274,22 +365,37 @@ export function GuardianVerification() {
                     </p>
                   </div>
                 )}
-                <Button disabled={busy || cameraBusy || !file}>
+                {state.proof_required !== false && !documentType && (
+                  <p className="form-note">
+                    Choose a document type and a photo to enable submission.
+                  </p>
+                )}
+                <Button
+                  disabled={
+                    busy ||
+                    cameraBusy ||
+                    (state.proof_required !== false && (!file || !documentType))
+                  }
+                >
                   <Upload size={16} />
                   {busy
                     ? "Uploading securely…"
-                    : "Submit proof and guardian consent"}
+                    : state.proof_required === false
+                      ? "Submit guardian confirmation"
+                      : "Submit proof and guardian consent"}
                 </Button>
               </form>
             ) : (
               <div className="guardian-status">
                 <CheckCheck size={24} />
                 <p>
-                  {state.status === "approved"
-                    ? "Your child’s document and eligibility have been approved by the league."
-                    : state.status === "pending"
-                      ? "Your submission is pending administrator review. No automatic verification decision has been made."
-                      : "Submissions are closed for this invitation. Contact the coach if you need assistance."}
+                  {state.status === "declaration_approved"
+                    ? "The league approved eligibility under its declaration policy. No document was verified."
+                    : state.status === "approved"
+                      ? "Your child’s document and eligibility have been approved by the league."
+                      : state.status === "pending"
+                        ? "Your submission is pending administrator review. No automatic verification decision has been made."
+                        : "Submissions are closed for this invitation. Contact the coach if you need assistance."}
                 </p>
               </div>
             )}

@@ -38,3 +38,15 @@ it("exposes resubmission, rejection and completed human decisions distinctly", (
     "Age verified",
   );
 });
+
+it("never labels a declaration decision document verification", () => {
+  expect(
+    verificationProgress(player("declaration_approved"), false, false).label,
+  ).toBe("Eligibility approved · declaration only");
+  expect(
+    verificationProgress(player("declaration_approved"), false, false).next,
+  ).toContain("No document was verified");
+  expect(verificationProgress(player("pending"), true, false).next).toContain(
+    "no document was submitted",
+  );
+});

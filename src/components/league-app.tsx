@@ -1138,6 +1138,11 @@ export function LeagueApp({
                   metaEnabled={health?.meta ?? false}
                   signedIn={!!session}
                   divisions={s.divisions}
+                  onOpenLaunchpad={
+                    organizerEnabled && isAdmin && canWrite
+                      ? () => changeView("Launchpad")
+                      : undefined
+                  }
                 />
               )}
               {view === "Meta AI activity" && (
@@ -1266,7 +1271,10 @@ export function LeagueApp({
                                         : "orange"
                                     }
                                   >
-                                    {p.eligibility_status}
+                                    {p.verification_status ===
+                                    "declaration_approved"
+                                      ? "eligible · declaration only"
+                                      : p.eligibility_status}
                                   </Badge>
                                   {isAdmin &&
                                     !s.league.preseason_enabled &&

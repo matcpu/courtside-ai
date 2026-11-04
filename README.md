@@ -13,7 +13,7 @@ This is an operations platform. It does not provide basketball coaching or evalu
 - Next.js App Router, TypeScript, Tailwind and a Radix/shadcn-style component foundation.
 - Real Supabase PostgreSQL, Auth and private Storage, with tenant membership authorization, RLS, composite tenant foreign keys and audited transactional commands.
 - Dedicated preseason setup and dashboard, comprehensive saved/resumable coach assessment, placement review/override, configurable roster readiness and opening-weekend scheduling gates.
-- Secure guardian invitations, real private proof uploads and consent, administrator document-review queue, resubmissions, decision history and retention/deletion controls. See [PRESEASON.md](PRESEASON.md) for precise security and verification limits.
+- Preseason separates season rules, teams/players and human age review. Required-proof leagues choose accepted documents explicitly; an optional declaration policy retains consent, deterministic eligibility checks and human approval, without claiming document verification. Secure guardian invitations, private proof uploads, resubmissions, decision history and retention/deletion controls remain. See [PRESEASON.md](PRESEASON.md) for precise security and verification limits.
 - Constraint-based round generation, confirmed court availability, 30-minute minimum rest, frozen completed fixtures and versioned publication.
 - Private scoresheet upload and human result review; corrections replay all official results to recalculate ratings. Missing statistics remain null or absent.
 - Evidence-based division proposals after three verified mismatches; rejection and stale-version checks.

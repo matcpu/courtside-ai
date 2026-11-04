@@ -103,3 +103,16 @@ describe("launch planning boundaries", () => {
     ).toThrow();
   });
 });
+
+it("starts with no implied document acceptance and preserves draft saving until policy is reviewed", () => {
+  const s = newSetup();
+  expect(s.allowedDocumentTypes).toEqual([]);
+  expect(s.proofRequired).toBe(true);
+  expect(setupSchema.safeParse(s).success).toBe(true);
+  expect(setupBlockers(s)).toContain(
+    "Select at least one accepted proof-of-age document.",
+  );
+  expect(setupBlockers({ ...s, proofRequired: false })).not.toContain(
+    "Select at least one accepted proof-of-age document.",
+  );
+});

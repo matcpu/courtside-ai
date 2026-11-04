@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { policyChecks, policyUpgradeChecks } from "./test-preseason-policy.mjs";
 import fs from "node:fs";
 import { localDatabase, asUser, organizer } from "./lib/local-database.mjs";
 import { newSetup } from "../src/lib/launchpad.ts";
@@ -41,7 +42,11 @@ try {
     "insert into auth.users(id,email,email_confirmed_at) values($1,'organizer@example.invalid',now()),($2,'outsider@example.invalid',now())",
     [admin, other],
   );
-  const minimal = { ...newSetup(), name: "Synthetic Launch League" };
+  const minimal = {
+    ...newSetup(),
+    allowedDocumentTypes: ["birth_certificate", "passport", "government_id"],
+    name: "Synthetic Launch League",
+  };
   let d = await run(admin, "save_draft", {
     id: null,
     league_id: null,
@@ -539,6 +544,9 @@ try {
   });
   checks += await sequentialSafetyChecks(db);
   console.log(
+    `Additional preseason proof-policy assertions passed: ${await policyChecks(db)}.`,
+  );
+  console.log(
     `Launchpad PostgreSQL assertions passed: ${checks}. In-memory database; no hosted changes.`,
   );
   for (const file of ["tests/database.sql", "tests/preseason-database.sql"]) {
@@ -554,6 +562,9 @@ try {
   await db.close();
 }
 if (!process.exitCode) {
+  console.log(
+    `Existing-policy migration upgrade assertions passed: ${await policyUpgradeChecks()}.`,
+  );
   const clean = await localDatabase();
   try {
     console.log(

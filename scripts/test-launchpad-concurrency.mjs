@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { policyChecks } from "./test-preseason-policy.mjs";
 import { nativeTestDatabase } from "./lib/native-test-database.mjs";
 import { assertTestSchema } from "./lib/assert-test-schema.mjs";
 import { organizer } from "./lib/local-database.mjs";
@@ -164,6 +165,9 @@ try {
     c.release();
     d.release();
   }
+  console.log(
+    `Native proof-policy assertions passed: ${await policyChecks(db)}.`,
+  );
   console.log(
     `Native PostgreSQL multi-session assertions passed: ${checks}. Actual lock waits observed; no hosted connection.`,
   );

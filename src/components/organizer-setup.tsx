@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { DocumentPolicyFields } from "./document-policy-fields";
 import {
   newSetup,
   setupBlockers,
@@ -704,17 +705,23 @@ export function OrganizerSetup({
                 "1–30 days. Existing retention and deletion controls remain in effect.",
               )}
             </div>
-            <p className="form-note">
-              Accepted proof types:{" "}
-              {data.allowedDocumentTypes
-                .map((v) => v.replaceAll("_", " "))
-                .join(", ")}
-              . Configure document policy in Preseason after setup.
-            </p>
+            <DocumentPolicyFields
+              required={data.proofRequired !== false}
+              types={data.allowedDocumentTypes}
+              disabled={busy}
+              onChange={(required, types) =>
+                setData((previous) => ({
+                  ...previous,
+                  proofRequired: required,
+                  allowedDocumentTypes: types as Setup["allowedDocumentTypes"],
+                }))
+              }
+            />
             <ul className="setup-safety">
               <li>
-                Guardian consent and administrator document review are required
-                before scheduling eligibility.
+                Guardian consent and a human eligibility decision are required
+                before scheduling; accepted documents are inspected when the
+                league requires proof.
               </li>
               <li>
                 Coaches submit their own scoresheets. Authorized humans confirm

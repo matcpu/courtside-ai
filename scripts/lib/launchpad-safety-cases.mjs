@@ -9,6 +9,7 @@ export const safetyCases = [
   ["cutoff date", { cutoff_date: "2099-02-01" }],
   ["accepted documents", { allowed_document_types: ["passport"] }],
   ["document retention", { document_retention_days: 7 }],
+  ["proof requirement", { proof_required: false, allowed_document_types: [] }],
   ["verification requirement", { enabled: false }],
   [
     "division ages",
@@ -46,6 +47,7 @@ export const runSafety = (db, action, p, actor = safetyActor) =>
 export async function createSafetyFixture(db, suffix) {
   const setup = {
     ...newSetup(),
+    allowedDocumentTypes: ["birth_certificate", "passport", "government_id"],
     name: `Synthetic Safety ${suffix}`,
     city: "Toronto",
     season: "Synthetic 2099",

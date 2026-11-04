@@ -45,9 +45,9 @@ export const setupSchema = z.object({
   maxRoster: z.number().int().min(1).max(30),
   gamesPerTeam: z.number().int().min(1).max(40),
   retentionDays: z.number().int().min(1).max(30),
+  proofRequired: z.boolean().default(true),
   allowedDocumentTypes: z
     .array(z.enum(["birth_certificate", "passport", "government_id"]))
-    .min(1)
     .max(3),
 });
 export type Setup = z.infer<typeof setupSchema>;
@@ -155,7 +155,8 @@ export function newSetup(): Setup {
     maxRoster: 20,
     gamesPerTeam: 1,
     retentionDays: 14,
-    allowedDocumentTypes: ["birth_certificate", "passport", "government_id"],
+    proofRequired: true,
+    allowedDocumentTypes: [],
     divisions: ["Premier", "Competitive", "Development"].map((name, i) => ({
       name: `U14 · ${name}`,
       age_category: "U14",
@@ -224,6 +225,8 @@ export function setupBlockers(s: Setup) {
       s.courts.length
   )
     b.push("Each court needs a unique name and venue/address.");
+  if (s.proofRequired !== false && !s.allowedDocumentTypes.length)
+    b.push("Select at least one accepted proof-of-age document.");
   return b;
 }
 /** An upper bound, not a feasible-matchup promise. Merge overlaps per court. */

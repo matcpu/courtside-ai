@@ -20,6 +20,7 @@ const actions = [
   "invite_guardian",
   "revoke_invitation",
   "review_document",
+  "review_declaration",
   "open_document",
   "delete_document",
 ] as const;
@@ -105,6 +106,16 @@ export async function POST(request: Request) {
           duplicate_acknowledged: z.boolean(),
         })
         .parse(payload);
+    if (b.action === "review_declaration")
+      payload = z
+        .object({
+          player_id: z.uuid(),
+          decision: z.enum(["approved", "rejected", "resubmission"]),
+          reason: z.string().min(10).max(1000),
+          details_checked: z.literal(true),
+          duplicate_acknowledged: z.boolean(),
+        })
+        .parse(payload);
     const { data, error } = await client.rpc("preseason_command", {
       p_league: b.league,
       p_action: dbAction,
@@ -115,7 +126,7 @@ export async function POST(request: Request) {
         error.code === "42501"
           ? "You do not have permission for this preseason action"
           : error.message,
-        error.code === "42501" ? 403 : 400,
+        error.code === "42501" ? 403 : error.code === "40001" ? 409 : 400,
       );
     if (b.action === "open_document") {
       const signed = await documentStorage()

@@ -1,3 +1,9 @@
+# Preseason UX candidate verification
+
+The current local verification and exact reproduction commands are in [PRESEASON_UX_REVIEW.md](PRESEASON_UX_REVIEW.md). New suites: `scripts/test-preseason-policy.mjs`, `tests/e2e/preseason-local.spec.ts`, `tests/e2e/preseason-flag-off.spec.ts`. SQL covers policy upgrades, explicit human declaration review, consent/age/readiness gates and the prior stale-finish repair. Browsers exercise actual Next routes against loopback-only synthetic Auth/Storage adapters. These are not hosted Supabase acceptance results. No recording/video or paid inference is used.
+
+---
+
 # Launchpad blocker repair — local verification
 
 The repaired Launchpad branch uses one ordered migration (`20261104164024_organizer_launchpad.sql`) and no proposal loader. `npm run test:database:local` passes 254 SQL/schema assertions across the repaired workflows, existing operations/preseason and a second clean bootstrap. `npm run test:database:concurrency` uses native PostgreSQL 17.11 and passes 113 assertions across separate sessions and a second clean bootstrap. It observes actual lock waits; it does not infer concurrency from the single-connection WASM queue. CI runs both suites using an ephemeral loopback PostgreSQL service. Hosted database URLs are rejected by the native harness.

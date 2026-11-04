@@ -118,6 +118,10 @@ test("organizer saves/resumes guided setup, finishes privately, adds genuine cap
     .fill("Synthetic Community Hall · Toronto");
   await dialog.getByRole("button", { name: /Rules & safety/ }).click();
   await dialog.getByLabel("Minimum active roster").fill("1");
+  await expect(
+    dialog.getByRole("checkbox", { name: "Passport", exact: true }),
+  ).not.toBeChecked();
+  await dialog.getByRole("checkbox", { name: "Passport", exact: true }).check();
   await dialog.getByRole("button", { name: /Review & finish/ }).click();
   await page.screenshot({
     path: `.local/launchpad-review/${info.project.name}-setup-review.png`,

@@ -38,12 +38,16 @@ fs.cpSync(
   path.join(directory, "node_modules"),
   { recursive: true, dereference: true },
 );
+const organizerFlag = process.env.LAUNCHPAD_REVIEW_ORGANIZER_ENABLED ?? "true";
+if (!["true", "false"].includes(organizerFlag))
+  throw Error("Invalid local review organizer flag");
 const env = {
   ...process.env,
   NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:3302",
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "synthetic-preview-publishable",
-  ORGANIZER_SETUP_ENABLED: "true",
-  NEXT_PUBLIC_ORGANIZER_SETUP_ENABLED: "true",
+  ORGANIZER_SETUP_ENABLED: organizerFlag,
+  NEXT_PUBLIC_ORGANIZER_SETUP_ENABLED: organizerFlag,
+  SUPABASE_SERVICE_ROLE_KEY: "synthetic-local-storage-service-only",
   META_API_ENABLED: "false",
   NOTIFICATIONS_ENABLED: "false",
   SMS_ENABLED: "false",
@@ -71,6 +75,7 @@ fs.writeFileSync(
     origin: "http://127.0.0.1:3301",
     backend: "http://127.0.0.1:3302",
     exitCode: 0,
+    organizerEnabled: organizerFlag,
   }),
 );
 if (!process.argv.includes("--build-only")) {

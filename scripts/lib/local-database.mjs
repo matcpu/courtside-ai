@@ -3,7 +3,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import fs from "node:fs";
 import path from "node:path";
-export async function initializeTestDatabase(db) {
+export async function initializeTestDatabase(db, { beforeMigration } = {}) {
   await db.exec(
     `
     do $$begin
@@ -34,6 +34,7 @@ export async function initializeTestDatabase(db) {
     .filter((f) => f.endsWith(".sql"))
     .sort()) {
     try {
+      if (beforeMigration) await beforeMigration(db, file);
       await db.exec(
         fs.readFileSync(path.join("supabase/migrations", file), "utf8"),
       );
@@ -52,7 +53,7 @@ export async function asUser(db, actor, fn, role = "authenticated") {
       JSON.stringify({ sub: actor, role }),
     ]);
     await tx.exec(
-      `set local role ${role === "anon" ? "anon" : "authenticated"}`,
+      `set local role ${role === "service_role" ? "service_role" : role === "anon" ? "anon" : "authenticated"}`,
     );
     return fn(tx);
   });

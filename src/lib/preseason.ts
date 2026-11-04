@@ -146,6 +146,8 @@ export function recommendPlacement(q: PreseasonQuestionnaire): Recommendation {
 export const settingsSchema = z
   .object({
     enabled: z.boolean(),
+    proof_required: z.boolean().optional(),
+    expected_rules_version: z.number().int().positive().optional(),
     season_name: z.string().min(2).max(80),
     season_start: z.iso.date(),
     cutoff_date: z.iso.date(),
@@ -158,9 +160,16 @@ export const settingsSchema = z
     document_retention_days: z.number().int().min(1).max(30),
     allowed_document_types: z
       .array(z.enum(["birth_certificate", "passport", "government_id"]))
-      .min(1)
       .max(3),
   })
+  .refine(
+    (v) => v.proof_required === false || v.allowed_document_types.length > 0,
+    {
+      message:
+        "Select at least one accepted document when proof of age is required.",
+      path: ["allowed_document_types"],
+    },
+  )
   .refine((v) => v.min_roster <= v.max_roster, {
     message: "Minimum roster cannot exceed maximum",
   })
@@ -179,6 +188,7 @@ export type Readiness = {
   roster_submitted: boolean;
   players: number;
   verified: number;
+  eligible_players?: number;
   eligible_for_scheduling: boolean;
   blockers: string[];
 };

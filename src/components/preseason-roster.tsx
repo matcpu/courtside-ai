@@ -81,11 +81,13 @@ export function PreseasonRoster({
       id="preseason-roster"
       aria-labelledby="roster-heading"
     >
-      <h2 id="roster-heading">Roster and guardian invitations</h2>
+      <h2 id="roster-heading" tabIndex={-1}>
+        Roster and guardian invitations
+      </h2>
       <p>
         1. Add players. 2. Invite each guardian. 3. Submit the roster when it
-        meets the size requirement. Guardians upload proof; only league
-        administrators inspect and approve it.
+        meets the size requirement. Guardians confirm details and consent, and
+        upload proof when required. League administrators decide eligibility.
       </p>
       <div className="verification-progress">
         <b>
@@ -93,7 +95,9 @@ export function PreseasonRoster({
           {roster.length === 1 ? "" : "s"} · required {minimum}–{maximum}
         </b>
         <p>
-          {readiness?.verified ?? 0}/{roster.length} age verified · Roster{" "}
+          {readiness?.verified ?? 0}/{roster.length} documents verified ·{" "}
+          {readiness?.eligible_players ?? readiness?.verified ?? 0}/
+          {roster.length} eligible players · Roster{" "}
           {readiness?.roster_submitted ? "submitted" : "not submitted"}
         </p>
         {!data.settings.enabled ? (
@@ -156,8 +160,14 @@ export function PreseasonRoster({
               !i.revoked_at &&
               Date.parse(i.expires_at) > Date.now(),
           );
-          const progress = verificationProgress(p, Boolean(activeInvitation));
-          const canInvite = p.verification_status !== "approved";
+          const progress = verificationProgress(
+            p,
+            Boolean(activeInvitation),
+            data.settings.proof_required !== false,
+          );
+          const canInvite = !["approved", "declaration_approved"].includes(
+            p.verification_status,
+          );
           return (
             <article
               className="panel"
@@ -174,7 +184,7 @@ export function PreseasonRoster({
                   </p>
                 </div>
                 <span
-                  className={`badge ${p.verification_status === "approved" ? "badge-green" : "badge-orange"}`}
+                  className={`badge ${["approved", "declaration_approved"].includes(p.verification_status) ? "badge-green" : "badge-orange"}`}
                 >
                   {progress.label}
                 </span>
@@ -242,9 +252,12 @@ export function PreseasonRoster({
                     }}
                   >
                     <p>
-                      The guardian—not the coach—uploads proof through the
-                      secure link. You do not need email delivery to share a
-                      link privately.
+                      The guardian confirms details and consent through the
+                      secure link
+                      {data.settings.proof_required !== false
+                        ? " and uploads accepted proof"
+                        : " without uploading a document"}
+                      . You can share the link privately without email delivery.
                     </p>
                     <label className="field">
                       <span>
@@ -382,6 +395,13 @@ export function PreseasonRoster({
         </p>
       )}
       <Button
+        variant={
+          readiness?.questionnaire_completed &&
+          readiness?.placement_approved &&
+          !readiness?.roster_submitted
+            ? "default"
+            : "secondary"
+        }
         disabled={busy || !sizeValid || deadlinePassed}
         onClick={() =>
           void act(

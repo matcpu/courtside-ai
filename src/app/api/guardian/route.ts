@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
           "reserve_upload",
           "submit",
           "withdraw_consent",
+          "submit_declaration",
         ]),
         payload: z.record(z.string(), z.unknown()).default({}),
       })
@@ -147,6 +148,21 @@ export async function POST(request: NextRequest) {
         { headers },
       );
     }
+    if (b.action === "submit_declaration")
+      return NextResponse.json(
+        await gateway(
+          hash,
+          "submit_declaration",
+          z
+            .object({
+              invitation_id: z.uuid(),
+              consent: z.literal(true),
+              confirmed_details: z.literal(true),
+            })
+            .parse(b.payload),
+        ),
+        { headers },
+      );
     if (b.action === "withdraw_consent")
       return NextResponse.json(
         await gateway(

@@ -11,7 +11,10 @@ export async function assertTestSchema(db) {
     files.filter((f) => f.endsWith("_organizer_launchpad.sql")).length,
     1,
   );
-  assert.ok(files.at(-1).endsWith("_organizer_launchpad.sql"));
+  assert.ok(
+    files.indexOf("20261104164024_organizer_launchpad.sql") <
+      files.indexOf("20261104183226_preseason_document_policy.sql"),
+  );
   assert.equal(
     fs.existsSync("supabase/proposals/organizer_launchpad.sql"),
     false,

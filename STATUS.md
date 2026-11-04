@@ -1,3 +1,17 @@
+# Preseason onboarding UX candidate — November 4, 2026 — NOT DEPLOYED
+
+Implemented on `codex/organizer-setup`, preserving the completed PR #2 concurrency repair. Three sections separate league rules, selected-team preparation and human age review. Shared proof controls start new leagues without implied accepted documents, preserve saved choices and validate required selections. Guardian capture/upload requires an explicit single type, preview and consent; second-child invitations now exchange correctly in the same tab.
+
+An explicit no-document policy retains guardian confirmation, human eligibility review and all deterministic readiness gates. Declaration approval is not document verification. Requiring proof again blocks declaration-only eligibility. One subsequent ordered migration adds the contract without altering the prior repair migration; no hosted migration has run.
+
+Verification: TypeScript/build with flags on/off, 128 unit tests, 295 WASM SQL/schema/upgrade assertions, 152 native PostgreSQL assertions and 20 desktop/mobile browser cases passed. Actual native lock waits and rejected-finish rollback remain covered. Auth/Storage browser adapters are local contracts, camera input is synthetic and physical-device/hosted acceptance is unverified. Repository audit passed. Read-only production smoke: HTTP 200, 12 public reference teams, zero public players, Meta false. No hosted writes, deployment, video edit or inference.
+
+**GO for local review; NO-GO for production enablement pending owner-approved migrations and hosted acceptance.** See [PRESEASON_UX_REVIEW.md](PRESEASON_UX_REVIEW.md) for changes, screenshots, commands, test scope and remaining gates. PR #2 remains draft.
+
+---
+
+Earlier checkpoints below are historical; their counts describe those earlier commits.
+
 # Targeted Launchpad repair — November 4, 2026 Eastern — NOT HOSTED
 
 The confirmed stale-finish overwrite is repaired locally in implementation commit `c3f9ce9bd3351bc991567ec1a6a193e13fd63200`.  Existing-season drafts bind a trusted snapshot of live league/Preseason/division configuration under the league lock. Finish rechecks after any lock wait and before writes in the same transaction. Old private autosaves cannot rebase the snapshot; conflicts return HTTP 409 and instruct the administrator to reload/review in a fresh edit. No automatic merge, retry or silent discard is added.
