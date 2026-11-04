@@ -1,3 +1,11 @@
+# Launchpad draft — November 4, 2026 — NOT DEPLOYED
+
+Draft pull request [#1](https://github.com/matcpu/courtside-ai/pull/1) adds a standalone responsive public league website at `/league/[slug]/website`, linked from the league Settings screen, and an administrator-only Launchpad starter view with generated handle/domain ideas and copyable social launch materials. This first slice uses the existing redacted `public_leagues` and `league_snapshot` RPCs: only approved teams, published fixtures and confirmed results power the site. It does not expose youth names, guardians, identification documents or coach contact details. No schema migration, external account, domain purchase, social posting, Meta inference, billing or notification was initiated. The social suggestions are **not verified available** and are not represented as model output.
+
+The PR remains **draft and unmerged**. GitHub CI passed on commit `174874d` after an unavailable icon import was corrected. No local `npm ci`/typecheck/build could run in this limited workspace because package registry fetches failed; the repository's GitHub CI did run the verified pipeline. Existing live deployment and hackathon submission candidate remain unchanged. The larger onboarding wizard, persisted branding themes, real domain checks, authenticated social publishing and agent extensions remain future, separately reviewed phases.
+
+---
+
 # Status — November 3, 2026 Eastern — camera release
 
 Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Runtime **93f44b6031b4494a45605ce0b4956a5f8d01dd92** is Ready as **dpl_84N1SnLLBDHPW64rfQq5QehhWimS**. [CI passed](https://github.com/matcpu/courtside-ai/actions/runs/41769062687). Source, private storage, billing and the sole Supabase project remain unchanged in scope.
