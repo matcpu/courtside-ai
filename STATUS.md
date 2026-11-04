@@ -1,3 +1,37 @@
+# Launchpad review — November 4, 2026 Eastern — NOT DEPLOYED
+
+Branch `codex/organizer-setup` is an isolated owner-review candidate. PR [#1](https://github.com/matcpu/courtside-ai/pull/1) was inspected at `43414f9` and its website route, starter, identity/social helpers and tests were reused. It remains unmerged. No hosted migration, deployment, video change, domain purchase/DNS, social account action, email expansion, billing change or Meta inference occurred.
+
+## Working local scope
+
+Three starting paths (guided/copy/direct), five steps, database-autosaved owner drafts, revision conflicts, editable age categories and private setup completion. A season copy receives fresh registration/schedules and excludes participants, contacts, documents, invitations, scores and dated availability. Existing seasons can enter setup without replacing their identity, teams, divisions or results. Removed administrators lose linked-draft access.
+
+Launchpad shows actual registration/onboarding/invitation/verification state, readiness blockers and a conservative merged-slot capacity upper bound. The existing public website route supports three responsive themes, normalized logo, public copy/colours/contact, desktop/mobile preview, private drafts, separate human publication/unpublication and immutable publication revisions. Public output is explicitly projected from approved teams, published fixtures and confirmed scores. Private administrator contact, youth records, proofs and invitations are excluded.
+
+Member invitations work before an account exists, expire in 72 hours and require the matching confirmed account. Membership/team assignment is atomic; revoked, expired, reused, wrong-account and stale-assignment cases fail. No invitation email is sent. Identity/social starter copy is explicitly rules based. One real official `example.com` RDAP check completed; registration lookup never claims purchase availability. Other domain suffixes, naming conflicts and Instagram handles require manual checks. Agent extension tools are documented design only.
+
+## Verification and limits
+
+- TypeScript and isolated production build passed; **125 Vitest tests** passed.
+- **171 real PostgreSQL assertions** in the local WASM engine passed: 69 new Launchpad checks plus 65 operations and 37 preseason assertions, with the existing suites rolled back. All prior repository migrations load before the unapplied proposal.
+- **12 browser cases** passed across desktop Chrome/mobile Chromium: all three setup paths, resume, real availability/capacity, current-season edits, website themes/logo/draft isolation/publication, pre-account invitation acceptance/restrictions and the PR #1 public reference fallback. Desktop/mobile screenshots were inspected in `.local/launchpad-review`.
+- Actual Next API checks reject unauthenticated access, administrator-role escalation, arbitrary domain URLs and invalid image bytes without advancing the site revision. The bounded official RDAP request succeeded without retries or paid inference.
+- Production database health is good and Meta is disabled. The canonical Northstar public snapshot matches its saved fingerprint. The directory contains an additional public league outside this branch; it was left untouched. The all-directory fingerprint therefore differs; no false unchanged-directory claim is made.
+
+The preview is local synthetic PostgreSQL plus Auth/PostgREST contract adapters, **not a hosted Supabase integration certification**. Hosted migration/advisors/API acceptance remain gated on owner approval. Physical Safari/Android and general multi-region timezone/runtime parity are unverified. Current Supabase changelog notes Vancouver/Edmonton/Casablanca tzdata fixes; validate hosted/runtime timezone data before operating those regions. No production database/runtime upgrade is part of this proposal.
+
+The additive SQL is intentionally in `supabase/proposals/organizer_launchpad.sql`, outside applied migrations. Both organizer flags default false. Existing schema-free PR #1 pages remain a fallback. New branch CI has not been run remotely because this is a local review stop; the CI workflow now includes the local SQL suite. [Review instructions](LAUNCHPAD_REVIEW.md), [scope plan](LAUNCHPAD_PLAN.md), [future agent tools](LAUNCHPAD_AGENT_DESIGN.md).
+
+---
+
+# Earlier PR #1 scope — preserved historical record
+
+Draft pull request [#1](https://github.com/matcpu/courtside-ai/pull/1) adds a standalone responsive public league website at `/league/[slug]/website`, linked from the league Settings screen, and an administrator-only Launchpad starter view with generated handle/domain ideas and copyable social launch materials. This first slice uses the existing redacted `public_leagues` and `league_snapshot` RPCs: only approved teams, published fixtures and confirmed results power the site. It does not expose youth names, guardians, identification documents or coach contact details. No schema migration, external account, domain purchase, social posting, Meta inference, billing or notification was initiated. The social suggestions are **not verified available** and are not represented as model output.
+
+The PR remains **draft and unmerged**. GitHub CI passed on commit `174874d` after an unavailable icon import was corrected. No local `npm ci`/typecheck/build could run in this limited workspace because package registry fetches failed; the repository's GitHub CI did run the verified pipeline. Existing live deployment and hackathon submission candidate remain unchanged. The larger onboarding wizard, persisted branding themes, real domain checks, authenticated social publishing and agent extensions remain future, separately reviewed phases.
+
+---
+
 # Status — November 3, 2026 Eastern — camera release
 
 Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Runtime **93f44b6031b4494a45605ce0b4956a5f8d01dd92** is Ready as **dpl_84N1SnLLBDHPW64rfQq5QehhWimS**. [CI passed](https://github.com/matcpu/courtside-ai/actions/runs/41769062687). Source, private storage, billing and the sole Supabase project remain unchanged in scope.

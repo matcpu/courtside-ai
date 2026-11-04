@@ -8,6 +8,8 @@
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "test:database:local": "node scripts/test-launchpad.mjs",
+    "launchpad:review": "node scripts/review-launchpad.mjs",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm test && npm run build"
   },
@@ -27,6 +29,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
     "@emnapi/core": "1.11.3",
     "@emnapi/wasi-threads": "1.2.3",
     "@playwright/test": "1.64.1",

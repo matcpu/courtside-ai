@@ -74,3 +74,5 @@ The [official participant guide](https://cerebralvalley.ai/e/meta-ai-developer-h
 [Feature audit](FEATURE_AUDIT.md) · [Preseason](PRESEASON.md) · [Meta evidence](META_HACKATHON.md) · [Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Setup](SETUP.md) · [Credits](CREDIT_SETUP.md) · [Tests](TESTING.md) · [Demo](DEMO.md) · [Status](STATUS.md)
 
 **Camera capture:** Scoresheets and guardian proof use a shared live-preview, capture/retake/confirm control with native-camera and gallery fallbacks. Uploads stay private and require explicit submission. Physical device support is not certified by Chromium emulation; see [CAMERA_CAPTURE.md](CAMERA_CAPTURE.md).
+
+**Post-submission Launchpad proposal:** this branch reuses PR #1 and adds private organizer drafts, guided/copy/quick setup, a connected launch dashboard and versioned website themes. It is not deployed. See [local review instructions](LAUNCHPAD_REVIEW.md), [scope and safety plan](LAUNCHPAD_PLAN.md) and [future agent design](LAUNCHPAD_AGENT_DESIGN.md).

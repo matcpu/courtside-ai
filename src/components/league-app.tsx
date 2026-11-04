@@ -61,9 +61,15 @@ import { ImageCapture } from "./image-capture";
 import { MetaActivity } from "./meta-activity";
 import { AgentActionReceipts } from "./agent-action-receipts";
 import { toolReceiptState } from "@/lib/agent-evidence";
+import { OrganizerSetup } from "./organizer-setup";
+import { Launchpad } from "./launchpad";
+import { LaunchpadStarter } from "./launchpad-starter";
+import { leagueLocalInstant } from "@/lib/launchpad";
+import type { SetupDraft } from "@/lib/launchpad";
 
 type View =
   | "Overview"
+  | "Launchpad"
   | "Preseason Onboarding"
   | "Meta AI activity"
   | "Teams & rosters"
@@ -82,6 +88,7 @@ type LeagueChoice = {
 };
 const nav: [View, typeof Activity][] = [
   ["Overview", LayoutDashboard],
+  ["Launchpad", Sparkles],
   ["Preseason Onboarding", ClipboardCheck],
   ["Meta AI activity", Sparkles],
   ["Teams & rosters", Users],
@@ -92,20 +99,20 @@ const nav: [View, typeof Activity][] = [
   ["Courts & gyms", MapPin],
   ["Notifications", Bell],
 ];
-const time = (s: string) =>
+const time = (s: string, timeZone = "America/Toronto") =>
   new Intl.DateTimeFormat("en-CA", {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "America/Toronto",
+    timeZone,
   }).format(new Date(s));
-const date = (s: string) =>
+const date = (s: string, timeZone = "America/Toronto") =>
   new Intl.DateTimeFormat("en-CA", {
     month: "short",
     day: "numeric",
     weekday: "short",
-    timeZone: "America/Toronto",
+    timeZone,
   }).format(new Date(s));
 function Badge({
   children,
@@ -247,7 +254,17 @@ function CourtArt() {
   );
 }
 
-export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
+export function LeagueApp({
+  publicSlug,
+  initialView = "Overview",
+}: {
+  publicSlug?: string;
+  initialView?: View;
+}) {
+  const organizerEnabled =
+    process.env.NEXT_PUBLIC_ORGANIZER_SETUP_ENABLED === "true";
+  const [setupDraft, setSetupDraft] = useState<SetupDraft | undefined>();
+  const [setupVersion, setSetupVersion] = useState(0);
   const supabase = useMemo(() => {
     try {
       return browserSupabase();
@@ -256,7 +273,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
     }
   }, []);
   const [session, setSession] = useState<Session | null>(null),
-    [view, setView] = useState<View>("Overview"),
+    [view, setView] = useState<View>(initialView),
     [snapshot, setSnapshot] = useState<Snapshot | null>(null),
     [leagues, setLeagues] = useState<LeagueChoice[]>([]),
     [publicLeagues, setPublicLeagues] = useState<LeagueChoice[]>([]),
@@ -550,29 +567,31 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
         </div>
         <span className="nav-label">WORKSPACE</span>
         <nav>
-          {nav.map(([title, Icon]) => (
-            <button
-              key={title}
-              aria-label={title}
-              className={view === title ? "active" : ""}
-              onClick={() => changeView(title)}
-            >
-              <Icon size={18} />
-              <span>{title}</span>
-              {title === "Scoresheets" && pendingSheets.length > 0 && (
-                <span className="nav-count">{pendingSheets.length}</span>
-              )}
-              {title === "Notifications" &&
-                s?.notifications.some(
-                  (n) =>
-                    n.channel === "in_app" &&
-                    n.recipient_id === session?.user.id &&
-                    !n.read_at,
-                ) && <span className="nav-dot" />}
-              {title === "Competitive balance" &&
-                pendingProposals.length > 0 && <span className="nav-dot" />}
-            </button>
-          ))}
+          {nav
+            .filter(([title]) => title !== "Launchpad" || (canWrite && isAdmin))
+            .map(([title, Icon]) => (
+              <button
+                key={title}
+                aria-label={title}
+                className={view === title ? "active" : ""}
+                onClick={() => changeView(title)}
+              >
+                <Icon size={18} />
+                <span>{title}</span>
+                {title === "Scoresheets" && pendingSheets.length > 0 && (
+                  <span className="nav-count">{pendingSheets.length}</span>
+                )}
+                {title === "Notifications" &&
+                  s?.notifications.some(
+                    (n) =>
+                      n.channel === "in_app" &&
+                      n.recipient_id === session?.user.id &&
+                      !n.read_at,
+                  ) && <span className="nav-dot" />}
+                {title === "Competitive balance" &&
+                  pendingProposals.length > 0 && <span className="nav-dot" />}
+              </button>
+            ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="agent-card">
@@ -603,7 +622,10 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
             className="sidebar-setting"
             onClick={() => changeView("Settings")}
           >
-            <Settings2 size={17} /> Settings & access
+            <Settings2 size={17} />{" "}
+            {organizerEnabled
+              ? "System settings & access"
+              : "Settings & access"}
           </button>
           <div className="profile">
             <span className="profile-avatar">{session ? "ME" : "D"}</span>
@@ -715,6 +737,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                 {
                   {
                     Overview: "Less administration. More time on the court.",
+                    Launchpad: "Prepare your league for opening day.",
                     "Preseason Onboarding":
                       "From coach assessment to verified rosters and opening weekend.",
                     "Meta AI activity":
@@ -813,8 +836,43 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
             </Panel>
           ) : (
             <>
+              {view === "Launchpad" &&
+                canWrite &&
+                isAdmin &&
+                (organizerEnabled ? (
+                  <Launchpad
+                    key={`${s.league.id}:${setupVersion}`}
+                    snapshot={s}
+                    api={api}
+                    onChanged={load}
+                    onNavigate={changeView}
+                    onSetup={(draft) => {
+                      setSetupDraft(draft);
+                      setModal("league");
+                    }}
+                  />
+                ) : (
+                  <LaunchpadStarter snapshot={s} />
+                ))}
               {view === "Overview" && (
                 <>
+                  {organizerEnabled && canWrite && isAdmin && (
+                    <section className="launch-overview-entry panel">
+                      <div>
+                        <span className="launch-eyebrow">
+                          COURTSIDE LAUNCHPAD
+                        </span>
+                        <h2>Make your next move clear.</h2>
+                        <p>
+                          Season setup, registration, your league website and
+                          launch readiness.
+                        </p>
+                      </div>
+                      <Button onClick={() => changeView("Launchpad")}>
+                        Open Launchpad <ArrowUpRight size={16} />
+                      </Button>
+                    </section>
+                  )}
                   <section className="hero">
                     <div className="hero-content">
                       <span className="hero-label">
@@ -883,7 +941,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                     <div className="dashboard-main">
                       <Panel
                         title="Coming up on court"
-                        subtitle="Your published schedule · Eastern Time"
+                        subtitle={`Your published schedule · ${s.league.timezone}`}
                         action={
                           <button
                             className="text-link"
@@ -903,7 +961,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                                       "en-CA",
                                       {
                                         day: "2-digit",
-                                        timeZone: "America/Toronto",
+                                        timeZone:
+                                          s?.league.timezone ??
+                                          "America/Toronto",
                                       },
                                     )}
                                   </b>
@@ -911,7 +971,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                                     {new Date(f.starts_at)
                                       .toLocaleDateString("en-CA", {
                                         month: "short",
-                                        timeZone: "America/Toronto",
+                                        timeZone:
+                                          s?.league.timezone ??
+                                          "America/Toronto",
                                       })
                                       .toUpperCase()}
                                   </small>
@@ -934,7 +996,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                                       {
                                         hour: "numeric",
                                         minute: "2-digit",
-                                        timeZone: "America/Toronto",
+                                        timeZone:
+                                          s?.league.timezone ??
+                                          "America/Toronto",
                                       },
                                     )}
                                   </b>
@@ -1260,7 +1324,8 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                           : "No published schedule"}
                       </Badge>
                       <span className="small-muted">
-                        All times Eastern · 60-minute games · 30-minute rest
+                        All times {s.league.timezone} · 60-minute games ·
+                        30-minute rest
                       </span>
                     </div>
                     {isAdmin && (
@@ -1371,7 +1436,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                             <details key={v.id}>
                               <summary>
                                 Version {v.number} <Badge>{v.status}</Badge>
-                                <span>{time(v.created_at)}</span>
+                                <span>
+                                  {time(v.created_at, s?.league.timezone)}
+                                </span>
                               </summary>
                               <p>{v.explanation}</p>
                               <FixtureTable s={s} version={v.id} />
@@ -1511,7 +1578,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                                 <option key={f.game_id} value={f.game_id}>
                                   {teamName(f.home_team_id)} vs{" "}
                                   {teamName(f.away_team_id)} ·{" "}
-                                  {date(f.starts_at)}
+                                  {date(f.starts_at, s?.league.timezone)}
                                 </option>
                               ))}
                           </select>
@@ -1584,7 +1651,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                                 {sh.source === "meta"
                                   ? "Meta Muse Spark"
                                   : "Manual entry"}{" "}
-                                · {time(sh.created_at)}
+                                · {time(sh.created_at, s?.league.timezone)}
                               </p>
                             </div>
                             <Badge
@@ -1658,7 +1725,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                             <b>{g.away_score}</b>
                           </div>
                           <small>
-                            {g.played_at ? time(g.played_at) : "Confirmed game"}
+                            {g.played_at
+                              ? time(g.played_at, s?.league.timezone)
+                              : "Confirmed game"}
                           </small>
                         </div>
                       ))}
@@ -1911,8 +1980,10 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                               <div key={a.id}>
                                 <Clock3 size={14} />
                                 <span>
-                                  {time(a.starts_at)}
-                                  <small>until {time(a.ends_at)}</small>
+                                  {time(a.starts_at, s?.league.timezone)}
+                                  <small>
+                                    until {time(a.ends_at, s?.league.timezone)}
+                                  </small>
                                 </span>
                                 <Badge tone="green">Confirmed</Badge>
                               </div>
@@ -1986,7 +2057,8 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                               <td>
                                 <b>{n.subject}</b>
                                 <small>
-                                  {teamName(n.team_id)} · {time(n.created_at)}
+                                  {teamName(n.team_id)} ·{" "}
+                                  {time(n.created_at, s?.league.timezone)}
                                 </small>
                               </td>
                               <td>
@@ -2078,7 +2150,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                 <>
                   <div className="settings-grid">
                     <Panel
-                      title="Connected services"
+                      title="System integrations"
                       subtitle="Actual server configuration status"
                     >
                       <div className="connection-list">
@@ -2238,6 +2310,14 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                         subtitle="Public data excludes player identities, documents and coach contact information."
                       >
                         <div className="inline-actions">
+                          <a
+                            href={`/league/${s.league.slug}/website`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="button button-secondary"
+                          >
+                            <ExternalLink size={15} /> Open branded website
+                          </a>
                           <Button
                             variant="secondary"
                             disabled={busy}
@@ -2275,7 +2355,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                             <div key={a.id}>
                               <Activity size={14} />
                               <b>{a.action.replaceAll("_", " ")}</b>
-                              <span>{time(a.created_at)}</span>
+                              <span>
+                                {time(a.created_at, s?.league.timezone)}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -2329,9 +2411,14 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
         </main>
       </div>
       {modal && (
-        <div className="modal-backdrop" onClick={() => setModal(null)}>
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            if (!(modal === "league" && organizerEnabled)) setModal(null);
+          }}
+        >
           <section
-            className={`modal ${modal === "agent" ? "modal-wide" : ""}`}
+            className={`modal ${modal === "league" && organizerEnabled ? "modal-setup" : modal === "agent" ? "modal-wide" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={
@@ -2348,7 +2435,18 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
             <button
               className="modal-close"
               aria-label="Close dialog"
-              onClick={() => setModal(null)}
+              onClick={() => {
+                const saveExit =
+                  modal === "league" && organizerEnabled
+                    ? document.getElementById("organizer-save-exit")
+                    : null;
+                if (saveExit instanceof HTMLButtonElement) {
+                  saveExit.click();
+                  return;
+                }
+                setSetupDraft(undefined);
+                setModal(null);
+              }}
             >
               <X size={20} />
             </button>
@@ -2588,8 +2686,8 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
               <>
                 <h2>Confirm court time.</h2>
                 <p>
-                  Enter local Eastern time. Only confirmed time can be
-                  scheduled.
+                  Enter local league time ({s?.league.timezone}). Only confirmed
+                  time can be scheduled.
                 </p>
                 <Form
                   busy={busy}
@@ -2597,18 +2695,11 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                   onSubmit={async (f) => {
                     const start = String(f.get("start")),
                       end = String(f.get("end"));
-                    const offset = (d: string) => {
-                      const utc = new Date(d + "Z");
-                      const toronto =
-                        new Intl.DateTimeFormat("en-CA", {
-                          timeZone: "America/Toronto",
-                          timeZoneName: "longOffset",
-                        })
-                          .formatToParts(utc)
-                          .find((p) => p.type === "timeZoneName")
-                          ?.value.replace("GMT", "") ?? "-05:00";
-                      return new Date(d + toronto).toISOString();
-                    };
+                    const offset = (d: string) =>
+                      leagueLocalInstant(
+                        d,
+                        s?.league.timezone ?? "America/Toronto",
+                      );
                     const result = await act(
                       () =>
                         cmd("add_availability", {
@@ -2630,60 +2721,86 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Start (Eastern)">
+                  <Field label={`Start (${s?.league.timezone})`}>
                     <input name="start" type="datetime-local" required />
                   </Field>
-                  <Field label="End (Eastern)">
+                  <Field label={`End (${s?.league.timezone})`}>
                     <input name="end" type="datetime-local" required />
                   </Field>
                 </Form>
               </>
             )}
-            {modal === "league" && (
-              <>
-                <h2>A new league, ready to grow.</h2>
-                <p>
-                  Create a private workspace with three competitive divisions.
-                </p>
-                <Form
-                  busy={busy}
-                  submit="Create league"
-                  onSubmit={async (f) => {
-                    setAgentResult(null);
-                    await act(async () => {
-                      const result = await api("/api/league", {
-                        method: "POST",
-                        body: JSON.stringify({
-                          league: null,
-                          action: "create_league",
-                          payload: {
-                            name: f.get("name"),
-                            season: f.get("season"),
-                            cutoff: f.get("cutoff"),
-                          },
-                        }),
-                      });
-                      await refreshChoices(result.id);
-                    }, "League created. Register your first teams.");
+            {modal === "league" &&
+              (organizerEnabled ? (
+                <OrganizerSetup
+                  api={api}
+                  initialDraft={setupDraft}
+                  onClose={() => {
+                    setSetupDraft(undefined);
+                    setModal(null);
                   }}
-                >
-                  <Field label="League name">
-                    <input name="name" required minLength={2} maxLength={100} />
-                  </Field>
-                  <Field label="Season">
-                    <input name="season" defaultValue="Fall 2026" required />
-                  </Field>
-                  <Field label="Age eligibility cutoff">
-                    <input
-                      name="cutoff"
-                      type="date"
-                      defaultValue="2026-09-01"
-                      required
-                    />
-                  </Field>
-                </Form>
-              </>
-            )}
+                  onComplete={async (id) => {
+                    setSetupDraft(undefined);
+                    setAgentResult(null);
+                    await refreshChoices(id);
+                    if (id === selected) await load();
+                    setSetupVersion((v) => v + 1);
+                    changeView("Launchpad");
+                    notify(
+                      "Private setup finished. Review Launchpad before opening registration or publishing.",
+                    );
+                  }}
+                />
+              ) : (
+                <>
+                  <h2>A new league, ready to grow.</h2>
+                  <p>
+                    Create a private workspace with three competitive divisions.
+                  </p>
+                  <Form
+                    busy={busy}
+                    submit="Create league"
+                    onSubmit={async (f) => {
+                      setAgentResult(null);
+                      await act(async () => {
+                        const result = await api("/api/league", {
+                          method: "POST",
+                          body: JSON.stringify({
+                            league: null,
+                            action: "create_league",
+                            payload: {
+                              name: f.get("name"),
+                              season: f.get("season"),
+                              cutoff: f.get("cutoff"),
+                            },
+                          }),
+                        });
+                        await refreshChoices(result.id);
+                      }, "League created. Register your first teams.");
+                    }}
+                  >
+                    <Field label="League name">
+                      <input
+                        name="name"
+                        required
+                        minLength={2}
+                        maxLength={100}
+                      />
+                    </Field>
+                    <Field label="Season">
+                      <input name="season" defaultValue="Fall 2026" required />
+                    </Field>
+                    <Field label="Age eligibility cutoff">
+                      <input
+                        name="cutoff"
+                        type="date"
+                        defaultValue="2026-09-01"
+                        required
+                      />
+                    </Field>
+                  </Form>
+                </>
+              ))}
             {modal === "player" && (
               <>
                 <h2>Add to the roster.</h2>
@@ -3169,7 +3286,7 @@ function FixtureTable({ s, version }: { s: Snapshot; version: string }) {
       <table>
         <thead>
           <tr>
-            <th>Tipoff · Eastern</th>
+            <th>Tipoff · {s.league.timezone}</th>
             <th>Matchup</th>
             <th>Court</th>
             <th>Status / result</th>
@@ -3182,7 +3299,7 @@ function FixtureTable({ s, version }: { s: Snapshot; version: string }) {
               const g = s.games.find((g) => g.id === f.game_id);
               return (
                 <tr key={f.game_id}>
-                  <td>{time(f.starts_at)}</td>
+                  <td>{time(f.starts_at, s.league.timezone)}</td>
                   <td>
                     <b>{s.teams.find((t) => t.id === f.home_team_id)?.name}</b>
                     <small>
