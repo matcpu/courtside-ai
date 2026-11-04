@@ -65,6 +65,7 @@ Use actual browser-issued JWTs and hosted Data API/Storage responses for these c
 
 ## Rollback and outstanding blockers
 
+- **Confirmed cross-workflow stale-write defect (production blocker).** In the local real-PostgreSQL engine: finish a synthetic setup with minimum roster 5; open `begin_edit`; use the existing authenticated `preseason_command(...,'configure',...)` to change the minimum to 7; finish the older Launchpad draft. It succeeds and restores **5**, instead of rejecting the stale draft. `finish` guards `league_launch.setup_revision`, while the existing Preseason writer does not advance that revision. Before merge/enablement, capture and compare an authoritative safety-configuration version/fingerprint under the league lock across *all* configuration paths, and add a regression covering cutoffs, division ages, roster bounds and retention as well as the demonstrated roster case. Existing green tests do not cover this cross-workflow race. No hosted reproduction or runtime fix was attempted during release preparation.
 - **Hosted acceptance is not complete.** Local Auth/PostgREST contracts do not prove actual hosted Auth, RLS exposure, Storage or browser integration.
 - **The SQL remains a proposal.** Promotion plus exactly-once migration/test loading and approval are required before schema rollout. No hosted migration is currently applied.
 - **Release authorization is pending.** Do not merge/deploy/enable flags under this preparation request. New branch CI must pass on its final head; it cannot be inferred from PR #1's earlier green run.

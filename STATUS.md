@@ -2,6 +2,8 @@
 
 `codex/organizer-setup` is being pushed for a review PR against `main`, without merging or deploying. Runtime implementation remains `3f64ce8`; release preparation adds documentation only. PR #1's helper bodies match after formatting, its three original tests are retained, there is one website route/conditional fallback, and no ordered migration was added. The new PR is the combined candidate; do not independently merge both PRs.
 
+Release preparation reproduced a **production-blocking stale-write defect** using local synthetic PostgreSQL only: an old Launchpad edit draft silently restored minimum roster 5 after a newer Preseason configuration changed it to 7. The current revision guard does not span both writers. Fix plus cross-workflow regression is required before merge/enablement; current green tests are not evidence that this case is safe. No product/runtime or hosted change was made to mask the finding.
+
 [LAUNCHPAD_RELEASE.md](LAUNCHPAD_RELEASE.md) records the synthetic-only hosted acceptance matrix, approval boundaries, exact migration/rollout/rollback order and remaining release gates. The pending proposal must be promoted and the local loader adjusted to apply it exactly once before any hosted rollout. Local tests are not hosted Supabase certification. GitHub CI results must be verified on the actual final PR head.
 
 Vercel was checked read-only: this existing project has no Git repository link and Git-created deployments are disabled. No hosted migration/data change, deployment, merge, video edit, provider inference, messaging, DNS/purchase or billing change occurred. **GO for review/CI; NO-GO for production enablement until hosted acceptance and explicit authorization.**
