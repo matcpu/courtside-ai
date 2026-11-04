@@ -2,6 +2,15 @@
 
 Prepared November 4, 2026 Eastern. **NO-GO for production enablement until the gates below pass. GO for PR review and CI.** No step in this plan authorizes a hosted migration, deployment, real message, model inference, purchase or publication. The targeted repair changes the database concurrency guard and HTTP conflict guidance only; no new product feature is added. The verified repair commit is recorded below.
 
+## Verified repair checkpoint
+
+- Implementation repair commit: `c3f9ce9bd3351bc991567ec1a6a193e13fd63200`.
+- Migration: `supabase/migrations/20261104164024_organizer_launchpad.sql`.
+- Canonical migration SHA-256: `8fec602c50895ae9912e3b7ba2bc5cf3d8e291b41c8e6069bce034c95c8103d5`.
+- Local results: TypeScript/build, 125 Vitest, 254 PostgreSQL/WASM assertions, 113 native PostgreSQL assertions and 14 browser cases passed. Clean setup was repeated on both engines; actual independent-session locks were observed.
+- PR #2 remains draft. GitHub CI must be checked on the final pushed head; a queued job with no runner is **infrastructure-blocked**, not a pass. CI now includes the native concurrency suite against an ephemeral PostgreSQL 17.11 service.
+- No hosted migration or acceptance run has occurred. Remaining gates are explicit hosted migration/runtime/fixture authorization, hosted Auth/RLS/Storage/browser acceptance and final release authorization. Local compatibility limits remain as described below.
+
 ## PR #1 integration
 
 PR #1 was inspected at `43414f96ec7eba6ff4f0ca6d6dc1b5abf7495d1f`. This branch incorporates its intended work by content, not by merging that PR:

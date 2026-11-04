@@ -1,6 +1,6 @@
 # Targeted Launchpad repair — November 4, 2026 Eastern — NOT HOSTED
 
-The confirmed stale-finish overwrite is repaired locally. Existing-season drafts bind a trusted snapshot of live league/Preseason/division configuration under the league lock. Finish rechecks after any lock wait and before writes in the same transaction. Old private autosaves cannot rebase the snapshot; conflicts return HTTP 409 and instruct the administrator to reload/review in a fresh edit. No automatic merge, retry or silent discard is added.
+The confirmed stale-finish overwrite is repaired locally in implementation commit `c3f9ce9bd3351bc991567ec1a6a193e13fd63200`.  Existing-season drafts bind a trusted snapshot of live league/Preseason/division configuration under the league lock. Finish rechecks after any lock wait and before writes in the same transaction. Old private autosaves cannot rebase the snapshot; conflicts return HTTP 409 and instruct the administrator to reload/review in a fresh edit. No automatic merge, retry or silent discard is added.
 
 The SQL is promoted to **one** ordered migration, `20261104164024_organizer_launchpad.sql`, generated with repository-pinned CLI 2.122.0. The proposal file and secondary loader path are removed. All ordered migrations load exactly once; repeated clean setup verifies order, RLS and permissions. No hosted migration has run.
 
