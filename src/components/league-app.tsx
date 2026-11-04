@@ -28,6 +28,7 @@ import {
   ExternalLink,
   FileImage,
   Flag,
+  Globe2,
   LayoutDashboard,
   LoaderCircle,
   LogIn,
@@ -60,10 +61,12 @@ import { PreseasonOnboarding } from "./preseason-onboarding";
 import { ImageCapture } from "./image-capture";
 import { MetaActivity } from "./meta-activity";
 import { AgentActionReceipts } from "./agent-action-receipts";
+import { LaunchpadStarter } from "./launchpad-starter";
 import { toolReceiptState } from "@/lib/agent-evidence";
 
 type View =
   | "Overview"
+  | "Launchpad"
   | "Preseason Onboarding"
   | "Meta AI activity"
   | "Teams & rosters"
@@ -82,6 +85,7 @@ type LeagueChoice = {
 };
 const nav: [View, typeof Activity][] = [
   ["Overview", LayoutDashboard],
+  ["Launchpad", Globe2],
   ["Preseason Onboarding", ClipboardCheck],
   ["Meta AI activity", Sparkles],
   ["Teams & rosters", Users],
@@ -550,7 +554,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
         </div>
         <span className="nav-label">WORKSPACE</span>
         <nav>
-          {nav.map(([title, Icon]) => (
+          {nav.filter(([title]) => title !== "Launchpad" || isAdmin).map(([title, Icon]) => (
             <button
               key={title}
               aria-label={title}
@@ -715,6 +719,7 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                 {
                   {
                     Overview: "Less administration. More time on the court.",
+                    Launchpad: "Give your league a public home and prepare your launch materials.",
                     "Preseason Onboarding":
                       "From coach assessment to verified rosters and opening weekend.",
                     "Meta AI activity":
@@ -813,6 +818,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
             </Panel>
           ) : (
             <>
+              {view === "Launchpad" && isAdmin && (
+                <LaunchpadStarter snapshot={s} />
+              )}
               {view === "Overview" && (
                 <>
                   <section className="hero">
