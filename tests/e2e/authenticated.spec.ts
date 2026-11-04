@@ -217,7 +217,7 @@ test("real coach and administrator operate a private synthetic season", async ({
       .getByLabel("Scoresheet photo (JPEG, PNG, WebP · up to 6 MB)")
       .setInputFiles("public/demo/scoresheet.png");
     await page
-      .getByRole("button", { name: "Upload for manual review", exact: true })
+      .getByRole("button", { name: "Upload and review", exact: true })
       .click();
   } else
     await page

@@ -296,6 +296,7 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
     .inputValue();
   const parentContext = await browser.newContext({
     ...devices[info.project.name === "mobile" ? "iPhone 13" : "Desktop Chrome"],
+    permissions: process.env.E2E_CAMERA_FEED ? ["camera"] : [],
   });
   const parent = await parentContext.newPage();
   parent.setDefaultTimeout(20000);
@@ -316,18 +317,36 @@ test("coach, guardian and administrator complete secure preseason onboarding", a
     await parent
       .getByLabel("Guardian full name", { exact: true })
       .fill("Fictional Guardian");
-    await parent
-      .getByLabel(
-        info.project.name === "mobile"
-          ? "Take a photo with your camera (where supported)"
-          : "Proof of age photo",
-        { exact: true },
-      )
-      .setInputFiles({
-        name: "synthetic-proof.png",
-        mimeType: "image/png",
-        buffer: image,
-      });
+    if (process.env.E2E_CAMERA_FEED) {
+      await parent
+        .getByRole("button", { name: "Take photo", exact: true })
+        .click();
+      await expect(
+        parent.getByRole("button", { name: "Capture photo", exact: true }),
+      ).toBeEnabled();
+      await parent
+        .getByRole("button", { name: "Capture photo", exact: true })
+        .click();
+      await expect(
+        parent.getByAltText("Captured photo to review", { exact: true }),
+      ).toBeVisible();
+      await parent
+        .getByRole("button", { name: "Use photo", exact: true })
+        .click();
+    } else {
+      await parent
+        .getByLabel(
+          info.project.name === "mobile"
+            ? "Take a photo with your camera (where supported)"
+            : "Proof of age photo",
+          { exact: true },
+        )
+        .setInputFiles({
+          name: "synthetic-proof.png",
+          mimeType: "image/png",
+          buffer: image,
+        });
+    }
     await expect(
       parent.getByAltText("Selected proof of age preview", { exact: true }),
     ).toBeVisible();

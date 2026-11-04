@@ -7,6 +7,14 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000",
     trace: "retain-on-failure",
+    launchOptions: process.env.E2E_CAMERA_FEED
+      ? {
+          args: [
+            "--use-fake-device-for-media-stream",
+            "--use-file-for-fake-video-capture=" + process.env.E2E_CAMERA_FEED,
+          ],
+        }
+      : undefined,
   },
   projects: [
     {

@@ -57,6 +57,7 @@ import {
 } from "@/lib/domain";
 import { Button } from "./ui/button";
 import { PreseasonOnboarding } from "./preseason-onboarding";
+import { ImageCapture } from "./image-capture";
 import { MetaActivity } from "./meta-activity";
 import { AgentActionReceipts } from "./agent-action-receipts";
 import { toolReceiptState } from "@/lib/agent-evidence";
@@ -163,11 +164,13 @@ function Form({
   onSubmit,
   submit,
   busy = false,
+  submitDisabled = false,
 }: {
   children: ReactNode;
   onSubmit: (f: FormData) => Promise<void>;
   submit: string;
   busy?: boolean;
+  submitDisabled?: boolean;
 }) {
   return (
     <form
@@ -180,7 +183,7 @@ function Form({
     >
       {children}
       <div className="form-actions">
-        <Button disabled={busy}>
+        <Button disabled={busy || submitDisabled}>
           {busy ? (
             <LoaderCircle className="spin" size={16} />
           ) : (
@@ -291,6 +294,9 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
     [reviewed, setReviewed] = useState(false),
     [correction, setCorrection] = useState(""),
     [imageUrl, setImageUrl] = useState(""),
+    [scoreImage, setScoreImage] = useState<File | null>(null),
+    [scoreCaptureBusy, setScoreCaptureBusy] = useState(false),
+    [scoreUploadStage, setScoreUploadStage] = useState(""),
     [agentResult, setAgentResult] = useState<{
       actor: string;
       league: string;
@@ -432,6 +438,10 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
       method: "POST",
       body: JSON.stringify({ league: selected, action, payload }),
     });
+  useEffect(() => {
+    setScoreImage(null);
+    setScoreUploadStage("");
+  }, [selected, session?.user.id, view]);
   const s = snapshot,
     isAdmin = s?.role === "admin",
     canWrite = mine && !!session,
@@ -1381,87 +1391,105 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                     >
                       <Form
                         busy={busy}
-                        submit={
-                          health?.meta
-                            ? "Upload & extract with Muse Spark"
-                            : "Upload for manual review"
-                        }
+                        submitDisabled={!scoreImage || scoreCaptureBusy}
+                        submit={"Upload and review"}
                         onSubmit={async (f) => {
                           const game_id = String(f.get("game_id")),
-                            file = f.get("image") as File;
+                            file = scoreImage;
                           if (!file?.size)
                             return notify("Choose a scoresheet image", true);
                           if (file.size > 6 * 1024 * 1024)
                             return notify("Maximum image size is 6 MB", true);
-                          await act(
-                            async () => {
-                              if (!supabase || !session)
-                                throw new Error("Sign in first");
-                              const ext =
-                                file.type === "image/png"
-                                  ? "png"
-                                  : file.type === "image/webp"
-                                    ? "webp"
-                                    : "jpg";
-                              const hash = Array.from(
-                                new Uint8Array(
-                                  await crypto.subtle.digest(
-                                    "SHA-256",
-                                    await file.arrayBuffer(),
+                          if (scoreCaptureBusy)
+                            return notify(
+                              "Confirm your photo before uploading",
+                              true,
+                            );
+                          setScoreUploadStage("Preparing a private upload…");
+                          try {
+                            await act(
+                              async () => {
+                                if (!supabase || !session)
+                                  throw new Error("Sign in first");
+                                const ext =
+                                  file.type === "image/png"
+                                    ? "png"
+                                    : file.type === "image/webp"
+                                      ? "webp"
+                                      : "jpg";
+                                const hash = Array.from(
+                                  new Uint8Array(
+                                    await crypto.subtle.digest(
+                                      "SHA-256",
+                                      await file.arrayBuffer(),
+                                    ),
                                   ),
-                                ),
-                              )
-                                .map((b) => b.toString(16).padStart(2, "0"))
-                                .join("");
-                              const path = `${selected}/${session.user.id}/${hash}.${ext}`;
-                              const { error } = await supabase.storage
-                                .from("scoresheets")
-                                .upload(path, file, {
-                                  upsert: false,
-                                  contentType: file.type,
+                                )
+                                  .map((b) => b.toString(16).padStart(2, "0"))
+                                  .join("");
+                                const path = `${selected}/${session.user.id}/${hash}.${ext}`;
+                                setScoreUploadStage(
+                                  "Uploading your scoresheet privately…",
+                                );
+                                const { error } = await supabase.storage
+                                  .from("scoresheets")
+                                  .upload(path, file, {
+                                    upsert: false,
+                                    contentType: file.type,
+                                  });
+                                if (
+                                  error &&
+                                  !/already exists|Duplicate/i.test(
+                                    error.message,
+                                  )
+                                )
+                                  throw error;
+                                const game = s.games.find(
+                                  (g) => g.id === game_id,
+                                )!;
+                                const empty: Extraction = {
+                                  homeTeam: teamName(game.home_team_id),
+                                  awayTeam: teamName(game.away_team_id),
+                                  homeScore: null,
+                                  awayScore: null,
+                                  confidence: 0,
+                                  warnings: [
+                                    "Manual entry. No AI extraction was performed.",
+                                  ],
+                                  players: [],
+                                };
+                                setScoreUploadStage(
+                                  health?.meta
+                                    ? "Processing the scoresheet for review…"
+                                    : "Saving for manual review. Live AI processing is paused…",
+                                );
+                                const result = await api("/api/scoresheet", {
+                                  method: "POST",
+                                  body: JSON.stringify({
+                                    league: selected,
+                                    game_id,
+                                    path,
+                                    mode: health?.meta ? "meta" : "manual",
+                                    extraction: empty,
+                                  }),
                                 });
-                              if (
-                                error &&
-                                !/already exists|Duplicate/i.test(error.message)
-                              )
-                                throw error;
-                              const game = s.games.find(
-                                (g) => g.id === game_id,
-                              )!;
-                              const empty: Extraction = {
-                                homeTeam: teamName(game.home_team_id),
-                                awayTeam: teamName(game.away_team_id),
-                                homeScore: null,
-                                awayScore: null,
-                                confidence: 0,
-                                warnings: [
-                                  "Manual entry. No AI extraction was performed.",
-                                ],
-                                players: [],
-                              };
-                              const result = await api("/api/scoresheet", {
-                                method: "POST",
-                                body: JSON.stringify({
-                                  league: selected,
-                                  game_id,
-                                  path,
-                                  mode: health?.meta ? "meta" : "manual",
-                                  extraction: empty,
-                                }),
-                              });
-                              const fresh = (await api(
-                                `/api/league?id=${selected}&public=false`,
-                              )) as Snapshot;
-                              setSnapshot(fresh);
-                              const saved = fresh.scoresheets.find(
-                                (sh) => sh.id === result.id,
-                              );
-                              if (saved) await openSheet(saved);
-                            },
-                            health?.meta
-                              ? "Extraction saved for human review. No official result recorded."
-                              : "Photo saved for manual review. Meta requests are not enabled.",
-                          );
+                                const fresh = (await api(
+                                  `/api/league?id=${selected}&public=false`,
+                                )) as Snapshot;
+                                setSnapshot(fresh);
+                                const saved = fresh.scoresheets.find(
+                                  (sh) => sh.id === result.id,
+                                );
+                                if (saved) await openSheet(saved);
+                                setScoreImage(null);
+                              },
+                              health?.meta
+                                ? "Extraction saved for human review. No official result recorded."
+                                : "Photo saved for manual review. Meta requests are not enabled.",
+                            );
+                          } finally {
+                            setScoreUploadStage("");
+                          }
                         }}
                       >
                         <Field label="Published game">
@@ -1488,20 +1516,32 @@ export function LeagueApp({ publicSlug }: { publicSlug?: string }) {
                               ))}
                           </select>
                         </Field>
-                        <Field label="Scoresheet photo (JPEG, PNG, WebP · up to 6 MB)">
-                          <input
-                            name="image"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            capture="environment"
-                            required
-                          />
-                        </Field>
-                        <p className="form-note">
-                          <ShieldCheck size={15} /> Photos stay in private
-                          storage. Missing scores and statistics stay empty
-                          until reviewed.
-                        </p>
+                        <ImageCapture
+                          key={selected}
+                          kind="scoresheet"
+                          value={scoreImage}
+                          onChange={setScoreImage}
+                          disabled={busy}
+                          onBusyChange={setScoreCaptureBusy}
+                          inputLabel="Scoresheet photo (JPEG, PNG, WebP · up to 6 MB)"
+                          previewAlt="Selected scoresheet preview"
+                        />
+                        {!health?.meta && (
+                          <p className="capture-privacy">
+                            Live AI processing is paused. Your photo will open
+                            in manual review; no result becomes official until
+                            an administrator confirms it.
+                          </p>
+                        )}
+                        {scoreUploadStage && (
+                          <div
+                            role="status"
+                            className="guardian-upload-progress"
+                          >
+                            <progress aria-label="Secure scoresheet upload progress" />
+                            <p>{scoreUploadStage}</p>
+                          </div>
+                        )}
                         {s.league.is_demo && (
                           <a
                             className="text-link"

@@ -2765,3 +2765,119 @@ td small {
     flex-direction: column;
   }
 }
+
+.image-capture {
+  border: 1px solid #dce6df;
+  border-radius: 12px;
+  padding: 18px;
+  background: #f8faf6;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.capture-actions .button {
+  min-height: 46px;
+  justify-content: center;
+}
+.capture-file-input {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.capture-guidance {
+  color: #42594a;
+  line-height: 1.65;
+}
+.capture-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #50644f;
+}
+.capture-privacy svg {
+  flex: none;
+  margin-top: 3px;
+}
+.capture-error {
+  background: #fff1eb;
+  color: #893d24;
+  border: 1px solid #ebcbbb;
+  padding: 12px;
+  border-radius: 8px;
+}
+.camera-panel {
+  display: grid;
+  gap: 14px;
+}
+.camera-view {
+  position: relative;
+  background: #102e28;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.camera-view video {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  max-height: 460px;
+  object-fit: contain;
+}
+.camera-guide {
+  position: absolute;
+  inset: 8% 10% 13%;
+  border: 2px dashed #d6f16a;
+  border-radius: 6px;
+  pointer-events: none;
+}
+.camera-hint {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 14px;
+  text-align: center;
+  background: #102e28d9;
+  color: white;
+  border-radius: 6px;
+  font-size: 13px;
+  padding: 5px;
+}
+.capture-preview {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.capture-preview img {
+  display: block;
+  max-height: 360px;
+  max-width: 100%;
+  object-fit: contain;
+  border: 1px solid #dce5d9;
+  background: white;
+  border-radius: 8px;
+}
+.capture-preview p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .image-capture {
+    padding: 14px;
+  }
+  .capture-actions {
+    flex-direction: column;
+  }
+  .capture-actions .button {
+    width: 100%;
+  }
+  .camera-view video {
+    max-height: 380px;
+  }
+}

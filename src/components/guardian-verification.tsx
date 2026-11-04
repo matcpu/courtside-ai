@@ -1,12 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import {
-  ShieldCheck,
-  CheckCheck,
-  Upload,
-  LockKeyhole,
-  Camera,
-} from "lucide-react";
+import { ShieldCheck, CheckCheck, Upload, LockKeyhole } from "lucide-react";
+import { ImageCapture } from "./image-capture";
 import { Button } from "./ui/button";
 import { browserSupabase } from "@/lib/supabase";
 type GuardianState = {
@@ -31,34 +26,8 @@ export function GuardianVerification() {
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [file, setFile] = useState<File | null>(null),
-    [preview, setPreview] = useState(""),
+    [cameraBusy, setCameraBusy] = useState(false),
     [uploadStage, setUploadStage] = useState("");
-  useEffect(() => {
-    if (!file) {
-      setPreview("");
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
-  function chooseFile(selected: File | undefined) {
-    setError("");
-    setNotice("");
-    if (!selected) return;
-    if (
-      !selected.size ||
-      selected.size > 6 * 1024 * 1024 ||
-      !["image/jpeg", "image/png", "image/webp"].includes(selected.type)
-    ) {
-      setFile(null);
-      setError(
-        "Choose a JPEG, PNG or WebP image under 6 MB. PDF and HEIC files are not supported; export a supported image or take a photo.",
-      );
-      return;
-    }
-    setFile(selected);
-  }
   async function api(action?: string, payload: unknown = {}) {
     const response = await fetch(
       "/api/guardian",
@@ -254,81 +223,22 @@ export function GuardianVerification() {
                     ))}
                   </select>
                 </label>
-                <label className="field">
-                  <span>Proof of age photo</span>
-                  <input
-                    name="proof"
-                    type="file"
-                    required={!file}
-                    accept="image/jpeg,image/png,image/webp"
-                    disabled={busy}
-                    onChange={(e) => chooseFile(e.currentTarget.files?.[0])}
-                  />
-                </label>
-                <label className="field guardian-camera">
-                  <span>
-                    <Camera size={16} /> Take a photo with your camera (where
-                    supported)
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    capture="environment"
-                    disabled={busy}
-                    onChange={(e) => chooseFile(e.currentTarget.files?.[0])}
-                  />
-                </label>
-                <p className="form-note">
-                  Photo of an accepted birth certificate, passport or government
-                  ID. Make the child's name and date of birth readable. Cover
-                  unrelated identification numbers and addresses. JPEG, PNG or
-                  WebP · maximum 6 MB. PDFs and HEIC are not supported. Choose
-                  an existing image above or use the separate camera option on
-                  supported devices. All development/demo uploads must be
-                  synthetic and clearly marked.
-                </p>
+                <ImageCapture
+                  kind="document"
+                  value={file}
+                  onChange={(next) => {
+                    setFile(next);
+                    setError("");
+                    setNotice("");
+                  }}
+                  disabled={busy}
+                  onBusyChange={setCameraBusy}
+                  inputLabel="Proof of age photo"
+                  previewAlt="Selected proof of age preview"
+                />
                 {error && (
                   <div className="notice notice-error" role="alert">
                     {error}
-                  </div>
-                )}
-                {file && preview && (
-                  <div className="guardian-proof-preview">
-                    <h3>Check your selected document</h3>
-                    <p>
-                      {file.name} · {(file.size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
-                    <img
-                      src={preview}
-                      alt="Selected proof of age preview"
-                      onError={() => {
-                        setFile(null);
-                        setError(
-                          "This image could not be previewed. Choose an undamaged JPEG, PNG or WebP image.",
-                        );
-                      }}
-                    />
-                    <p>
-                      Make sure the full name and date of birth are readable.
-                      Selecting a file does not submit it.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => {
-                        setFile(null);
-                        document
-                          .querySelectorAll<HTMLInputElement>(
-                            'input[type="file"]',
-                          )
-                          .forEach((input) => {
-                            input.value = "";
-                          });
-                      }}
-                    >
-                      Remove selected document
-                    </Button>
                   </div>
                 )}
                 <label className="checkbox-label">
@@ -364,7 +274,7 @@ export function GuardianVerification() {
                     </p>
                   </div>
                 )}
-                <Button disabled={busy || !file}>
+                <Button disabled={busy || cameraBusy || !file}>
                   <Upload size={16} />
                   {busy
                     ? "Uploading securely…"
