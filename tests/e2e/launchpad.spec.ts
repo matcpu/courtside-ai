@@ -445,3 +445,157 @@ test("PR 1 legacy public website preserves approved reference data without signu
     fullPage: true,
   });
 });
+test("stale existing-season draft returns HTTP 409, preserves newer safety rules and all records", async ({
+  page,
+  request,
+}) => {
+  const fixture = await (
+    await request.get("http://127.0.0.1:3302/__preview")
+  ).json();
+  await login(page);
+  await page.getByLabel("Switch league").selectOption(fixture.league);
+  await navigate(page, "Launchpad");
+  const initial = await api(page, "workspace", { league_id: fixture.league });
+  await page.getByRole("button", { name: /Shape the season/ }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("League name", { exact: true })
+    .fill("STALE NAME MUST NOT APPLY");
+  await dialog.getByRole("button", { name: /Rules & safety/ }).click();
+  await expect(
+    dialog.getByLabel("Minimum active roster", { exact: true }),
+  ).toHaveValue("5");
+  await expect(dialog.locator(".setup-save-status")).toContainText(
+    "Draft saved privately",
+  );
+  const saved = await page.evaluate(
+    async ({ league, payload }) => {
+      const key = Object.keys(localStorage).find(
+        (k) => k.startsWith("sb-") && k.endsWith("-auth-token"),
+      )!;
+      const token = JSON.parse(localStorage.getItem(key)!).access_token;
+      const r = await fetch("/api/preseason", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ league, action: "configure", payload }),
+      });
+      return { status: r.status, data: await r.json() };
+    },
+    {
+      league: fixture.league,
+      payload: {
+        ...initial.data.preseason.settings,
+        questionnaire_deadline: new Date(
+          initial.data.preseason.settings.questionnaire_deadline,
+        ).toISOString(),
+        roster_deadline: new Date(
+          initial.data.preseason.settings.roster_deadline,
+        ).toISOString(),
+        verification_deadline: new Date(
+          initial.data.preseason.settings.verification_deadline,
+        ).toISOString(),
+        season_name: initial.data.setup.season,
+        cutoff_date: initial.data.setup.cutoff,
+        season_start: initial.data.setup.opening,
+        min_roster: 7,
+      },
+    },
+  );
+  expect(saved.status).toBe(200);
+  const snapshot = async () =>
+    page.evaluate(async (league) => {
+      const key = Object.keys(localStorage).find(
+        (k) => k.startsWith("sb-") && k.endsWith("-auth-token"),
+      )!;
+      return fetch("/api/league?id=" + league, {
+        headers: {
+          Authorization:
+            "Bearer " + JSON.parse(localStorage.getItem(key)!).access_token,
+        },
+      }).then((r) => r.json());
+    }, fixture.league);
+  const before = await snapshot();
+  const safetyBefore = await api(page, "workspace", {
+    league_id: fixture.league,
+  });
+  await dialog.getByRole("button", { name: /Review & finish/ }).click();
+  const conflict = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/launchpad") &&
+      r.request().postDataJSON()?.action === "finish",
+  );
+  await dialog
+    .getByRole("button", { name: "Finish setup", exact: true })
+    .click();
+  expect((await conflict).status()).toBe(409);
+  await expect(dialog.locator(".launch-error")).toContainText(
+    "reload the current league",
+  );
+  await expect(dialog.locator(".launch-error")).toContainText("fresh edit");
+  expect(await snapshot()).toEqual(before);
+  expect(
+    (await api(page, "workspace", { league_id: fixture.league })).data,
+  ).toEqual(safetyBefore.data);
+  await dialog.getByRole("button", { name: /League basics/ }).click();
+  await expect(dialog.getByLabel("League name", { exact: true })).toHaveValue(
+    "STALE NAME MUST NOT APPLY",
+  );
+  await dialog.getByRole("button", { name: "Save draft & exit" }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole("button", { name: /Shape the season/ }).click();
+  await dialog.getByRole("button", { name: /Rules & safety/ }).click();
+  await expect(
+    dialog.getByLabel("Minimum active roster", { exact: true }),
+  ).toHaveValue("7");
+  await dialog.getByRole("button", { name: /Review & finish/ }).click();
+  await dialog
+    .getByRole("button", { name: "Finish setup", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  expect(
+    (await api(page, "workspace", { league_id: fixture.league })).data.preseason
+      .settings.min_roster,
+  ).toBe(7);
+  // Restore only this local synthetic fixture for the next viewport's regression.
+  const current = await api(page, "workspace", { league_id: fixture.league });
+  const restored = await page.evaluate(
+    async ({ league, payload }) => {
+      const key = Object.keys(localStorage).find(
+        (k) => k.startsWith("sb-") && k.endsWith("-auth-token"),
+      )!;
+      const r = await fetch("/api/preseason", {
+        method: "POST",
+        headers: {
+          Authorization:
+            "Bearer " + JSON.parse(localStorage.getItem(key)!).access_token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ league, action: "configure", payload }),
+      });
+      return r.status;
+    },
+    {
+      league: fixture.league,
+      payload: {
+        ...current.data.preseason.settings,
+        questionnaire_deadline: new Date(
+          current.data.preseason.settings.questionnaire_deadline,
+        ).toISOString(),
+        roster_deadline: new Date(
+          current.data.preseason.settings.roster_deadline,
+        ).toISOString(),
+        verification_deadline: new Date(
+          current.data.preseason.settings.verification_deadline,
+        ).toISOString(),
+        season_name: current.data.setup.season,
+        cutoff_date: current.data.setup.cutoff,
+        season_start: current.data.setup.opening,
+        min_roster: 5,
+      },
+    },
+  );
+  expect(restored).toBe(200);
+});

@@ -1,8 +1,10 @@
--- REVIEW CANDIDATE ONLY. Not an applied migration. Generate a migration after owner approval.
+-- Ordered Launchpad migration, generated with repository-pinned Supabase CLI 2.122.0.
+-- Verified locally only. Hosted application requires separate owner approval.
 -- Additive tables/functions. Existing commands, public reference and provider evidence are untouched.
 create table public.organizer_drafts (
  id uuid primary key default gen_random_uuid(), owner_id uuid not null references auth.users(id),
  league_id uuid references public.leagues(id), source_league_id uuid references public.leagues(id), revision int not null default 1, base_revision int not null default 0,
+ base_safety jsonb,
  data jsonb not null check(jsonb_typeof(data)='object' and octet_length(data::text)<=64000),
  status text not null default 'draft' check(status in ('draft','completed')), updated_at timestamptz not null default now()
 );
@@ -75,6 +77,20 @@ declare k text;d jsonb;c jsonb;v date;begin
 end $$;
 revoke all on function private.validate_organizer_setup(jsonb,boolean) from public,anon,authenticated;
 
+-- Actual authoritative configuration, not the cached Launchpad JSON or a client
+-- version. Callers already hold the league row lock. Both configuration workflows
+-- take that same lock before touching these rows. rules_version also detects ABA
+-- changes through Preseason. Unrelated team/results activity does not stale a draft.
+create function private.organizer_safety_snapshot(l uuid) returns jsonb
+language sql stable security invoker set search_path='' as $$
+ select jsonb_build_object(
+  'league',jsonb_build_object('name',le.name,'season_name',le.season_name,'cutoff_date',le.cutoff_date,'timezone',le.timezone),
+  'preseason',to_jsonb(ps),
+  'divisions',(select coalesce(jsonb_agg(to_jsonb(dv) order by dv.id),'[]') from public.divisions dv where dv.league_id=l))
+ from public.leagues le join public.preseason_settings ps on ps.league_id=le.id where le.id=l
+$$;
+revoke all on function private.organizer_safety_snapshot(uuid) from public,anon,authenticated;
+
 create function private.launch_site_data(l uuid,c jsonb) returns jsonb language sql stable security definer set search_path='' as $$
  select jsonb_build_object('config',c,
  'league',jsonb_build_object('id',le.id,'name',le.name,'slug',le.slug,'season',le.season_name,'timezone',le.timezone,'city',la.config->>'city','region',la.config->>'region','country',la.config->>'country','start',la.config->>'start','end',la.config->>'end','cutoff',le.cutoff_date,'registration',ps.registration_status,'registrationDeadline',ps.questionnaire_deadline,'minRoster',ps.min_roster,'maxRoster',ps.max_roster),
@@ -105,7 +121,7 @@ declare actor uuid:=auth.uid();l uuid;d public.organizer_drafts;la public.league
   if l is not null then perform 1 from public.leagues where leagues.id=l for update;if private.member_role(l) is distinct from 'admin' then raise exception 'Administrator required' using errcode='42501';end if;end if;
   if nullif(p->>'id','') is null then
    if l is not null and (p->>'base_revision')::int is distinct from coalesce((select setup_revision from public.league_launch where league_id=l),0) then raise exception 'Setup changed. Reload before editing.' using errcode='40001';end if;
-   insert into public.organizer_drafts(owner_id,league_id,data,base_revision) values(actor,l,p->'data',coalesce((p->>'base_revision')::int,0)) returning * into d;
+   insert into public.organizer_drafts(owner_id,league_id,data,base_revision,base_safety) values(actor,l,p->'data',coalesce((p->>'base_revision')::int,0),case when l is not null then private.organizer_safety_snapshot(l) end) returning * into d;
   else
    select * into d from public.organizer_drafts where organizer_drafts.id=(p->>'id')::uuid and owner_id=actor for update;
    if d.id is null or d.status<>'draft' then raise exception 'Draft access denied' using errcode='42501';end if;
@@ -141,6 +157,12 @@ declare actor uuid:=auth.uid();l uuid;d public.organizer_drafts;la public.league
   if d.revision is distinct from (p->>'revision')::int then raise exception 'Draft changed. Reload before finishing.' using errcode='40001';end if;
   cfg:=d.data;perform private.validate_organizer_setup(cfg,true);
   if l is not null and d.base_revision is distinct from coalesce((select setup_revision from public.league_launch where league_id=l),0) then raise exception 'Setup changed. Reload before finishing.' using errcode='40001';end if;
+  -- After the league-lock wait, compare live tables before *any* league mutation.
+  -- Autosaving an old draft never refreshes this trusted baseline. Missing baselines
+  -- fail closed. A conflict rolls back the whole command, including history/audit.
+  if l is not null and d.base_safety is distinct from private.organizer_safety_snapshot(l) then
+   raise exception 'Safety configuration changed. Reload the current league and review its settings in a fresh edit.' using errcode='40001';
+  end if;
   if l is null then
    res:=private.command(null,'create_league',jsonb_build_object('name',cfg->>'name','season',cfg->>'season','cutoff',cfg->>'cutoff'));l:=(res->>'id')::uuid;
    delete from public.divisions where league_id=l;
@@ -189,7 +211,7 @@ declare actor uuid:=auth.uid();l uuid;d public.organizer_drafts;la public.league
     'rosterDeadline',(select (roster_deadline at time zone le.timezone)::date::text from public.preseason_settings where league_id=l),
     'verificationDeadline',(select (verification_deadline at time zone le.timezone)::date::text from public.preseason_settings where league_id=l));
    perform private.validate_organizer_setup(cfg,false);
-   insert into public.organizer_drafts(owner_id,league_id,base_revision,data) values(actor,l,coalesce(la.setup_revision,0),cfg) returning * into d;
+   insert into public.organizer_drafts(owner_id,league_id,base_revision,base_safety,data) values(actor,l,coalesce(la.setup_revision,0),private.organizer_safety_snapshot(l),cfg) returning * into d;
   else
    perform private.validate_organizer_setup(cfg,false);insert into public.organizer_drafts(owner_id,source_league_id,data) values(actor,l,cfg) returning * into d;
   end if;return to_jsonb(d)-'owner_id';

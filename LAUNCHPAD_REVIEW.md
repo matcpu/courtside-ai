@@ -24,10 +24,12 @@ The review harness does not implement hosted Auth email delivery, Storage signin
 
 ## Release gates after submission
 
-- Owner reviews this branch and the additive SQL proposal in `supabase/proposals/organizer_launchpad.sql`. It is deliberately outside applied migrations. No hosted migration or replacement infrastructure has been created.
-- Generate the ordered production migration with the installed/pinned Supabase CLI only after approval; verify the current changelog first. Apply to the existing project only, run advisors, and repeat hosted authorization/API/browser acceptance before enabling flags.
+- Owner reviews this branch and the ordered migration `supabase/migrations/20261104164024_organizer_launchpad.sql`. It is generated and verified locally only; no hosted migration or replacement infrastructure has been created.
+- Do not generate another copy of the migration. With separate approval, apply the reviewed migration to the existing project only, run advisors, and repeat hosted authorization/API/browser acceptance before enabling flags.
 - Enable server `ORGANIZER_SETUP_ENABLED` and build-time `NEXT_PUBLIC_ORGANIZER_SETUP_ENABLED` together. They default to false. The schema-free PR #1 website/starter remains available independently in this branch.
 - Review public copy/logo/contact/address for publication. Keep website publication, registration, official results, document eligibility and schedule publication as distinct human decisions.
 - No domain/DNS, paid API, social OAuth/publishing, email expansion, SMS, payments or production deployment is part of this review.
 
 Deferred: reusable organization-level season grouping, advanced playoffs/pools/travel rules, recurring availability templates/blackouts, domain purchases/custom-domain verification, automated trademark/name-conflict checks, verified handle lookup, social account connection/publishing and live Muse Launchpad orchestration. No unsupported controls claim these work.
+
+Concurrency repair: `npm run test:database:concurrency` requires a disposable local PostgreSQL 17 service and `LAUNCHPAD_TEST_DATABASE_URL` pointing to a loopback-only `courtside_launchpad_test` database. It refuses hosted URLs, creates/deletes only generated test databases, and observes real independent-session row-lock waits. CI supplies an ephemeral PostgreSQL 17.11 service. The ordered loader applies Launchpad exactly once.

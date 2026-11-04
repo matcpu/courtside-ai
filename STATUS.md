@@ -1,3 +1,17 @@
+# Targeted Launchpad repair — November 4, 2026 Eastern — NOT HOSTED
+
+The confirmed stale-finish overwrite is repaired locally. Existing-season drafts bind a trusted snapshot of live league/Preseason/division configuration under the league lock. Finish rechecks after any lock wait and before writes in the same transaction. Old private autosaves cannot rebase the snapshot; conflicts return HTTP 409 and instruct the administrator to reload/review in a fresh edit. No automatic merge, retry or silent discard is added.
+
+The SQL is promoted to **one** ordered migration, `20261104164024_organizer_launchpad.sql`, generated with repository-pinned CLI 2.122.0. The proposal file and secondary loader path are removed. All ordered migrations load exactly once; repeated clean setup verifies order, RLS and permissions. No hosted migration has run.
+
+Local evidence: 125 Vitest tests, TypeScript and isolated production build passed. PostgreSQL/WASM passes 254 assertions (136 repaired workflow/schema, 102 existing and 16 repeat-bootstrap). Native PostgreSQL 17.11 passes 113 assertions (97 sequential/multi-session/schema and 16 repeat-bootstrap), with actual independent-session blocking observed. Synthetic team/player rows, audit/history and all other affected records survive rejected finishes unchanged. All requested safety fields, ABA and both writer orderings are covered. All 14 browser cases passed: HTTP 409 on desktop/mobile plus the 12 prior regressions. Commit/CI details are recorded in LAUNCHPAD_RELEASE.md.
+
+**GO for review and approved hosted acceptance; NO-GO for production enablement until hosted migration/Auth/RLS/Storage/browser acceptance and explicit authorization.** Local Auth/PostgREST remain test contracts. No merge, deployment, hosted data write, external publication, message, Meta inference, billing or video change occurred. PR #2 stays draft.
+
+Earlier preparation findings below are historical; the stale-write and proposal-promotion blockers described there have now been resolved locally.
+
+---
+
 # Launchpad release preparation — November 4, 2026 Eastern
 
 `codex/organizer-setup` is being pushed for a review PR against `main`, without merging or deploying. Runtime implementation remains `3f64ce8`; release preparation adds documentation only. PR #1's helper bodies match after formatting, its three original tests are retained, there is one website route/conditional fallback, and no ordered migration was added. The new PR is the combined candidate; do not independently merge both PRs.

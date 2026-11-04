@@ -3,11 +3,14 @@
 import { PGlite } from "@electric-sql/pglite";
 import fs from "node:fs";
 import path from "node:path";
-export async function localDatabase({ launchpad = true } = {}) {
-  const db = new PGlite();
+export async function initializeTestDatabase(db) {
   await db.exec(
     `
-    create role anon; create role authenticated; create role service_role bypassrls;
+    do $$begin
+      if not exists(select 1 from pg_roles where rolname='anon') then create role anon;end if;
+      if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated;end if;
+      if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role bypassrls;end if;
+    end $$;
     create schema auth; create schema storage;
     create table auth.users(id uuid primary key, aud text, role text, email text unique, email_confirmed_at timestamptz, raw_app_meta_data jsonb default '{}', raw_user_meta_data jsonb default '{}');
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub'$$;
@@ -38,11 +41,10 @@ export async function localDatabase({ launchpad = true } = {}) {
       throw new Error(`Local migration ${file}: ${e.message}`);
     }
   }
-  if (launchpad)
-    await db.exec(
-      fs.readFileSync("supabase/proposals/organizer_launchpad.sql", "utf8"),
-    );
   return db;
+}
+export async function localDatabase() {
+  return initializeTestDatabase(new PGlite());
 }
 export async function asUser(db, actor, fn, role = "authenticated") {
   return db.transaction(async (tx) => {

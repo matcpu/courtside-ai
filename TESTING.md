@@ -1,3 +1,11 @@
+# Launchpad blocker repair — local verification
+
+The repaired Launchpad branch uses one ordered migration (`20261104164024_organizer_launchpad.sql`) and no proposal loader. `npm run test:database:local` passes 254 SQL/schema assertions across the repaired workflows, existing operations/preseason and a second clean bootstrap. `npm run test:database:concurrency` uses native PostgreSQL 17.11 and passes 113 assertions across separate sessions and a second clean bootstrap. It observes actual lock waits; it does not infer concurrency from the single-connection WASM queue. CI runs both suites using an ephemeral loopback PostgreSQL service. Hosted database URLs are rejected by the native harness.
+
+Cases cover all requested safety fields, immutable trusted snapshots, ABA, both writer orderings, capture after a lock wait, HTTP 409 and no partial changes across the affected record graph. Browser testing remains a local Auth/PostgREST contract plus real SQL; hosted Supabase acceptance is a separate approval gate. See LAUNCHPAD_RELEASE.md for final commit/test evidence and remaining blockers.
+
+---
+
 # Verification
 
 The current camera runtime passes TypeScript, production build and **115 unit tests**. Its November 3 pass rechecked **102 transactional SQL assertions** and **22 production browser cases**, plus the blurred-document API regression and coach camera filming check; see STATUS.md for scope. The earlier release pass separately checked 106 SQL assertions and 21 real API/file cases. The following 170-assertion total is the earlier broader baseline. **170 transactional PostgreSQL assertions** passed and rolled back: 65 operations, 37 preseason, four independent-proposal reviews and 64 budget/evidence authorization checks, including explicit timestamp freshness.

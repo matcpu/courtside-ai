@@ -44,7 +44,9 @@ async function rpc(
       );
     if (error.code === "40001")
       throw new ApiError(
-        "This draft changed in another window. Reload before saving.",
+        error.message?.includes("Safety configuration changed")
+          ? "The league’s safety settings changed after this draft was opened. Close this draft, reload the current league and open a fresh edit to review the newer settings before finishing. Your draft has not overwritten them."
+          : "This draft changed in another window. Reload and review the changes before saving.",
         409,
       );
     if (["PGRST202", "42883", "42P01"].includes(error.code))

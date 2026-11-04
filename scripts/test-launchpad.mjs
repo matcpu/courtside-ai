@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { localDatabase, asUser, organizer } from "./lib/local-database.mjs";
 import { newSetup } from "../src/lib/launchpad.ts";
+import { sequentialSafetyChecks } from "./lib/launchpad-safety-cases.mjs";
+import { assertTestSchema } from "./lib/assert-test-schema.mjs";
 const db = await localDatabase();
 let checks = 0;
 const admin = "cc000000-0000-4000-8000-000000000001",
@@ -32,6 +34,7 @@ const command = (actor, league, action, payload) =>
       ).rows[0].r,
   );
 try {
+  checks += await assertTestSchema(db);
   const baseCount = (await sql("select count(*)::int n from public.leagues"))[0]
     .n;
   await db.query(
@@ -534,6 +537,7 @@ try {
     id: revokedDraft.id,
     revision: revokedDraft.revision,
   });
+  checks += await sequentialSafetyChecks(db);
   console.log(
     `Launchpad PostgreSQL assertions passed: ${checks}. In-memory database; no hosted changes.`,
   );
@@ -548,4 +552,14 @@ try {
   process.exitCode = 1;
 } finally {
   await db.close();
+}
+if (!process.exitCode) {
+  const clean = await localDatabase();
+  try {
+    console.log(
+      `Repeated clean setup: ${await assertTestSchema(clean)} migration/RLS/permission assertions passed.`,
+    );
+  } finally {
+    await clean.close();
+  }
 }
