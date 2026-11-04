@@ -4,6 +4,8 @@ Scope: every feature in the original COURTSIDE AI request. **Working** means exe
 
 Latest release: saved Meta capability entry points, readable tool/outcome summaries and expandable original evidence are verified on desktop/mobile. Current verification counts and runtime are in STATUS.md. No new model inference or general accuracy claim was added.
 
+The shared camera release adds live preview/capture/retake/confirmation and native/gallery fallbacks to both private upload workflows. Desktop/mobile Chromium browser integration is verified with synthetic virtual cameras; physical iOS/Android camera behavior remains unverified. See CAMERA_CAPTURE.md and STATUS.md.
+
 ## Feature-by-feature assessment
 
 | Original requirement | Completion and evidence | Remaining limitation |

@@ -1,6 +1,6 @@
 # Verification
 
-The current runtime passes TypeScript and **112 unit tests**. The November 3 pass rechecked 106 transactional SQL assertions and 22 production browser cases plus 21 real API/file checks; see STATUS.md for scope. The following 170-assertion total is the earlier broader baseline. **170 transactional PostgreSQL assertions** passed and rolled back: 65 operations, 37 preseason, four independent-proposal reviews and 64 budget/evidence authorization checks, including explicit timestamp freshness.
+The current camera runtime passes TypeScript, production build and **115 unit tests**. Its November 3 pass rechecked **102 transactional SQL assertions** and **22 production browser cases**, plus the blurred-document API regression and coach camera filming check; see STATUS.md for scope. The earlier release pass separately checked 106 SQL assertions and 21 real API/file cases. The following 170-assertion total is the earlier broader baseline. **170 transactional PostgreSQL assertions** passed and rolled back: 65 operations, 37 preseason, four independent-proposal reviews and 64 budget/evidence authorization checks, including explicit timestamp freshness.
 
 These are separate from genuine provider evaluations: six scoresheets (one reused baseline), three questionnaires (one reused baseline), eight generated document illustrations and multistep operations/error recovery. See [EVALUATION_REPORT.md](EVALUATION_REPORT.md). Mocked responses remain contract tests, never model-quality evidence.
 
@@ -39,3 +39,7 @@ No simultaneous 500-browser load test, issuer-authentication benchmark, disaster
 ## Safe release rehearsals
 
 Set `E2E_AUDIT_FILE` to an ignored synthetic account file to avoid mutating another rehearsal's fixtures. `E2E_NO_PUBLISH=true` exercises draft generation and approval controls while withholding schedule publication. The authenticated browser test intentionally stops at that boundary; SQL transactions still cover publication, outbox and read receipts and then roll back. Read-only judge/evidence tests keep the canonical private fixture intact. Never treat a UI health stub in the deterministic-scheduling regression as a model response or dispatch authorization.
+
+## Camera regression opt-in
+
+`tests/e2e/camera.spec.ts` requires ignored `.local/camera-audit.json` and an absolute `E2E_CAMERA_FEED` path to a visibly synthetic Y4M fixture. Chrome uses the real media/canvas path with a virtual device; native OS pickers and physical optics are not simulated as certified hardware. The tests explicitly distinguish actual Chrome permission denial from injected no-device/storage faults. Preseason tests can use the same opt-in feed for actual camera JPEG upload, while ordinary runs retain gallery/native-file paths. Keep feeds, Auth accounts, screenshots and recordings private. No model dispatch is part of these tests.

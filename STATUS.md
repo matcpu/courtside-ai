@@ -1,4 +1,28 @@
-# Status — November 3, 2026 Eastern
+# Status — November 3, 2026 Eastern — camera release
+
+Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Runtime **93f44b6031b4494a45605ce0b4956a5f8d01dd92** is Ready as **dpl_84N1SnLLBDHPW64rfQq5QehhWimS**. [CI passed](https://github.com/matcpu/courtside-ai/actions/runs/41769062687). Source, private storage, billing and the sole Supabase project remain unchanged in scope.
+
+## Shared camera capture
+
+Scoresheets and the private guardian portal now share Take photo, live preview/framing, Capture photo, Retake, Use photo and gallery/native-camera fallbacks. Capture/confirmation stays local; upload requires the existing explicit submission. Rear-facing camera is preferred; audio is never requested. Streams stop on capture, cancellation, hidden-page/navigation/unmount and late permission responses. Camera images normalize to bounded JPEG without upscaling; supported native files are resized/compressed locally before the unchanged 6 MB upload limit. Gallery files retain supported formats and strict limit/decoder checks.
+
+Scoresheets show selected-image preview, honest private upload/processing stages and **Upload and review**. With inference paused this follows manual review with unknown scores until a person reviews the original. Guardian consent, private signed upload, local OCR, declared date, tenant/role permissions, human decisions, retention and audit rules are unchanged. Guardian originals never go to an external model.
+
+**115 unit tests**, TypeScript, production build and **102 rolled-back SQL assertions** (37 preseason, 65 operations) passed. **22 production browser cases** passed: camera controls on desktop/mobile Chromium, a full guardian camera-JPEG journey, the ordinary mobile file journey, public/signup/judge/Meta evidence regressions. Camera control coverage includes capture/retake/local confirmation, real browser permission denial, injected no-device fault, cancellation/late permission cleanup, navigation cleanup, invalid/oversized files, oversized native-photo normalization, actual WebP upload and explicit retry after an injected storage failure. A real blurred synthetic JPEG submission returned **unable_to_assess / unreadable_or_unsupported**, remained pending and preserved the declared date. Actual coach camera-JPEG upload reached manual review with confirmation forbidden to that coach.
+
+Chrome tests and footage use an explicitly synthetic virtual-camera feed. Physical desktop optics, iPhone Safari, Android Chrome and native operating-system camera pickers were unavailable and are not certified. No universal client blur detector or document-authenticity claim is made. See [CAMERA_CAPTURE.md](CAMERA_CAPTURE.md).
+
+Production health is good, Meta remains disabled and configured private credentials are absent from deployed client assets. Public reference fingerprint and canonical judge memberships are unchanged; judge access works. Completed filming-test invitations were revoked/replaced as appropriate; canonical judge invitations were not touched. No schedule was published, real notification sent, model inference run, infrastructure replaced or billing changed.
+
+## Updated camera review video
+
+The updated audio-pending review cut is `C:\Users\matti\Downloads\courtside-ai-camera-audio-pending.mp4`: 170 seconds, 1920×1080 H.264/AAC, 25.41 MB with intentional silence. Full audio/video decoding and Chrome playback through the end passed; midpoint and camera/invitation boundary frames were visually checked. It replaces guardian and coach footage with genuine deployed camera interactions, previews, consent/private uploads and review. A visible label discloses the virtual camera and fictional feed. Invitation tokens are redacted. Separate saved Meta extraction and approved-season/schedule examples are labeled; no new inference or automatic eligibility is implied.
+
+The seven founder timing slots and recording folder remain `C:\Users\matti\Downloads\COURTSIDE AI Narration`. Actual founder audio, final synchronization, owner review and authorized publication/submission remain pending. Earlier review videos and source recordings are preserved. No public upload or entry submission occurred.
+
+---
+
+# Earlier November 3 release baseline
 
 Live: [COURTSIDE AI](https://courtside-ai-one.vercel.app). Current runtime **21861ba7e10ecb6575c69ec9a4dc2916fc4504b0** is Ready as **dpl_AZE3ohKoLeEUPQh2hodeEeVLeAZA**. [Linux CI passed](https://github.com/matcpu/courtside-ai/actions/runs/41725660671). The final copy/shape correction keeps evaluation envelopes separate from primary scoresheet extractions. Supabase remains xdmkgoradmbnjofmbojs; no infrastructure or billing changed.
 

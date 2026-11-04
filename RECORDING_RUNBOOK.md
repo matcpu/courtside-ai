@@ -1,6 +1,6 @@
 # Founder video — release recording and audio handoff
 
-The updated review cut is `C:\Users\matti\Downloads\courtside-ai-release-audio-pending.mp4`, 170 seconds, 1920×1080 H.264/AAC. It is explicitly audio pending, with a silent AAC track. Do not use Microsoft David or another synthetic narrator. Earlier review videos are preserved and are not the current release edit.
+The updated review cut is `C:\Users\matti\Downloads\courtside-ai-camera-audio-pending.mp4`, 170 seconds, 1920×1080 H.264/AAC. It is explicitly audio pending, with a silent AAC track. Do not use Microsoft David or another synthetic narrator. Earlier review videos are preserved and are not the current release edit.
 
 ## Seven scenes and voice slots
 
@@ -25,3 +25,7 @@ All new footage was captured from the deployed application in this release pass.
 The main Meta demonstration's two moves have earlier owner approvals. Its revised schedule v3 remains unpublished. The recording does not replay an approval click as the earlier decision. Inference, email expansion and publication remain disabled/restricted as recorded in STATUS.md. Inspect original response/audit details privately when needed; keep raw JSON out of the main visual story.
 
 A final owner-approved public video URL still has to be tested signed out and inserted in the official form. Do not upload the video or submit the entry without owner authorization.
+
+## Camera update
+
+Guardian and coach camera scenes use real browser media/canvas/file/upload interactions with a disclosed synthetic Chrome virtual-camera feed. Physical phone hardware is unverified. The seven slots stay exactly 0–14, 14–44, 44–73, 73–92, 92–121, 121–156 and 156–170 seconds. Fresh camera sources and current edit metadata are private in `.local/camera/video`; unchanged chapters retain the verified earlier edit. Link capabilities are redacted. Camera submission remains pending until human review; the approved scheduling example is separately labeled. The paused camera upload is never presented as a newly executed Meta extraction.
