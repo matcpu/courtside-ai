@@ -22,7 +22,11 @@ Vercel Authentication protects existing preview deployment URLs. Use a deploymen
 
 The latest application source passes isolated TypeScript/production build and 160 unit tests. The changed local credential source was retested through the full desktop creation/customization/publication/return journey. Earlier desktop/mobile coverage and local SQL/permissions/RLS/upgrade results are recorded in `INTERACTIVE_DEMO_REVIEW.md`; those are not hosted acceptance.
 
-Run `tests/e2e/release-smoke.spec.ts` with explicit `RELEASE_SMOKE=true` against the actual HTTPS preview in fresh desktop/mobile contexts. It checks entry/navigation, reference public redaction, disabled outbound services, production denial of local-cookie/client-flag authentication and unauthenticated command rejection. No authenticated hosted writes are performed. Remote results and screenshots are private local artifacts under `.local/release-candidate/`; update the actual outcome before claiming a pass.
+Executed `tests/e2e/release-smoke.spec.ts` with explicit `RELEASE_SMOKE=true` against the actual HTTPS preview in fresh desktop/mobile contexts: **2 passed**. It checks entry/navigation, reference public redaction, disabled outbound services, production denial of local-cookie/client-flag authentication and unauthenticated command rejection. No authenticated hosted writes were performed. Remote results and screenshots are private local artifacts under `.local/release-candidate/`.
+
+Deployed application SHA: `0cdac7af1b20eeae92228f78025b891651f0a768`. Preview: `https://courtside-4375zfmf2-matcpus-projects.vercel.app` / `dpl_EMsUxCKMNfqHSuX1iMczUJrTcaUn`. A deployment-scoped 23-hour sharing URL is held only in the private local access manifest. The ordinary URL retains Vercel Authentication; this is temporary review access, not a permanent submission URL. GitHub CI [run 41941598717](https://github.com/matcpu/courtside-ai/actions/runs/41941598717) passed all verification steps, including native PostgreSQL concurrency. Reachable-history credential audit passed (562 blobs), and the production dependency audit reported zero vulnerabilities. This documentation update does not change the deployed application source.
+
+Production target and project protection were compared after deployment and are unchanged. No production promotion, hosted migration/data write, Auth provisioning, outbound message, inference or local backend restart occurred.
 
 ## Release sequence once unblocked
 
