@@ -1,5 +1,7 @@
 # Hosted conflict response repair — approval required
 
+**Approved and applied checkpoint:** the owner separately approved this exact migration, and version `20261105010200` is now hosted. The previously timing-out RPC returns HTTP 409 / `PT409` promptly. An independent-connection hosted test observed a real row-lock wait and confirmed the stale finish preserved minimum roster 7 with no partial record changes. GitHub CI passed on repair SHA `a0ea966c02647637157312aab7ddc66995ae9bcc`, including native concurrency. The statements below preserve the proposal/review history; no further migration is implied.
+
 The two reviewed migrations `20261104164024` and `20261104183226` were applied after a verified encrypted backup. All 31 historical versions and existing values in 28 application tables were preserved. A protected PostgreSQL 17.11 restore matched all 66 backed-up table digests, including Auth/Storage metadata and migration history. Restore instructions are stored outside Git with the backup.
 
 Hosted acceptance exposed a real compatibility defect: deterministic revision conflicts raised as SQLSTATE `40001` are retried indefinitely by the project's PostgREST, causing timeouts instead of HTTP 409. Two synthetic test requests were cancelled and confirmed inactive. Supabase documents this behaviour and recommends a non-retrying application error: [official troubleshooting guide](https://supabase.com/kb/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions).

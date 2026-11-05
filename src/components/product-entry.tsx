@@ -168,6 +168,11 @@ export function ProductEntry({
                 <button className="product-secondary" onClick={onCreate}>
                   Create a league
                 </button>
+                {!localPreview && demo?.publicDashboard && (
+                  <a className="product-secondary" href={demo.publicDashboard}>
+                    Open public demo dashboard ↗
+                  </a>
+                )}
                 {localPreview && (
                   <a
                     className="product-secondary"
@@ -178,7 +183,9 @@ export function ProductEntry({
                 )}
               </div>
               <p className="product-fine">
-                Explore publicly. Manage your league securely.
+                {localPreview
+                  ? "Explore publicly. Manage your league securely."
+                  : "Explore the demo without signing in. League setup and management require secure sign-in."}
               </p>
             </div>
             <aside className="product-season">

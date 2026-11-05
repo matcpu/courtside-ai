@@ -34,4 +34,5 @@ export type ProductDemo = {
   name: string;
   season: string;
   href: string;
+  publicDashboard?: string;
 };

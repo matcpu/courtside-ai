@@ -19,6 +19,7 @@ export async function productDemo(): Promise<ProductDemo | null> {
             name: row.name,
             season: site.league.season,
             href: `/league/${encodeURIComponent(row.slug)}/website`,
+            publicDashboard: `/league/${encodeURIComponent(row.slug)}`,
           };
       }
     }
@@ -31,6 +32,7 @@ export async function productDemo(): Promise<ProductDemo | null> {
           name: reference.name,
           season: "Public reference league",
           href: `/league/${reference.slug}/website`,
+          publicDashboard: `/league/${encodeURIComponent(reference.slug)}`,
         }
       : null;
   } catch {

@@ -1,3 +1,11 @@
+# Hosted database acceptance — November 4, 2026 Eastern — PREVIEW VERIFICATION IN PROGRESS
+
+The owner approved and the pinned CLI applied the exact third migration `20261105010200_postgrest_conflict_response.sql` after the verified backup. Direct hosted RPC stale conflicts now return HTTP 409 / PT409 promptly. Independent hosted connections observed a real row-lock wait; rejected stale finish preserved minimum roster 7 and the full fixture record graph. The two lingering synthetic conflict test requests were cancelled and verified inactive. All historical migration versions remain unchanged.
+
+Nine hosted Auth/RLS/command checks pass: new guided/quick/copy seasons, resumable/revision-checked drafts, idempotent finish, coach email binding/reuse denial, coach publication denial, private themes and redacted public Scoreboard (12 teams/25 fixtures/18 fictional finals, ages 12–13). Synthetic account credentials are private and no signup email is used. Public dashboard exploration uses the existing read-only portal; management still requires real authentication and tenant authorization. TypeScript/build and 164 unit tests pass. GitHub CI for a0ea966 passed, including native concurrency. The enabled HTTPS preview/browser journey remains to be verified; production has not been promoted.
+
+---
+
 # Hosted backup and rollout — November 4, 2026 Eastern — REPAIR APPROVAL REQUIRED
 
 Owner approved the two reviewed migrations and isolated hosted synthetic fixtures, subject to verified backup. A protected manual backup outside Git was restored into a password-protected loopback PostgreSQL 17.11 cluster: all 66 table digests, including Auth/Storage metadata and 31 migration-history rows, matched. Recovery files are AES-256-GCM encrypted with a Windows DPAPI CurrentUser-protected key; ciphertext/plaintext and key recovery checks passed. Restore instructions accompany the files. Automatic cleanup review rejected deletion of the stopped restore-check folder; it remains ACL-restricted outside Git with no listening server.
