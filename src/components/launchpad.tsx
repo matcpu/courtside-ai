@@ -632,9 +632,11 @@ export function Launchpad({
                       setApproved(false);
                     }}
                   >
-                    <option value="courtside">Courtside · modern club</option>
+                    <option value="courtside">
+                      Scoreboard · clean & modern
+                    </option>
                     <option value="community">
-                      Community · warm and welcoming
+                      Clubhouse · community editorial
                     </option>
                     <option value="arena">Arena · bold competition</option>
                   </select>

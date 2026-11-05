@@ -8,7 +8,18 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import type { Session } from "@supabase/supabase-js";
+import {
+  ensureLocalPreviewSession,
+  type LocalPreviewSession,
+} from "@/lib/local-demo-client";
+import { useRouter } from "next/navigation";
+import { ProductEntry, type LeagueChoice } from "./product-entry";
+import { LeagueConnections } from "./league-connections";
+import {
+  authorizedSelection,
+  workspaceHref,
+  type ProductDemo,
+} from "@/lib/product-navigation";
 import {
   Activity,
   ArrowDown,
@@ -80,12 +91,6 @@ type View =
   | "Courts & gyms"
   | "Notifications"
   | "Settings";
-type LeagueChoice = {
-  id: string;
-  name: string;
-  slug: string;
-  is_demo: boolean;
-};
 const nav: [View, typeof Activity][] = [
   ["Overview", LayoutDashboard],
   ["Launchpad", Sparkles],
@@ -257,10 +262,22 @@ function CourtArt() {
 export function LeagueApp({
   publicSlug,
   initialView = "Overview",
+  workspaceLeague,
+  entryAction,
+  demo,
 }: {
   publicSlug?: string;
   initialView?: View;
+  workspaceLeague?: string;
+  entryAction?: "signin" | "create";
+  demo?: ProductDemo | null;
 }) {
+  const router = useRouter();
+  const [authReady, setAuthReady] = useState(false),
+    [choicesReady, setChoicesReady] = useState(false);
+  const [websiteHref, setWebsiteHref] = useState<string | null>(null);
+  const createAfterAuth = useRef(entryAction === "create");
+  const handledEntryAction = useRef(false);
   const organizerEnabled =
     process.env.NEXT_PUBLIC_ORGANIZER_SETUP_ENABLED === "true";
   const [setupDraft, setSetupDraft] = useState<SetupDraft | undefined>();
@@ -272,7 +289,11 @@ export function LeagueApp({
       return null;
     }
   }, []);
-  const [session, setSession] = useState<Session | null>(null),
+  const [localPreview, setLocalPreview] = useState<LocalPreviewSession | null>(
+    null,
+  );
+  const localPreviewRef = useRef<LocalPreviewSession | null>(null);
+  const [session, setSession] = useState<{ user: { id: string } } | null>(null),
     [view, setView] = useState<View>(initialView),
     [snapshot, setSnapshot] = useState<Snapshot | null>(null),
     [leagues, setLeagues] = useState<LeagueChoice[]>([]),
@@ -323,9 +344,10 @@ export function LeagueApp({
   const notify = (text: string, error = false) => setNotice({ text, error });
   const api = useCallback(
     async (path: string, options: RequestInit = {}) => {
-      const fresh = supabase
-        ? (await supabase.auth.getSession()).data.session
-        : null;
+      const fresh =
+        supabase && !localPreviewRef.current
+          ? (await supabase.auth.getSession()).data.session
+          : null;
       const res = await fetch(path, {
         ...options,
         headers: {
@@ -342,10 +364,11 @@ export function LeagueApp({
   );
   const mine = leagues.some((l) => l.id === selected) && !publicSlug;
   const selectedRef = useRef(selected);
+  const authUserRef = useRef<string | null>(null);
   const loadEpoch = useRef(0);
   selectedRef.current = selected;
   const load = useCallback(async () => {
-    if (!selected) return;
+    if (!selected || (!publicSlug && (!session || !mine))) return;
     const epoch = ++loadEpoch.current;
     setLoading(true);
     try {
@@ -361,70 +384,123 @@ export function LeagueApp({
       if (selectedRef.current === selected && epoch === loadEpoch.current)
         setLoading(false);
     }
-  }, [api, selected, mine]);
+  }, [api, selected, mine, publicSlug, session?.user.id]);
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
+      setAuthReady(true);
       return;
     }
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (!s) {
+    const applySession = (next: { user: { id: string } } | null) => {
+      if (!next || authUserRef.current !== next.user.id) {
         ++loadEpoch.current;
         setSnapshot(null);
         setLeagues([]);
+        setSelected("");
+        setChoicesReady(false);
         setSheet(null);
         setImageUrl("");
         setAgentResult(null);
       }
+      authUserRef.current = next?.user.id ?? null;
+      setSession(next);
+      setAuthReady(true);
+    };
+    let live = true,
+      resolved = false,
+      interactive = false;
+    void (async () => {
+      try {
+        const preview = await ensureLocalPreviewSession();
+        if (!live) return;
+        interactive = Boolean(preview);
+        resolved = true;
+        if (preview) {
+          localPreviewRef.current = preview;
+          setLocalPreview(preview);
+          applySession({ user: preview.user });
+        } else {
+          const { data } = await supabase.auth.getSession();
+          if (live) applySession(data.session);
+        }
+      } catch {
+        if (live) {
+          notify(
+            "The local preview session could not be prepared. Check the loopback services.",
+            true,
+          );
+          setAuthReady(true);
+        }
+      }
+    })();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, next) => {
+      if (resolved && !interactive) applySession(next);
     });
     fetch("/api/health")
       .then((r) => r.json())
       .then(setHealth)
       .catch(() => {});
-    return () => subscription.unsubscribe();
+    return () => {
+      live = false;
+      subscription.unsubscribe();
+    };
   }, [supabase]);
   useEffect(() => {
+    setView(initialView);
+  }, [workspaceLeague, initialView]);
+  useEffect(() => {
+    if (!authReady || handledEntryAction.current || !entryAction) return;
+    handledEntryAction.current = true;
+    setModal(
+      session && entryAction === "create" ? "league" : session ? null : "auth",
+    );
+  }, [authReady, session, entryAction]);
+  useEffect(() => {
+    if (!authReady) return;
     let active = true;
+    setChoicesReady(false);
     (async () => {
       try {
-        const pubs = (await api("/api/league?public=true")) as LeagueChoice[];
+        const pubs = publicSlug
+          ? ((await api("/api/league?public=true")) as LeagueChoice[])
+          : [];
         if (!active) return;
         setPublicLeagues(pubs);
         let own: LeagueChoice[] = [];
         if (session) own = await api("/api/league");
         if (!active) return;
         setLeagues(own);
-        setSelected((current) => {
-          if (publicSlug)
-            return pubs.find((l) => l.slug === publicSlug)?.id ?? "";
-          if (current && own.some((l) => l.id === current)) return current;
-          let remembered = "";
-          try {
-            remembered =
-              localStorage.getItem(
-                `courtside:last-league:v1:${session?.user.id ?? "public"}`,
-              ) ?? "";
-          } catch {}
-          if (remembered && [...own, ...pubs].some((l) => l.id === remembered))
-            return remembered;
-          return own[0]?.id ?? pubs[0]?.id ?? "";
-        });
+        const next = publicSlug
+          ? (pubs.find((l) => l.slug === publicSlug)?.id ?? "")
+          : authorizedSelection(own, workspaceLeague, selectedRef.current);
+        if (!next) {
+          ++loadEpoch.current;
+          setSnapshot(null);
+        }
+        setSelected(next);
       } catch (e) {
         if (active) notify((e as Error).message, true);
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+          setChoicesReady(true);
+        }
       }
     })();
     return () => {
       active = false;
     };
-  }, [api, session, publicSlug]);
-  const chooseLeague = (id: string) => {
+  }, [api, session, publicSlug, workspaceLeague, authReady]);
+  const chooseLeague = (id: string, targetView: View = "Overview") => {
+    ++loadEpoch.current;
+    setSnapshot(null);
     setSelected(id);
+    if (publicSlug) {
+      const league = publicLeagues.find((l) => l.id === id);
+      if (league) router.push(`/league/${encodeURIComponent(league.slug)}`);
+    } else router.push(workspaceHref(id, targetView));
     if (!publicSlug)
       try {
         localStorage.setItem(
@@ -459,11 +535,27 @@ export function LeagueApp({
     setScoreImage(null);
     setScoreUploadStage("");
   }, [selected, session?.user.id, view]);
-  const s = snapshot,
+  const s =
+      snapshot && (!workspaceLeague || snapshot.league.id === workspaceLeague)
+        ? snapshot
+        : null,
     isAdmin = s?.role === "admin",
     canWrite = mine && !!session,
     canScore =
       canWrite && ["admin", "scorekeeper", "coach"].includes(s?.role ?? "");
+  useEffect(() => {
+    let live = true;
+    setWebsiteHref(null);
+    if (!selected || !canWrite || !isAdmin) return;
+    api(`/api/workspace-access?league=${encodeURIComponent(selected)}`)
+      .then((access) => {
+        if (live) setWebsiteHref(access.website);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [api, selected, canWrite, isAdmin, s?.league.data_revision, setupVersion]);
   const teamName = (id: string) =>
     s?.teams.find((t) => t.id === id)?.name ?? "Unknown team";
   const divisionName = (id: string | null) =>
@@ -485,6 +577,8 @@ export function LeagueApp({
   const changeView = (v: View) => {
     setView(v);
     setMenu(false);
+    if (!publicSlug && selected)
+      router.replace(workspaceHref(selected, v), { scroll: false });
   };
   async function openSheet(item: Sheet) {
     setSheet(item);
@@ -511,1913 +605,2095 @@ export function LeagueApp({
   const refreshChoices = async (id: string) => {
     const own = await api("/api/league");
     setLeagues(own);
-    chooseLeague(id);
+    chooseLeague(id, organizerEnabled ? "Launchpad" : "Overview");
     setModal(null);
   };
 
+  const requestedMember = Boolean(
+    workspaceLeague && leagues.some((league) => league.id === workspaceLeague),
+  );
+  const entry =
+    !publicSlug &&
+    (!session ||
+      (!selected && !requestedMember) ||
+      Boolean(workspaceLeague && !requestedMember));
+  const accessDenied = Boolean(
+    workspaceLeague &&
+    session &&
+    choicesReady &&
+    !leagues.some((l) => l.id === workspaceLeague),
+  );
+  const openCreate = async () => {
+    try {
+      const preview =
+        localPreviewRef.current ?? (await ensureLocalPreviewSession());
+      if (preview) {
+        localPreviewRef.current = preview;
+        setLocalPreview(preview);
+        setSession({ user: preview.user });
+      }
+      createAfterAuth.current = !session && !preview;
+      setSetupDraft(undefined);
+      setModal(session || preview ? "league" : "auth");
+    } catch {
+      notify(
+        "The local preview session could not be prepared. Check the loopback services.",
+        true,
+      );
+    }
+  };
+  const openExplore = async () => {
+    try {
+      const preview =
+        localPreviewRef.current ?? (await ensureLocalPreviewSession());
+      router.push(preview?.demo.href ?? demo?.href ?? "/");
+    } catch {
+      notify(
+        "The local demo could not be prepared. Check the loopback services.",
+        true,
+      );
+    }
+  };
   return (
-    <div className="app-shell">
-      <aside className={`sidebar ${menu ? "sidebar-open" : ""}`}>
-        <a className="brand" href="/" aria-label="Courtside AI home">
-          <span className="brand-mark">
-            <svg viewBox="0 0 32 32" fill="none">
-              <circle
-                cx="16"
-                cy="16"
-                r="12"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              />
-              <path
-                d="M4 16h24M16 4v24M8 7c9 4 9 14 0 18M24 7c-9 4-9 14 0 18"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-            </svg>
-          </span>
-          <span>
-            courtside<span className="brand-ai">AI</span>
-            <small>LEAGUE OPERATIONS</small>
-          </span>
-        </a>
-        <div className="workspace">
-          <span className="workspace-avatar">N</span>
-          <div>
-            <b>{s?.league.name ?? "Your league"}</b>
-            <small>{s?.league.season_name ?? "Basketball operations"}</small>
-          </div>
-          <ChevronDown size={15} />
-          <select
-            aria-label="Switch league"
-            value={selected}
-            onChange={(e) => chooseLeague(e.target.value)}
-          >
-            {[
-              ...leagues,
-              ...publicLeagues.filter(
-                (p) => !leagues.some((l) => l.id === p.id),
-              ),
-            ].map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-                {l.is_demo ? " · Demo" : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-        <span className="nav-label">WORKSPACE</span>
-        <nav>
-          {nav
-            .filter(([title]) => title !== "Launchpad" || (canWrite && isAdmin))
-            .map(([title, Icon]) => (
-              <button
-                key={title}
-                aria-label={title}
-                className={view === title ? "active" : ""}
-                onClick={() => changeView(title)}
-              >
-                <Icon size={18} />
-                <span>{title}</span>
-                {title === "Scoresheets" && pendingSheets.length > 0 && (
-                  <span className="nav-count">{pendingSheets.length}</span>
-                )}
-                {title === "Notifications" &&
-                  s?.notifications.some(
-                    (n) =>
-                      n.channel === "in_app" &&
-                      n.recipient_id === session?.user.id &&
-                      !n.read_at,
-                  ) && <span className="nav-dot" />}
-                {title === "Competitive balance" &&
-                  pendingProposals.length > 0 && <span className="nav-dot" />}
-              </button>
-            ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="agent-card">
-            <div>
-              <span className="live-dot" />
-              <b>League intelligence</b>
-              <Sparkles size={14} />
-            </div>
-            <p>
-              {health?.meta
-                ? "Muse Spark is connected. Ready to coordinate your next workflow."
-                : health?.metaConfigured
-                  ? "Meta key saved. Live inference is paused; saved evidence remains available."
-                  : "Connect Meta to unlock your league operations agent."}
-            </p>
-            <button
-              onClick={() =>
-                canWrite && isAdmin ? setModal("agent") : changeView("Settings")
-              }
-            >
-              {health?.meta
-                ? "Open operations agent"
-                : "View connection status"}{" "}
-              <ArrowUpRight size={14} />
-            </button>
-          </div>
-          <button
-            className="sidebar-setting"
-            onClick={() => changeView("Settings")}
-          >
-            <Settings2 size={17} />{" "}
-            {organizerEnabled
-              ? "System settings & access"
-              : "Settings & access"}
-          </button>
-          <div className="profile">
-            <span className="profile-avatar">{session ? "ME" : "D"}</span>
-            <div>
-              <b>{session ? "Your workspace" : "Demo visitor"}</b>
-              <small>{canWrite ? s?.role : "Public, read-only access"}</small>
-            </div>
-            <button
-              aria-label={session ? "Sign out" : "Sign in"}
-              onClick={() =>
-                session ? void supabase?.auth.signOut() : setModal("auth")
-              }
-            >
-              {session ? <LogOut size={17} /> : <LogIn size={17} />}
-            </button>
-          </div>
-        </div>
-      </aside>
-      <div className="main-shell">
-        <header className="topbar">
-          <div className="breadcrumbs">
-            <button
-              className="mobile-menu"
-              aria-label="Open navigation"
-              onClick={() => setMenu(!menu)}
-            >
-              <Menu size={20} />
-            </button>
-            <span>Workspace</span>
-            <ChevronRight size={14} />
-            <b>{view}</b>
-          </div>
-          <div className="topbar-actions">
-            <span className="season-pill">
-              <span className="live-dot" />
-              {s?.league.season_name ?? "Fall 2026"}
-            </span>
-            {s && (
-              <a
-                href={`/league/${s.league.slug}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Public site <ArrowUpRight size={14} />
-              </a>
-            )}
-            <button onClick={() => void load()} aria-label="Refresh league">
-              <RefreshCw size={17} className={loading ? "spin" : ""} />
-            </button>
-            <button
-              aria-label="Notification history"
-              onClick={() => changeView("Notifications")}
-            >
-              <Bell size={18} />
-            </button>
-          </div>
-        </header>
-        <main>
-          {notice && (
-            <div
-              role="status"
-              className={`notice ${notice.error ? "notice-error" : ""}`}
-            >
-              <span>
-                {notice.error ? <CircleHelp size={17} /> : <Check size={17} />}{" "}
-                {notice.text}
+    <div className={entry ? "product-shell" : "app-shell"}>
+      {entry ? (
+        <ProductEntry
+          demo={localPreview?.demo ?? demo}
+          localPreview={localPreview}
+          onExplore={() => void openExplore()}
+          signedIn={!!session}
+          ready={authReady && choicesReady}
+          leagues={leagues}
+          denied={accessDenied}
+          privateRequest={!!workspaceLeague}
+          notice={notice}
+          onSignIn={() => {
+            createAfterAuth.current = false;
+            setAuthMode("signin");
+            setModal("auth");
+          }}
+          onCreate={() => void openCreate()}
+          onSignOut={() => void supabase?.auth.signOut()}
+        />
+      ) : (
+        <>
+          <aside className={`sidebar ${menu ? "sidebar-open" : ""}`}>
+            <a className="brand" href="/" aria-label="Courtside AI home">
+              <span className="brand-mark">
+                <svg viewBox="0 0 32 32" fill="none">
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r="12"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  />
+                  <path
+                    d="M4 16h24M16 4v24M8 7c9 4 9 14 0 18M24 7c-9 4-9 14 0 18"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
+                </svg>
               </span>
-              <button
-                aria-label="Dismiss notification"
-                onClick={() => setNotice(null)}
-              >
-                <X size={16} />
-              </button>
-            </div>
-          )}
-          {s?.league.is_demo && (
-            <div className="demo-strip">
-              <ShieldCheck size={15} />
-              <span>FICTIONAL DEMO LEAGUE</span>
-              <p>
-                {canWrite
-                  ? "Your isolated sandbox. All records are synthetic."
-                  : "Explore real database records with safe, read-only access."}
-              </p>
-              {!session && (
-                <button onClick={() => setModal("auth")}>
-                  Create your workspace <ArrowRight size={14} />
-                </button>
-              )}
-              {session && !canWrite && (
-                <button onClick={() => void createDemo()} disabled={busy}>
-                  Create private demo <ArrowRight size={14} />
-                </button>
-              )}
-            </div>
-          )}
-          <div className="page-heading">
-            <div>
-              <div className="eyebrow">
-                {s?.league.name ?? "COURTSIDE AI"} <span>/</span>{" "}
-                {isAdmin
-                  ? "LEAGUE ADMINISTRATION"
-                  : canWrite
-                    ? "COACH PORTAL"
-                    : "LEAGUE EXPLORER"}
+              <span>
+                courtside<span className="brand-ai">AI</span>
+                <small>LEAGUE OPERATIONS</small>
+              </span>
+            </a>
+            <div className="workspace">
+              <span className="workspace-avatar">N</span>
+              <div>
+                <b>{s?.league.name ?? "Your league"}</b>
+                <small>
+                  {s?.league.season_name ?? "Basketball operations"}
+                </small>
               </div>
-              <h1>{view === "Overview" ? "Your league. In sync." : view}</h1>
-              <p>
-                {
-                  {
-                    Overview: "Less administration. More time on the court.",
-                    Launchpad: "Prepare your league for opening day.",
-                    "Preseason Onboarding":
-                      "From coach assessment to verified rosters and opening weekend.",
-                    "Meta AI activity":
-                      "Model observations, selected tools and actions you can verify.",
-                    "Teams & rosters":
-                      "Every team, in the right place. Built on verified information.",
-                    Schedule:
-                      "Confirmed courts. Conflict-free fixtures. One source of truth.",
-                    Scoresheets: "From the final buzzer to a verified result.",
-                    Standings:
-                      "The season so far, from confirmed results only.",
-                    "Competitive balance":
-                      "Better matchups start with evidence. Every move stays in your control.",
-                    "Courts & gyms":
-                      "Your schedule starts with confirmed space.",
-                    Notifications:
-                      "Every update, with a traceable delivery state.",
-                    Settings:
-                      "Connections, league configuration, and who can do what.",
-                  }[view]
-                }
-              </p>
+              <ChevronDown size={15} />
+              <select
+                aria-label="Switch league"
+                value={selected}
+                onChange={(e) => chooseLeague(e.target.value)}
+              >
+                {[...(publicSlug ? publicLeagues : leagues)].map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                    {l.is_demo ? " · Demo" : ""}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="heading-actions">
-              {view === "Overview" && (
-                <>
-                  <Button
-                    variant="secondary"
-                    onClick={() => changeView("Schedule")}
+            <span className="nav-label">WORKSPACE</span>
+            <nav>
+              {nav
+                .filter(
+                  ([title]) => title !== "Launchpad" || (canWrite && isAdmin),
+                )
+                .map(([title, Icon]) => (
+                  <button
+                    key={title}
+                    aria-label={title}
+                    className={view === title ? "active" : ""}
+                    onClick={() => changeView(title)}
                   >
-                    <CalendarDays size={16} /> View schedule
-                  </Button>
-                  <Button
-                    onClick={() =>
-                      canScore ? changeView("Scoresheets") : setModal("auth")
-                    }
-                  >
-                    <Upload size={16} /> Upload scoresheet
-                  </Button>
-                </>
-              )}
-              {view === "Teams & rosters" && (
-                <Button
+                    <Icon size={18} />
+                    <span>{title}</span>
+                    {title === "Scoresheets" && pendingSheets.length > 0 && (
+                      <span className="nav-count">{pendingSheets.length}</span>
+                    )}
+                    {title === "Notifications" &&
+                      s?.notifications.some(
+                        (n) =>
+                          n.channel === "in_app" &&
+                          n.recipient_id === session?.user.id &&
+                          !n.read_at,
+                      ) && <span className="nav-dot" />}
+                    {title === "Competitive balance" &&
+                      pendingProposals.length > 0 && (
+                        <span className="nav-dot" />
+                      )}
+                  </button>
+                ))}
+            </nav>
+            <div className="sidebar-bottom">
+              <div className="agent-card">
+                <div>
+                  <span className="live-dot" />
+                  <b>League intelligence</b>
+                  <Sparkles size={14} />
+                </div>
+                <p>
+                  {health?.meta
+                    ? "Muse Spark is connected. Ready to coordinate your next workflow."
+                    : health?.metaConfigured
+                      ? "Meta key saved. Live inference is paused; saved evidence remains available."
+                      : "Connect Meta to unlock your league operations agent."}
+                </p>
+                <button
                   onClick={() =>
-                    (session && !s?.league.is_demo) || canWrite
-                      ? s?.league.preseason_enabled
-                        ? changeView("Preseason Onboarding")
-                        : setModal("team")
-                      : setModal("auth")
+                    canWrite && isAdmin
+                      ? setModal("agent")
+                      : changeView("Settings")
                   }
                 >
-                  <Plus size={16} /> Register team
-                </Button>
-              )}
-              {view === "Courts & gyms" && isAdmin && (
-                <Button onClick={() => setModal("court")}>
-                  <Plus size={16} /> Add court
-                </Button>
-              )}
-            </div>
-          </div>
-          {loading && !s ? (
-            <div className="loading-state">
-              <LoaderCircle className="spin" /> Loading your league…
-            </div>
-          ) : !s ? (
-            <Panel
-              title="Welcome to Courtside AI"
-              subtitle="The league that learns as it plays."
-            >
-              <Empty
-                title={
-                  health?.database
-                    ? "Your next season starts here"
-                    : "Connect the league database"
-                }
-              >
-                {health?.database
-                  ? "Sign in to create a league or start an isolated demo workspace."
-                  : "Configure the Supabase environment to connect the app. Setup details are in SETUP.md."}
-              </Empty>
-              <div className="center-actions">
-                <Button onClick={() => setModal(session ? "league" : "auth")}>
-                  {session ? "Create a league" : "Sign in / create account"}
-                </Button>
-                {session && (
-                  <Button
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => void createDemo()}
-                  >
-                    Create private demo
-                  </Button>
-                )}
+                  {health?.meta
+                    ? "Open operations agent"
+                    : "View connection status"}{" "}
+                  <ArrowUpRight size={14} />
+                </button>
               </div>
-            </Panel>
-          ) : (
-            <>
-              {view === "Launchpad" &&
-                canWrite &&
-                isAdmin &&
-                (organizerEnabled ? (
-                  <Launchpad
-                    key={`${s.league.id}:${setupVersion}`}
-                    snapshot={s}
-                    api={api}
-                    onChanged={load}
-                    onNavigate={changeView}
-                    onSetup={(draft) => {
-                      setSetupDraft(draft);
-                      setModal("league");
-                    }}
-                  />
-                ) : (
-                  <LaunchpadStarter snapshot={s} />
-                ))}
-              {view === "Overview" && (
-                <>
-                  {organizerEnabled && canWrite && isAdmin && (
-                    <section className="launch-overview-entry panel">
-                      <div>
-                        <span className="launch-eyebrow">
-                          COURTSIDE LAUNCHPAD
-                        </span>
-                        <h2>Make your next move clear.</h2>
-                        <p>
-                          Season setup, registration, your league website and
-                          launch readiness.
-                        </p>
-                      </div>
-                      <Button onClick={() => changeView("Launchpad")}>
-                        Open Launchpad <ArrowUpRight size={16} />
-                      </Button>
-                    </section>
-                  )}
-                  <section className="hero">
-                    <div className="hero-content">
-                      <span className="hero-label">
-                        <Sparkles size={14} /> THE LEAGUE THAT LEARNS AS IT
-                        PLAYS
-                      </span>
-                      <h2>
-                        A better game.
-                        <br />
-                        For every team.
-                      </h2>
-                      <p>
-                        Bring your season together. Turn verified results into
-                        <br className="desktop-br" /> fairer competition, with
-                        you in control.
-                      </p>
-                      <button onClick={() => changeView("Competitive balance")}>
-                        Explore league intelligence <ArrowRight size={16} />
-                      </button>
-                    </div>
-                    <CourtArt />
-                    <div className="hero-footnote">
-                      <ShieldCheck size={13} /> Human approved. Always.
-                    </div>
-                  </section>
-                  <div className="stats-grid">
-                    <Stat
-                      label="REGISTERED TEAMS"
-                      value={s.teams.length}
-                      icon={Users}
-                      detail={`${s.teams.filter((t) => t.status === "approved").length} approved for competition`}
-                      color="green"
-                    />
-                    <Stat
-                      label="GAMES THIS SEASON"
-                      value={officialFixtures.length}
-                      icon={CalendarDays}
-                      detail={`${verified.length} results confirmed`}
-                      color="blue"
-                    />
-                    <Stat
-                      label="COMPETITIVE DIVISIONS"
-                      value={s.divisions.length}
-                      icon={ChartNoAxesCombined}
-                      detail="Placement backed by evidence"
-                      color="purple"
-                    />
-                    <Stat
-                      label="NEEDS YOUR REVIEW"
-                      value={
-                        pendingTeams.length +
-                        pendingSheets.length +
-                        pendingProposals.length +
-                        drafts.length
-                      }
-                      icon={ClipboardCheck}
-                      detail={
-                        s.role === "public"
-                          ? "Sign in to view approval queues"
-                          : "Your decisions keep the league moving"
-                      }
-                      color="orange"
-                    />
-                  </div>
-                  <div className="dashboard-grid">
-                    <div className="dashboard-main">
-                      <Panel
-                        title="Coming up on court"
-                        subtitle={`Your published schedule · ${s.league.timezone}`}
-                        action={
-                          <button
-                            className="text-link"
-                            onClick={() => changeView("Schedule")}
-                          >
-                            Full schedule <ArrowUpRight size={14} />
-                          </button>
-                        }
-                      >
-                        {upcoming.length ? (
-                          <div className="fixture-list">
-                            {upcoming.slice(0, 4).map((f) => (
-                              <div className="fixture-row" key={f.game_id}>
-                                <div className="fixture-date">
-                                  <b>
-                                    {new Date(f.starts_at).toLocaleDateString(
-                                      "en-CA",
-                                      {
-                                        day: "2-digit",
-                                        timeZone:
-                                          s?.league.timezone ??
-                                          "America/Toronto",
-                                      },
-                                    )}
-                                  </b>
-                                  <small>
-                                    {new Date(f.starts_at)
-                                      .toLocaleDateString("en-CA", {
-                                        month: "short",
-                                        timeZone:
-                                          s?.league.timezone ??
-                                          "America/Toronto",
-                                      })
-                                      .toUpperCase()}
-                                  </small>
-                                </div>
-                                <div className="fixture-match">
-                                  <span>
-                                    <TeamMark name={teamName(f.home_team_id)} />
-                                    {teamName(f.home_team_id)}
-                                  </span>
-                                  <small>vs</small>
-                                  <span>
-                                    <TeamMark name={teamName(f.away_team_id)} />
-                                    {teamName(f.away_team_id)}
-                                  </span>
-                                </div>
-                                <div className="fixture-meta">
-                                  <b>
-                                    {new Date(f.starts_at).toLocaleTimeString(
-                                      "en-CA",
-                                      {
-                                        hour: "numeric",
-                                        minute: "2-digit",
-                                        timeZone:
-                                          s?.league.timezone ??
-                                          "America/Toronto",
-                                      },
-                                    )}
-                                  </b>
-                                  <small>
-                                    <MapPin size={11} />
-                                    {
-                                      s.courts.find((c) => c.id === f.court_id)
-                                        ?.name
-                                    }
-                                  </small>
-                                </div>
-                                <Badge tone="green">Scheduled</Badge>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <Empty title="The next round is yours">
-                            Approve team placements and confirm gym time, then
-                            generate a schedule.
-                          </Empty>
-                        )}
-                      </Panel>
-                      <Panel
-                        title="League standings"
-                        subtitle="Only verified results count"
-                        action={
-                          <button
-                            className="text-link"
-                            onClick={() => changeView("Standings")}
-                          >
-                            View all <ArrowUpRight size={14} />
-                          </button>
-                        }
-                      >
-                        <StandingsTable rows={table.slice(0, 5)} />
-                      </Panel>
-                    </div>
-                    <div className="dashboard-side">
-                      <Panel
-                        title="The next best move"
-                        subtitle="LEAGUE INTELLIGENCE"
-                        className="intelligence-panel"
-                      >
-                        <div className="intelligence-icon">
-                          <Sparkles size={23} />
-                        </div>
-                        <h3>
-                          {pendingProposals.length
-                            ? `${pendingProposals.length} competitive adjustments to review`
-                            : "Keep competition moving forward"}
-                        </h3>
-                        <p>
-                          {pendingProposals.length
-                            ? "Recent verified results indicate a sustained mismatch. Review the evidence before making a division change."
-                            : "The engine looks for sustained mismatches across three verified games. No decision is made from a single result."}
-                        </p>
-                        <div className="evidence-line">
-                          <ShieldCheck size={15} /> Grounded in confirmed game
-                          data
-                        </div>
-                        <Button
-                          variant="secondary"
-                          onClick={() => changeView("Competitive balance")}
-                        >
-                          Review league balance <ArrowRight size={15} />
-                        </Button>
-                      </Panel>
-                      <Panel
-                        title="Operations checklist"
-                        subtitle="A clear path from setup to tipoff"
-                      >
-                        <div className="checklist">
-                          {[
-                            [
-                              s.teams.some((t) => t.status === "approved"),
-                              "Approve team placements",
-                              "Teams & rosters",
-                            ],
-                            [
-                              s.availability.some((a) => a.confirmed) ||
-                                !!published,
-                              "Confirm gym availability",
-                              "Courts & gyms",
-                            ],
-                            [
-                              !!published,
-                              "Publish your game schedule",
-                              "Schedule",
-                            ],
-                            [
-                              verified.length > 0,
-                              "Confirm game results",
-                              "Scoresheets",
-                            ],
-                          ].map(([done, title, v]) => (
-                            <button
-                              key={String(title)}
-                              onClick={() => changeView(v as View)}
-                            >
-                              <span
-                                className={
-                                  done ? "check-circle done" : "check-circle"
-                                }
-                              >
-                                {done ? <Check size={12} /> : <span />}
-                              </span>
-                              <span>{title as string}</span>
-                              <ChevronRight size={14} />
-                            </button>
-                          ))}
-                        </div>
-                      </Panel>
-                    </div>
-                  </div>
-                  <div className="trust-footer">
-                    <span>
-                      <span className="live-dot" /> Connected to your league
-                      database
-                    </span>
-                    <span>
-                      Verified results <i>·</i> Deterministic scheduling{" "}
-                      <i>·</i> Human approval
-                    </span>
-                    <b>COURTSIDE AI</b>
-                  </div>
-                </>
-              )}
-              {view === "Preseason Onboarding" && (
-                <PreseasonOnboarding
-                  key={selected}
-                  league={selected}
-                  api={api}
-                  onChanged={async () => {
-                    await refreshChoices(selected);
-                    await load();
-                  }}
-                  metaEnabled={health?.meta ?? false}
-                  signedIn={!!session}
-                  divisions={s.divisions}
-                  onOpenLaunchpad={
-                    organizerEnabled && isAdmin && canWrite
-                      ? () => changeView("Launchpad")
+              <button
+                className="sidebar-setting"
+                onClick={() => changeView("Settings")}
+              >
+                <Settings2 size={17} />{" "}
+                {organizerEnabled
+                  ? "System settings & access"
+                  : "Settings & access"}
+              </button>
+              <div className="profile">
+                <span className="profile-avatar">{session ? "ME" : "D"}</span>
+                <div>
+                  <b>{session ? "Your workspace" : "Demo visitor"}</b>
+                  <small>
+                    {canWrite ? s?.role : "Public, read-only access"}
+                  </small>
+                </div>
+                <button
+                  aria-label={
+                    localPreview
+                      ? "Local demo session active"
+                      : session
+                        ? "Sign out"
+                        : "Open account access"
+                  }
+                  disabled={!!localPreview}
+                  title={
+                    localPreview
+                      ? "Local demo · No credentials required"
                       : undefined
                   }
-                />
-              )}
-              {view === "Meta AI activity" && (
-                <MetaActivity
-                  key={selected}
-                  league={selected}
-                  api={api}
-                  isAdmin={!!isAdmin}
-                  enabled={health?.meta ?? false}
-                  actionContext={{
-                    teams: s?.teams ?? [],
-                    divisions: s?.divisions ?? [],
-                    proposals: s?.proposals ?? [],
-                    versions: s?.versions ?? [],
-                  }}
-                  onPlacement={() => changeView("Preseason Onboarding")}
-                  onScoresheet={() => changeView("Scoresheets")}
-                  onAgent={() =>
-                    isAdmin ? setModal("agent") : changeView("Schedule")
+                  onClick={() =>
+                    session ? void supabase?.auth.signOut() : setModal("auth")
                   }
-                />
-              )}
-              {view === "Teams & rosters" && (
-                <>
-                  <div className="toolbar">
-                    <input
-                      placeholder="Search teams…"
-                      aria-label="Search teams"
-                      value={teamFilter}
-                      onChange={(e) => setTeamFilter(e.target.value)}
-                    />
-                    <span>
-                      {s.teams.length} teams · {pendingTeams.length} awaiting
-                      approval
-                    </span>
-                  </div>
-                  <div className="team-grid">
-                    {s.teams
-                      .filter((t) =>
-                        t.name.toLowerCase().includes(teamFilter.toLowerCase()),
-                      )
-                      .map((t) => (
-                        <Panel
-                          key={t.id}
-                          title={t.name}
-                          subtitle={divisionName(t.division_id)}
-                          action={<TeamMark name={t.name} />}
-                        >
-                          <div className="team-details">
-                            <Badge
-                              tone={
-                                t.status === "approved" ? "green" : "orange"
-                              }
-                            >
-                              {t.status}
-                            </Badge>
-                            <span>
-                              Rating <b>{t.rating}</b>
-                            </span>
-                          </div>
-                          <p className="team-explanation">
-                            {t.assessment_explanation ??
-                              "Rating and placement are based on the team questionnaire and verified game results."}
-                          </p>
-                          {t.status === "pending" && (
-                            <p className="small-muted">
-                              Recommended:{" "}
-                              {
-                                s.divisions.find(
-                                  (d) => d.tier === t.recommended_division,
-                                )?.name
-                              }
-                            </p>
-                          )}
-                          {isAdmin && t.status === "pending" && (
-                            <div className="inline-actions">
-                              <Button
-                                size="sm"
-                                disabled={busy}
-                                onClick={() =>
-                                  void act(
-                                    () =>
-                                      cmd("approve_team", { team_id: t.id }),
-                                    "Team placement approved.",
-                                  )
-                                }
-                              >
-                                <Check size={14} /> Approve placement
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={busy}
-                                onClick={() =>
-                                  void act(
-                                    () => cmd("reject_team", { team_id: t.id }),
-                                    "Team registration rejected.",
-                                  )
-                                }
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                          <div className="roster-preview">
-                            <h4>
-                              Roster{" "}
-                              <span>
-                                {
-                                  s.players.filter((p) => p.team_id === t.id)
-                                    .length
-                                }
-                              </span>
-                            </h4>
-                            {s.players
-                              .filter((p) => p.team_id === t.id)
-                              .map((p) => (
-                                <div className="roster-row" key={p.id}>
-                                  <span>
-                                    #{p.jersey} {p.display_name}
-                                  </span>
-                                  <Badge
-                                    tone={
-                                      p.eligibility_status === "verified"
-                                        ? "green"
-                                        : "orange"
-                                    }
-                                  >
-                                    {p.verification_status ===
-                                    "declaration_approved"
-                                      ? "eligible · declaration only"
-                                      : p.eligibility_status}
-                                  </Badge>
-                                  {isAdmin &&
-                                    !s.league.preseason_enabled &&
-                                    p.eligibility_status === "pending" && (
-                                      <button
-                                        className="text-link"
-                                        disabled={busy}
-                                        onClick={() =>
-                                          void act(
-                                            () =>
-                                              cmd("verify_player", {
-                                                player_id: p.id,
-                                              }),
-                                            "Age eligibility and guardian consent checked.",
-                                          )
-                                        }
-                                      >
-                                        Verify
-                                      </button>
-                                    )}
-                                </div>
-                              ))}
-                            {!canWrite && (
-                              <p className="small-muted">
-                                Player details are private.
-                              </p>
-                            )}
-                            {canWrite &&
-                              (isAdmin || t.coach_id === session?.user.id) && (
-                                <button
-                                  className="text-link"
-                                  onClick={() => setModal("player")}
-                                >
-                                  <Plus size={14} /> Add player
-                                </button>
-                              )}
-                          </div>
-                        </Panel>
-                      ))}
-                  </div>
-                  {!s.teams.length && (
-                    <Empty title="Meet your first team">
-                      Register a team and complete the coach questionnaire.
-                    </Empty>
-                  )}
-                </>
-              )}
-              {view === "Schedule" && (
-                <>
-                  <div className="schedule-toolbar">
-                    <div className="inline-actions">
-                      <Badge tone="green">
-                        {published
-                          ? `Published · v${published.number}`
-                          : "No published schedule"}
-                      </Badge>
-                      <span className="small-muted">
-                        All times {s.league.timezone} · 60-minute games ·
-                        30-minute rest
-                      </span>
-                    </div>
-                    {isAdmin && (
-                      <div className="inline-actions">
-                        <Field label="Round">
-                          <input
-                            type="number"
-                            min="1"
-                            max="500"
-                            value={round + 1}
-                            onChange={(e) =>
-                              setRound(Math.max(0, Number(e.target.value) - 1))
-                            }
-                          />
-                        </Field>
-                        <Button
-                          disabled={busy}
-                          onClick={() =>
-                            void act(
-                              () =>
-                                api("/api/schedule", {
-                                  method: "POST",
-                                  body: JSON.stringify({
-                                    league: selected,
-                                    round,
-                                    useMeta: false,
-                                  }),
-                                }),
-                              "Schedule draft saved. Review before publishing.",
-                            )
-                          }
-                        >
-                          <Sparkles size={16} /> Generate next round
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  {drafts.map((v) => (
-                    <Panel
-                      key={v.id}
-                      title={`Draft schedule · version ${v.number}`}
-                      subtitle={v.explanation}
-                      action={<Badge tone="orange">Approval required</Badge>}
-                    >
-                      <FixtureTable s={s} version={v.id} />
-                      <div className="approval-bar">
-                        <p>
-                          <ShieldCheck size={15} /> Publishing replaces all
-                          future fixtures in the current schedule and queues
-                          coach notifications.
-                        </p>
-                        <div className="inline-actions">
-                          <Button
-                            variant="secondary"
-                            disabled={busy}
-                            onClick={() =>
-                              void act(
-                                () =>
-                                  cmd("reject_schedule", { version_id: v.id }),
-                                "Draft rejected. The published schedule is unchanged.",
-                              )
-                            }
-                          >
-                            Reject draft
-                          </Button>
-                          <Button
-                            disabled={busy}
-                            onClick={() =>
-                              void act(
-                                () =>
-                                  cmd("publish_schedule", { version_id: v.id }),
-                                "Schedule published. Coach notifications are queued.",
-                              )
-                            }
-                          >
-                            <CheckCheck size={16} /> Approve & publish
-                          </Button>
-                        </div>
-                      </div>
-                    </Panel>
-                  ))}
-                  <Panel
-                    title="Published fixtures"
-                    subtitle={
-                      published?.explanation ??
-                      "Only approved schedules appear on the public site."
-                    }
+                >
+                  {session ? <LogOut size={17} /> : <LogIn size={17} />}
+                </button>
+              </div>
+            </div>
+          </aside>
+          <div className="main-shell">
+            <header className="topbar">
+              <div className="breadcrumbs">
+                <button
+                  className="mobile-menu"
+                  aria-label="Open navigation"
+                  onClick={() => setMenu(!menu)}
+                >
+                  <Menu size={20} />
+                </button>
+                <a href="/">{publicSlug ? "Courtside AI" : "Your leagues"}</a>
+                <ChevronRight size={14} />
+                <b>{view}</b>
+              </div>
+              <div className="topbar-actions">
+                <span className="season-pill">
+                  <span className="live-dot" />
+                  {s?.league.season_name ?? "Fall 2026"}
+                </span>
+                {!session && (
+                  <button
+                    className="workspace-sign-in"
+                    onClick={() => {
+                      setAuthMode("signin");
+                      setModal("auth");
+                    }}
                   >
-                    {published ? (
-                      <FixtureTable s={s} version={published.id} />
+                    Sign in
+                  </button>
+                )}
+                {s && publicSlug && session && (
+                  <LeagueConnections leagueId={s.league.id} header />
+                )}
+                {s && websiteHref && isAdmin && canWrite && (
+                  <a className="workspace-website-link" href={websiteHref}>
+                    View league website <ArrowUpRight size={14} />
+                  </a>
+                )}
+                <button onClick={() => void load()} aria-label="Refresh league">
+                  <RefreshCw size={17} className={loading ? "spin" : ""} />
+                </button>
+                <button
+                  aria-label="Notification history"
+                  onClick={() => changeView("Notifications")}
+                >
+                  <Bell size={18} />
+                </button>
+              </div>
+            </header>
+            <main>
+              {notice && (
+                <div
+                  role="status"
+                  className={`notice ${notice.error ? "notice-error" : ""}`}
+                >
+                  <span>
+                    {notice.error ? (
+                      <CircleHelp size={17} />
                     ) : (
-                      <Empty title="No schedule published yet">
-                        Generate a feasible draft, review it and approve
-                        publication.
-                      </Empty>
-                    )}
-                  </Panel>
-                  {s.versions.filter((v) =>
-                    ["superseded", "rejected"].includes(v.status),
-                  ).length > 0 && (
-                    <Panel title="Version history">
-                      <div className="history-list">
-                        {s.versions
-                          .filter((v) =>
-                            ["superseded", "rejected"].includes(v.status),
-                          )
-                          .map((v) => (
-                            <details key={v.id}>
-                              <summary>
-                                Version {v.number} <Badge>{v.status}</Badge>
-                                <span>
-                                  {time(v.created_at, s?.league.timezone)}
-                                </span>
-                              </summary>
-                              <p>{v.explanation}</p>
-                              <FixtureTable s={s} version={v.id} />
-                            </details>
-                          ))}
-                      </div>
-                    </Panel>
-                  )}
-                </>
+                      <Check size={17} />
+                    )}{" "}
+                    {notice.text}
+                  </span>
+                  <button
+                    aria-label="Dismiss notification"
+                    onClick={() => setNotice(null)}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               )}
-              {view === "Scoresheets" && (
-                <>
-                  {canScore && (
-                    <Panel
-                      title="Capture the final whistle"
-                      subtitle="Upload a scoresheet photo. Extract, review, then confirm the result."
-                    >
-                      <Form
-                        busy={busy}
-                        submitDisabled={!scoreImage || scoreCaptureBusy}
-                        submit={"Upload and review"}
-                        onSubmit={async (f) => {
-                          const game_id = String(f.get("game_id")),
-                            file = scoreImage;
-                          if (!file?.size)
-                            return notify("Choose a scoresheet image", true);
-                          if (file.size > 6 * 1024 * 1024)
-                            return notify("Maximum image size is 6 MB", true);
-                          if (scoreCaptureBusy)
-                            return notify(
-                              "Confirm your photo before uploading",
-                              true,
-                            );
-                          setScoreUploadStage("Preparing a private upload…");
-                          try {
-                            await act(
-                              async () => {
-                                if (!supabase || !session)
-                                  throw new Error("Sign in first");
-                                const ext =
-                                  file.type === "image/png"
-                                    ? "png"
-                                    : file.type === "image/webp"
-                                      ? "webp"
-                                      : "jpg";
-                                const hash = Array.from(
-                                  new Uint8Array(
-                                    await crypto.subtle.digest(
-                                      "SHA-256",
-                                      await file.arrayBuffer(),
-                                    ),
-                                  ),
-                                )
-                                  .map((b) => b.toString(16).padStart(2, "0"))
-                                  .join("");
-                                const path = `${selected}/${session.user.id}/${hash}.${ext}`;
-                                setScoreUploadStage(
-                                  "Uploading your scoresheet privately…",
-                                );
-                                const { error } = await supabase.storage
-                                  .from("scoresheets")
-                                  .upload(path, file, {
-                                    upsert: false,
-                                    contentType: file.type,
-                                  });
-                                if (
-                                  error &&
-                                  !/already exists|Duplicate/i.test(
-                                    error.message,
-                                  )
-                                )
-                                  throw error;
-                                const game = s.games.find(
-                                  (g) => g.id === game_id,
-                                )!;
-                                const empty: Extraction = {
-                                  homeTeam: teamName(game.home_team_id),
-                                  awayTeam: teamName(game.away_team_id),
-                                  homeScore: null,
-                                  awayScore: null,
-                                  confidence: 0,
-                                  warnings: [
-                                    "Manual entry. No AI extraction was performed.",
-                                  ],
-                                  players: [],
-                                };
-                                setScoreUploadStage(
-                                  health?.meta
-                                    ? "Processing the scoresheet for review…"
-                                    : "Saving for manual review. Live AI processing is paused…",
-                                );
-                                const result = await api("/api/scoresheet", {
-                                  method: "POST",
-                                  body: JSON.stringify({
-                                    league: selected,
-                                    game_id,
-                                    path,
-                                    mode: health?.meta ? "meta" : "manual",
-                                    extraction: empty,
-                                  }),
-                                });
-                                const fresh = (await api(
-                                  `/api/league?id=${selected}&public=false`,
-                                )) as Snapshot;
-                                setSnapshot(fresh);
-                                const saved = fresh.scoresheets.find(
-                                  (sh) => sh.id === result.id,
-                                );
-                                if (saved) await openSheet(saved);
-                                setScoreImage(null);
-                              },
-                              health?.meta
-                                ? "Extraction saved for human review. No official result recorded."
-                                : "Photo saved for manual review. Meta requests are not enabled.",
-                            );
-                          } finally {
-                            setScoreUploadStage("");
-                          }
-                        }}
-                      >
-                        <Field label="Published game">
-                          <select name="game_id" required>
-                            <option value="">Choose a game</option>
-                            {officialFixtures
-                              .filter(
-                                (f) =>
-                                  s.role !== "coach" ||
-                                  s.teams.some(
-                                    (t) =>
-                                      t.coach_id === session?.user.id &&
-                                      [f.home_team_id, f.away_team_id].includes(
-                                        t.id,
-                                      ),
-                                  ),
-                              )
-                              .map((f) => (
-                                <option key={f.game_id} value={f.game_id}>
-                                  {teamName(f.home_team_id)} vs{" "}
-                                  {teamName(f.away_team_id)} ·{" "}
-                                  {date(f.starts_at, s?.league.timezone)}
-                                </option>
-                              ))}
-                          </select>
-                        </Field>
-                        <ImageCapture
-                          key={selected}
-                          kind="scoresheet"
-                          value={scoreImage}
-                          onChange={setScoreImage}
-                          disabled={busy}
-                          onBusyChange={setScoreCaptureBusy}
-                          inputLabel="Scoresheet photo (JPEG, PNG, WebP · up to 6 MB)"
-                          previewAlt="Selected scoresheet preview"
-                        />
-                        {!health?.meta && (
-                          <p className="capture-privacy">
-                            Live AI processing is paused. Your photo will open
-                            in manual review; no result becomes official until
-                            an administrator confirms it.
-                          </p>
-                        )}
-                        {scoreUploadStage && (
-                          <div
-                            role="status"
-                            className="guardian-upload-progress"
-                          >
-                            <progress aria-label="Secure scoresheet upload progress" />
-                            <p>{scoreUploadStage}</p>
-                          </div>
-                        )}
-                        {s.league.is_demo && (
-                          <a
-                            className="text-link"
-                            href="/demo/scoresheet.png"
-                            download
-                          >
-                            Download fictional demo scoresheet{" "}
-                            <ArrowDown size={14} />
-                          </a>
-                        )}
-                      </Form>
-                    </Panel>
+              {s?.league.is_demo && (
+                <div className="demo-strip">
+                  <ShieldCheck size={15} />
+                  <span>FICTIONAL DEMO LEAGUE</span>
+                  <p>
+                    {canWrite
+                      ? "Your isolated sandbox. All records are synthetic."
+                      : "Explore real database records with safe, read-only access."}
+                  </p>
+                  {!session && (
+                    <button onClick={() => setModal("auth")}>
+                      Create your workspace <ArrowRight size={14} />
+                    </button>
                   )}
-                  <Panel
-                    title="Scoresheet review queue"
-                    subtitle={
-                      s.role === "public"
-                        ? "Original scoresheets and youth information are private."
-                        : "Every official result has a human review step."
+                  {session && !canWrite && (
+                    <button onClick={() => void createDemo()} disabled={busy}>
+                      Create private demo <ArrowRight size={14} />
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className="page-heading">
+                <div>
+                  <div className="eyebrow">
+                    {s?.league.name ?? "COURTSIDE AI"} <span>/</span>{" "}
+                    {isAdmin
+                      ? "LEAGUE ADMINISTRATION"
+                      : canWrite
+                        ? "COACH PORTAL"
+                        : "LEAGUE EXPLORER"}
+                  </div>
+                  <h1>
+                    {view === "Overview" ? "Your league. In sync." : view}
+                  </h1>
+                  <p>
+                    {
+                      {
+                        Overview:
+                          "Less administration. More time on the court.",
+                        Launchpad: "Prepare your league for opening day.",
+                        "Preseason Onboarding":
+                          "From coach assessment to verified rosters and opening weekend.",
+                        "Meta AI activity":
+                          "Model observations, selected tools and actions you can verify.",
+                        "Teams & rosters":
+                          "Every team, in the right place. Built on verified information.",
+                        Schedule:
+                          "Confirmed courts. Conflict-free fixtures. One source of truth.",
+                        Scoresheets:
+                          "From the final buzzer to a verified result.",
+                        Standings:
+                          "The season so far, from confirmed results only.",
+                        "Competitive balance":
+                          "Better matchups start with evidence. Every move stays in your control.",
+                        "Courts & gyms":
+                          "Your schedule starts with confirmed space.",
+                        Notifications:
+                          "Every update, with a traceable delivery state.",
+                        Settings:
+                          "Connections, league configuration, and who can do what.",
+                      }[view]
+                    }
+                  </p>
+                </div>
+                <div className="heading-actions">
+                  {view === "Overview" && (
+                    <>
+                      <Button
+                        variant="secondary"
+                        onClick={() => changeView("Schedule")}
+                      >
+                        <CalendarDays size={16} /> View schedule
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          canScore
+                            ? changeView("Scoresheets")
+                            : setModal("auth")
+                        }
+                      >
+                        <Upload size={16} /> Upload scoresheet
+                      </Button>
+                    </>
+                  )}
+                  {view === "Teams & rosters" && (
+                    <Button
+                      onClick={() =>
+                        (session && !s?.league.is_demo) || canWrite
+                          ? s?.league.preseason_enabled
+                            ? changeView("Preseason Onboarding")
+                            : setModal("team")
+                          : setModal("auth")
+                      }
+                    >
+                      <Plus size={16} /> Register team
+                    </Button>
+                  )}
+                  {view === "Courts & gyms" && isAdmin && (
+                    <Button onClick={() => setModal("court")}>
+                      <Plus size={16} /> Add court
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {loading && !s ? (
+                <div className="loading-state">
+                  <LoaderCircle className="spin" /> Loading your league…
+                </div>
+              ) : !s ? (
+                <Panel
+                  title="Welcome to Courtside AI"
+                  subtitle="The league that learns as it plays."
+                >
+                  <Empty
+                    title={
+                      health?.database
+                        ? "Your next season starts here"
+                        : "Connect the league database"
                     }
                   >
-                    {s.scoresheets.length ? (
-                      <div className="sheet-grid">
-                        {s.scoresheets.map((sh) => (
-                          <div className="sheet-card" key={sh.id}>
-                            <FileImage size={24} />
-                            <div>
-                              <b>
-                                {teamName(
-                                  s.games.find((g) => g.id === sh.game_id)
-                                    ?.home_team_id ?? "",
-                                )}{" "}
-                                vs{" "}
-                                {teamName(
-                                  s.games.find((g) => g.id === sh.game_id)
-                                    ?.away_team_id ?? "",
-                                )}
-                              </b>
-                              <p>
-                                {sh.source === "meta"
-                                  ? "Meta Muse Spark"
-                                  : "Manual entry"}{" "}
-                                · {time(sh.created_at, s?.league.timezone)}
-                              </p>
-                            </div>
-                            <Badge
-                              tone={
-                                sh.status === "confirmed" ? "green" : "orange"
-                              }
-                            >
-                              {sh.status}
-                            </Badge>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => void openSheet(sh)}
-                            >
-                              Review <ArrowRight size={14} />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <Empty title="No scoresheets to review">
-                        {canScore
-                          ? "Choose a published game and upload its scoresheet."
-                          : "Sign in with the appropriate role to upload and review scoresheets."}
-                      </Empty>
-                    )}
-                  </Panel>
-                </>
-              )}
-              {view === "Standings" && (
-                <>
-                  <Panel
-                    title="Season standings"
-                    subtitle="2 points for a win · 1 for a draw · Verified results only"
-                    action={
-                      <select
-                        aria-label="Standings division"
-                        value={divisionFilter}
-                        onChange={(e) => setDivisionFilter(e.target.value)}
-                      >
-                        <option value="">All divisions</option>
-                        {s.divisions.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name}
-                          </option>
-                        ))}
-                      </select>
-                    }
-                  >
-                    <StandingsTable
-                      rows={table.filter(
-                        (row) =>
-                          !divisionFilter ||
-                          row.team.division_id === divisionFilter,
-                      )}
-                    />
-                  </Panel>
-                  <Panel title="Latest confirmed results">
-                    <div className="results-grid">
-                      {verified.map((g) => (
-                        <div className="result-card" key={g.id}>
-                          <Badge tone="green">
-                            <Check size={12} /> Verified
-                          </Badge>
-                          <div>
-                            <span>{teamName(g.home_team_id)}</span>
-                            <b>{g.home_score}</b>
-                          </div>
-                          <div>
-                            <span>{teamName(g.away_team_id)}</span>
-                            <b>{g.away_score}</b>
-                          </div>
-                          <small>
-                            {g.played_at
-                              ? time(g.played_at, s?.league.timezone)
-                              : "Confirmed game"}
-                          </small>
-                        </div>
-                      ))}
-                    </div>
-                    {!verified.length && (
-                      <Empty title="The season is waiting for its first result">
-                        Confirmed scoresheets will update standings and ratings
-                        here.
-                      </Empty>
-                    )}
-                  </Panel>
-                  {canWrite && (
-                    <Panel
-                      title="Verified player statistics"
-                      subtitle="Recorded values from confirmed scoresheets. A dash means the statistic was not recorded; it is never inferred."
+                    {health?.database
+                      ? "Sign in to create a league or start an isolated demo workspace."
+                      : "Configure the Supabase environment to connect the app. Setup details are in SETUP.md."}
+                  </Empty>
+                  <div className="center-actions">
+                    <Button
+                      onClick={() => setModal(session ? "league" : "auth")}
                     >
-                      {s.statistics?.length ? (
-                        <div className="table-wrap">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Team / jersey</th>
-                                <th>Game</th>
-                                <th>Points</th>
-                                <th>Rebounds</th>
-                                <th>Assists</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {s.statistics
-                                .filter(
-                                  (stat) =>
-                                    !divisionFilter ||
-                                    s.teams.find((t) => t.id === stat.team_id)
-                                      ?.division_id === divisionFilter,
-                                )
-                                .map((stat) => {
-                                  const game = s.games.find(
-                                    (g) => g.id === stat.game_id,
-                                  );
-                                  return (
-                                    <tr
-                                      key={`${stat.game_id}:${stat.team_id}:${stat.jersey}`}
-                                    >
-                                      <td>
-                                        {teamName(stat.team_id)} · #
-                                        {stat.jersey}
-                                      </td>
-                                      <td>
-                                        {game
-                                          ? `${teamName(game.home_team_id)} vs ${teamName(game.away_team_id)}`
-                                          : "Confirmed game"}
-                                      </td>
-                                      <td>{stat.points ?? "—"}</td>
-                                      <td>{stat.rebounds ?? "—"}</td>
-                                      <td>{stat.assists ?? "—"}</td>
-                                    </tr>
-                                  );
-                                })}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <Empty title="No player statistics recorded">
-                          Confirm explicitly recorded statistics during
-                          scoresheet review to show them here.
-                        </Empty>
-                      )}
-                    </Panel>
-                  )}
-                </>
-              )}
-              {view === "Competitive balance" && (
-                <>
-                  <div className="info-banner">
-                    <ShieldCheck size={20} />
-                    <div>
-                      <b>
-                        Three verified games. One evidence-based recommendation.
-                      </b>
-                      <p>
-                        A team with three consecutive wins or losses and an
-                        average margin of at least 15 points may move one tier.
-                        Every change requires your approval.
-                      </p>
-                    </div>
-                    {isAdmin && (
+                      {session ? "Create a league" : "Sign in / create account"}
+                    </Button>
+                    {session && (
                       <Button
                         variant="secondary"
                         disabled={busy}
-                        onClick={() =>
-                          void act(
-                            () => cmd("propose_balance"),
-                            "Competitive evidence checked. Review any new proposals.",
-                          )
-                        }
+                        onClick={() => void createDemo()}
                       >
-                        <RefreshCw size={15} /> Evaluate balance
+                        Create private demo
                       </Button>
                     )}
                   </div>
-                  {pendingProposals.map((p) => (
-                    <Panel
-                      key={p.id}
-                      title={teamName(p.team_id)}
-                      subtitle="DIVISION ADJUSTMENT PROPOSAL"
-                      action={<Badge tone="orange">Needs your decision</Badge>}
-                    >
-                      <div className="proposal-path">
-                        <span>{divisionName(p.from_division_id)}</span>
-                        <ArrowRight size={22} />
-                        <span>{divisionName(p.to_division_id)}</span>
-                      </div>
-                      <p className="proposal-reason">{p.reason}</p>
-                      <div className="evidence-stats">
-                        {Object.entries(p.evidence).map(([k, v]) => (
-                          <div key={k}>
-                            <small>{k.replaceAll("_", " ")}</small>
-                            <b>
-                              {typeof v === "number"
-                                ? Number(v.toFixed(1))
-                                : String(v)}
-                            </b>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="approval-bar">
-                        <p>
-                          Approval updates placement. Generate and review a
-                          revised schedule before publishing new fixtures.
-                        </p>
-                        <div className="inline-actions">
-                          <Button
-                            variant="secondary"
-                            disabled={busy}
-                            onClick={() =>
-                              void act(
-                                () =>
-                                  cmd("decide_proposal", {
-                                    proposal_id: p.id,
-                                    approve: false,
-                                  }),
-                                "Division proposal rejected.",
-                              )
-                            }
-                          >
-                            Keep current division
-                          </Button>
-                          <Button
-                            disabled={busy}
-                            onClick={() =>
-                              void act(
-                                () =>
-                                  cmd("decide_proposal", {
-                                    proposal_id: p.id,
-                                    approve: true,
-                                  }),
-                                "Division adjustment approved. Generate a revised schedule next.",
-                              )
-                            }
-                          >
-                            <Check size={16} /> Approve adjustment
-                          </Button>
-                        </div>
-                      </div>
-                    </Panel>
-                  ))}
-                  {!pendingProposals.length && (
-                    <Panel title="Competitive review">
-                      <Empty
-                        title={
-                          s.role === "public"
-                            ? "Division reviews are private"
-                            : "No pending division adjustments"
-                        }
-                      >
-                        {s.role === "public"
-                          ? "Administrators review individual evidence and placement proposals securely."
-                          : "Run an evaluation after three verified games. The engine proposes a move only when the evidence threshold is met."}
-                      </Empty>
-                    </Panel>
-                  )}
-                  <Panel
-                    title="Team rating monitor"
-                    subtitle="Elo ratings are recalculated from the complete verified result history."
-                  >
-                    <div className="rating-list">
-                      {[...s.teams]
-                        .sort((a, b) => b.rating - a.rating)
-                        .map((t) => (
-                          <div key={t.id}>
-                            <TeamMark name={t.name} />
-                            <b>{t.name}</b>
-                            <span>{divisionName(t.division_id)}</span>
-                            <div className="rating-bar">
-                              <i
-                                style={{
-                                  width: `${Math.max(5, Math.min(100, (t.rating - 700) / 8))}%`,
-                                }}
-                              />
-                            </div>
-                            <strong>{t.rating}</strong>
-                            <small
-                              className={
-                                t.rating >= t.initial_rating
-                                  ? "text-green"
-                                  : "text-orange"
-                              }
-                            >
-                              {t.rating >= t.initial_rating ? (
-                                <ArrowUp size={12} />
-                              ) : (
-                                <ArrowDown size={12} />
-                              )}{" "}
-                              {Math.abs(t.rating - t.initial_rating)}
-                            </small>
-                          </div>
-                        ))}
-                    </div>
-                  </Panel>
-                </>
-              )}
-              {view === "Courts & gyms" && (
+                </Panel>
+              ) : (
                 <>
-                  <div className="court-grid">
-                    {s.courts.map((c) => (
-                      <Panel
-                        key={c.id}
-                        title={c.name}
-                        subtitle={c.venue}
-                        action={<MapPin size={21} />}
-                      >
-                        <div className="court-mini">
-                          <svg viewBox="0 0 280 130" aria-hidden="true">
-                            <rect
-                              x="10"
-                              y="10"
-                              width="260"
-                              height="110"
-                              rx="3"
-                            />
-                            <path d="M140 10v110M10 35h45v60H10M270 35h-45v60h45" />
-                            <circle cx="140" cy="65" r="23" />
-                          </svg>
-                        </div>
-                        <div className="availability-list">
-                          {s.availability
-                            .filter((a) => a.court_id === c.id)
-                            .map((a) => (
-                              <div key={a.id}>
-                                <Clock3 size={14} />
-                                <span>
-                                  {time(a.starts_at, s?.league.timezone)}
-                                  <small>
-                                    until {time(a.ends_at, s?.league.timezone)}
-                                  </small>
-                                </span>
-                                <Badge tone="green">Confirmed</Badge>
-                              </div>
-                            ))}
-                          {!s.availability.some((a) => a.court_id === c.id) && (
-                            <p className="small-muted">
-                              No confirmed availability.
-                            </p>
-                          )}
-                        </div>
-                        {isAdmin && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setModal("availability")}
-                          >
-                            <Plus size={14} /> Confirm availability
-                          </Button>
-                        )}
-                      </Panel>
+                  {view === "Launchpad" &&
+                    canWrite &&
+                    isAdmin &&
+                    (organizerEnabled ? (
+                      <Launchpad
+                        key={`${s.league.id}:${setupVersion}`}
+                        snapshot={s}
+                        api={api}
+                        onChanged={load}
+                        onNavigate={changeView}
+                        onSetup={(draft) => {
+                          setSetupDraft(draft);
+                          setModal("league");
+                        }}
+                      />
+                    ) : (
+                      <LaunchpadStarter snapshot={s} />
                     ))}
-                  </div>
-                  {!s.courts.length && (
-                    <Empty title="Give your season a home court">
-                      Add a venue and court, then confirm available time blocks.
-                    </Empty>
+                  {view === "Overview" && (
+                    <>
+                      {organizerEnabled && canWrite && isAdmin && (
+                        <section className="launch-overview-entry panel">
+                          <div>
+                            <span className="launch-eyebrow">
+                              COURTSIDE LAUNCHPAD
+                            </span>
+                            <h2>Make your next move clear.</h2>
+                            <p>
+                              Season setup, registration, your league website
+                              and launch readiness.
+                            </p>
+                          </div>
+                          <Button onClick={() => changeView("Launchpad")}>
+                            Open Launchpad <ArrowUpRight size={16} />
+                          </Button>
+                        </section>
+                      )}
+                      <section className="hero">
+                        <div className="hero-content">
+                          <span className="hero-label">
+                            <Sparkles size={14} /> THE LEAGUE THAT LEARNS AS IT
+                            PLAYS
+                          </span>
+                          <h2>
+                            A better game.
+                            <br />
+                            For every team.
+                          </h2>
+                          <p>
+                            Bring your season together. Turn verified results
+                            into
+                            <br className="desktop-br" /> fairer competition,
+                            with you in control.
+                          </p>
+                          <button
+                            onClick={() => changeView("Competitive balance")}
+                          >
+                            Explore league intelligence <ArrowRight size={16} />
+                          </button>
+                        </div>
+                        <CourtArt />
+                        <div className="hero-footnote">
+                          <ShieldCheck size={13} /> Human approved. Always.
+                        </div>
+                      </section>
+                      <div className="stats-grid">
+                        <Stat
+                          label="REGISTERED TEAMS"
+                          value={s.teams.length}
+                          icon={Users}
+                          detail={`${s.teams.filter((t) => t.status === "approved").length} approved for competition`}
+                          color="green"
+                        />
+                        <Stat
+                          label="GAMES THIS SEASON"
+                          value={officialFixtures.length}
+                          icon={CalendarDays}
+                          detail={`${verified.length} results confirmed`}
+                          color="blue"
+                        />
+                        <Stat
+                          label="COMPETITIVE DIVISIONS"
+                          value={s.divisions.length}
+                          icon={ChartNoAxesCombined}
+                          detail="Placement backed by evidence"
+                          color="purple"
+                        />
+                        <Stat
+                          label="NEEDS YOUR REVIEW"
+                          value={
+                            pendingTeams.length +
+                            pendingSheets.length +
+                            pendingProposals.length +
+                            drafts.length
+                          }
+                          icon={ClipboardCheck}
+                          detail={
+                            s.role === "public"
+                              ? "Sign in to view approval queues"
+                              : "Your decisions keep the league moving"
+                          }
+                          color="orange"
+                        />
+                      </div>
+                      <div className="dashboard-grid">
+                        <div className="dashboard-main">
+                          <Panel
+                            title="Coming up on court"
+                            subtitle={`Your published schedule · ${s.league.timezone}`}
+                            action={
+                              <button
+                                className="text-link"
+                                onClick={() => changeView("Schedule")}
+                              >
+                                Full schedule <ArrowUpRight size={14} />
+                              </button>
+                            }
+                          >
+                            {upcoming.length ? (
+                              <div className="fixture-list">
+                                {upcoming.slice(0, 4).map((f) => (
+                                  <div className="fixture-row" key={f.game_id}>
+                                    <div className="fixture-date">
+                                      <b>
+                                        {new Date(
+                                          f.starts_at,
+                                        ).toLocaleDateString("en-CA", {
+                                          day: "2-digit",
+                                          timeZone:
+                                            s?.league.timezone ??
+                                            "America/Toronto",
+                                        })}
+                                      </b>
+                                      <small>
+                                        {new Date(f.starts_at)
+                                          .toLocaleDateString("en-CA", {
+                                            month: "short",
+                                            timeZone:
+                                              s?.league.timezone ??
+                                              "America/Toronto",
+                                          })
+                                          .toUpperCase()}
+                                      </small>
+                                    </div>
+                                    <div className="fixture-match">
+                                      <span>
+                                        <TeamMark
+                                          name={teamName(f.home_team_id)}
+                                        />
+                                        {teamName(f.home_team_id)}
+                                      </span>
+                                      <small>vs</small>
+                                      <span>
+                                        <TeamMark
+                                          name={teamName(f.away_team_id)}
+                                        />
+                                        {teamName(f.away_team_id)}
+                                      </span>
+                                    </div>
+                                    <div className="fixture-meta">
+                                      <b>
+                                        {new Date(
+                                          f.starts_at,
+                                        ).toLocaleTimeString("en-CA", {
+                                          hour: "numeric",
+                                          minute: "2-digit",
+                                          timeZone:
+                                            s?.league.timezone ??
+                                            "America/Toronto",
+                                        })}
+                                      </b>
+                                      <small>
+                                        <MapPin size={11} />
+                                        {
+                                          s.courts.find(
+                                            (c) => c.id === f.court_id,
+                                          )?.name
+                                        }
+                                      </small>
+                                    </div>
+                                    <Badge tone="green">Scheduled</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <Empty title="The next round is yours">
+                                Approve team placements and confirm gym time,
+                                then generate a schedule.
+                              </Empty>
+                            )}
+                          </Panel>
+                          <Panel
+                            title="League standings"
+                            subtitle="Only verified results count"
+                            action={
+                              <button
+                                className="text-link"
+                                onClick={() => changeView("Standings")}
+                              >
+                                View all <ArrowUpRight size={14} />
+                              </button>
+                            }
+                          >
+                            <StandingsTable rows={table.slice(0, 5)} />
+                          </Panel>
+                        </div>
+                        <div className="dashboard-side">
+                          <Panel
+                            title="The next best move"
+                            subtitle="LEAGUE INTELLIGENCE"
+                            className="intelligence-panel"
+                          >
+                            <div className="intelligence-icon">
+                              <Sparkles size={23} />
+                            </div>
+                            <h3>
+                              {pendingProposals.length
+                                ? `${pendingProposals.length} competitive adjustments to review`
+                                : "Keep competition moving forward"}
+                            </h3>
+                            <p>
+                              {pendingProposals.length
+                                ? "Recent verified results indicate a sustained mismatch. Review the evidence before making a division change."
+                                : "The engine looks for sustained mismatches across three verified games. No decision is made from a single result."}
+                            </p>
+                            <div className="evidence-line">
+                              <ShieldCheck size={15} /> Grounded in confirmed
+                              game data
+                            </div>
+                            <Button
+                              variant="secondary"
+                              onClick={() => changeView("Competitive balance")}
+                            >
+                              Review league balance <ArrowRight size={15} />
+                            </Button>
+                          </Panel>
+                          <Panel
+                            title="Operations checklist"
+                            subtitle="A clear path from setup to tipoff"
+                          >
+                            <div className="checklist">
+                              {[
+                                [
+                                  s.teams.some((t) => t.status === "approved"),
+                                  "Approve team placements",
+                                  "Teams & rosters",
+                                ],
+                                [
+                                  s.availability.some((a) => a.confirmed) ||
+                                    !!published,
+                                  "Confirm gym availability",
+                                  "Courts & gyms",
+                                ],
+                                [
+                                  !!published,
+                                  "Publish your game schedule",
+                                  "Schedule",
+                                ],
+                                [
+                                  verified.length > 0,
+                                  "Confirm game results",
+                                  "Scoresheets",
+                                ],
+                              ].map(([done, title, v]) => (
+                                <button
+                                  key={String(title)}
+                                  onClick={() => changeView(v as View)}
+                                >
+                                  <span
+                                    className={
+                                      done
+                                        ? "check-circle done"
+                                        : "check-circle"
+                                    }
+                                  >
+                                    {done ? <Check size={12} /> : <span />}
+                                  </span>
+                                  <span>{title as string}</span>
+                                  <ChevronRight size={14} />
+                                </button>
+                              ))}
+                            </div>
+                          </Panel>
+                        </div>
+                      </div>
+                      <div className="trust-footer">
+                        <span>
+                          <span className="live-dot" /> Connected to your league
+                          database
+                        </span>
+                        <span>
+                          Verified results <i>·</i> Deterministic scheduling{" "}
+                          <i>·</i> Human approval
+                        </span>
+                        <b>COURTSIDE AI</b>
+                      </div>
+                    </>
                   )}
-                </>
-              )}
-              {view === "Notifications" && (
-                <Panel
-                  title={
-                    isAdmin ? "Coach notification history" : "Your team updates"
-                  }
-                  subtitle="In-app updates arrive when a schedule is published. External email delivery depends on provider configuration."
-                  action={
-                    isAdmin && (
-                      <Button
-                        disabled={busy}
-                        onClick={() =>
-                          void act(
-                            () =>
-                              api("/api/notifications", {
-                                method: "POST",
-                                body: JSON.stringify({ league: selected }),
-                              }),
-                            "Notification delivery attempts completed. Review each delivery state.",
+                  {view === "Preseason Onboarding" && (
+                    <PreseasonOnboarding
+                      key={selected}
+                      league={selected}
+                      api={api}
+                      onChanged={async () => {
+                        await refreshChoices(selected);
+                        await load();
+                      }}
+                      metaEnabled={health?.meta ?? false}
+                      signedIn={!!session}
+                      divisions={s.divisions}
+                      onOpenLaunchpad={
+                        organizerEnabled && isAdmin && canWrite
+                          ? () => changeView("Launchpad")
+                          : undefined
+                      }
+                    />
+                  )}
+                  {view === "Meta AI activity" && (
+                    <MetaActivity
+                      key={selected}
+                      league={selected}
+                      api={api}
+                      isAdmin={!!isAdmin}
+                      enabled={health?.meta ?? false}
+                      actionContext={{
+                        teams: s?.teams ?? [],
+                        divisions: s?.divisions ?? [],
+                        proposals: s?.proposals ?? [],
+                        versions: s?.versions ?? [],
+                      }}
+                      onPlacement={() => changeView("Preseason Onboarding")}
+                      onScoresheet={() => changeView("Scoresheets")}
+                      onAgent={() =>
+                        isAdmin ? setModal("agent") : changeView("Schedule")
+                      }
+                    />
+                  )}
+                  {view === "Teams & rosters" && (
+                    <>
+                      <div className="toolbar">
+                        <input
+                          placeholder="Search teams…"
+                          aria-label="Search teams"
+                          value={teamFilter}
+                          onChange={(e) => setTeamFilter(e.target.value)}
+                        />
+                        <span>
+                          {s.teams.length} teams · {pendingTeams.length}{" "}
+                          awaiting approval
+                        </span>
+                      </div>
+                      <div className="team-grid">
+                        {s.teams
+                          .filter((t) =>
+                            t.name
+                              .toLowerCase()
+                              .includes(teamFilter.toLowerCase()),
                           )
-                        }
-                      >
-                        <Send size={15} /> Process queue
-                      </Button>
-                    )
-                  }
-                >
-                  {s.notifications.length ? (
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Update</th>
-                            <th>Channel</th>
-                            <th>Status</th>
-                            <th>Attempts</th>
-                            <th>Details</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {s.notifications.map((n) => (
-                            <tr key={n.id}>
-                              <td>
-                                <b>{n.subject}</b>
-                                <small>
-                                  {teamName(n.team_id)} ·{" "}
-                                  {time(n.created_at, s?.league.timezone)}
-                                </small>
-                              </td>
-                              <td>
-                                {n.channel === "in_app" ? "In app" : n.channel}
-                              </td>
-                              <td>
+                          .map((t) => (
+                            <Panel
+                              key={t.id}
+                              title={t.name}
+                              subtitle={divisionName(t.division_id)}
+                              action={<TeamMark name={t.name} />}
+                            >
+                              <div className="team-details">
                                 <Badge
                                   tone={
-                                    ["accepted", "delivered"].includes(n.status)
-                                      ? "green"
-                                      : n.status === "failed"
-                                        ? "orange"
-                                        : "neutral"
+                                    t.status === "approved" ? "green" : "orange"
                                   }
                                 >
-                                  {n.channel === "in_app"
-                                    ? n.read_at
-                                      ? "Read"
-                                      : "Unread"
-                                    : n.status}
+                                  {t.status}
                                 </Badge>
-                              </td>
-                              <td>
-                                {n.channel === "in_app"
-                                  ? "—"
-                                  : `${n.attempts} / 5`}
-                              </td>
-                              <td>
-                                {n.channel === "in_app" ? (
-                                  <>
-                                    <p>{n.body}</p>
-                                    <div className="inline-actions">
-                                      <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        onClick={() => changeView("Schedule")}
+                                <span>
+                                  Rating <b>{t.rating}</b>
+                                </span>
+                              </div>
+                              <p className="team-explanation">
+                                {t.assessment_explanation ??
+                                  "Rating and placement are based on the team questionnaire and verified game results."}
+                              </p>
+                              {t.status === "pending" && (
+                                <p className="small-muted">
+                                  Recommended:{" "}
+                                  {
+                                    s.divisions.find(
+                                      (d) => d.tier === t.recommended_division,
+                                    )?.name
+                                  }
+                                </p>
+                              )}
+                              {isAdmin && t.status === "pending" && (
+                                <div className="inline-actions">
+                                  <Button
+                                    size="sm"
+                                    disabled={busy}
+                                    onClick={() =>
+                                      void act(
+                                        () =>
+                                          cmd("approve_team", {
+                                            team_id: t.id,
+                                          }),
+                                        "Team placement approved.",
+                                      )
+                                    }
+                                  >
+                                    <Check size={14} /> Approve placement
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={busy}
+                                    onClick={() =>
+                                      void act(
+                                        () =>
+                                          cmd("reject_team", { team_id: t.id }),
+                                        "Team registration rejected.",
+                                      )
+                                    }
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              )}
+                              <div className="roster-preview">
+                                <h4>
+                                  Roster{" "}
+                                  <span>
+                                    {
+                                      s.players.filter(
+                                        (p) => p.team_id === t.id,
+                                      ).length
+                                    }
+                                  </span>
+                                </h4>
+                                {s.players
+                                  .filter((p) => p.team_id === t.id)
+                                  .map((p) => (
+                                    <div className="roster-row" key={p.id}>
+                                      <span>
+                                        #{p.jersey} {p.display_name}
+                                      </span>
+                                      <Badge
+                                        tone={
+                                          p.eligibility_status === "verified"
+                                            ? "green"
+                                            : "orange"
+                                        }
                                       >
-                                        View schedule
-                                      </Button>
-                                      {n.recipient_id === session?.user.id &&
-                                        !n.read_at && (
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
+                                        {p.verification_status ===
+                                        "declaration_approved"
+                                          ? "eligible · declaration only"
+                                          : p.eligibility_status}
+                                      </Badge>
+                                      {isAdmin &&
+                                        !s.league.preseason_enabled &&
+                                        p.eligibility_status === "pending" && (
+                                          <button
+                                            className="text-link"
                                             disabled={busy}
                                             onClick={() =>
                                               void act(
                                                 () =>
-                                                  cmd(
-                                                    "mark_notification_read",
-                                                    { notification_id: n.id },
-                                                  ),
-                                                "Update marked as read.",
+                                                  cmd("verify_player", {
+                                                    player_id: p.id,
+                                                  }),
+                                                "Age eligibility and guardian consent checked.",
                                               )
                                             }
                                           >
-                                            Mark as read
-                                          </Button>
+                                            Verify
+                                          </button>
                                         )}
                                     </div>
-                                  </>
-                                ) : (
-                                  (n.last_error ??
-                                  (n.provider_id
-                                    ? "Provider message recorded"
-                                    : "Awaiting configured provider"))
+                                  ))}
+                                {!canWrite && (
+                                  <p className="small-muted">
+                                    Player details are private.
+                                  </p>
                                 )}
-                              </td>
-                            </tr>
+                                {canWrite &&
+                                  (isAdmin ||
+                                    t.coach_id === session?.user.id) && (
+                                    <button
+                                      className="text-link"
+                                      onClick={() => setModal("player")}
+                                    >
+                                      <Plus size={14} /> Add player
+                                    </button>
+                                  )}
+                              </div>
+                            </Panel>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <Empty
-                      title={
-                        isAdmin
-                          ? "No updates queued yet"
-                          : "No team updates yet"
-                      }
-                    >
-                      Publishing a schedule adds an update to each coach’s
-                      inbox. External sending suppresses synthetic addresses.
-                    </Empty>
-                  )}
-                </Panel>
-              )}
-              {view === "Settings" && (
-                <>
-                  <div className="settings-grid">
-                    <Panel
-                      title="System integrations"
-                      subtitle="Actual server configuration status"
-                    >
-                      <div className="connection-list">
-                        {[
-                          [
-                            "Supabase",
-                            "Authoritative league database",
-                            health?.database,
-                          ],
-                          [
-                            "Meta Muse Spark",
-                            "Questionnaire, vision and operations agent",
-                            health?.meta,
-                          ],
-                          [
-                            "Resend",
-                            health?.emailMode === "test"
-                              ? "Restricted to the authorized test inbox"
-                              : "Transactional coach notifications",
-                            health?.email,
-                          ],
-                          ["Twilio", "Consent saved · sending disabled", false],
-                        ].map(([name, desc, ready]) => (
-                          <div key={String(name)}>
-                            <span className="connection-logo">
-                              {String(name)[0]}
-                            </span>
-                            <div>
-                              <b>{name}</b>
-                              <small>{desc}</small>
-                            </div>
-                            <Badge tone={ready ? "green" : "orange"}>
-                              {ready
-                                ? name === "Resend" &&
-                                  health?.emailMode === "test"
-                                  ? "Test inbox only"
-                                  : "Connected"
-                                : name === "Meta Muse Spark" &&
-                                    health?.metaConfigured
-                                  ? "Configured · paused"
-                                  : "Setup required"}
-                            </Badge>
-                          </div>
-                        ))}
                       </div>
-                      <p className="form-note">
-                        Credentials stay on the server. See SETUP.md for the
-                        required environment variables.
-                      </p>
-                    </Panel>
-                    <Panel
-                      title="Your workspace"
-                      subtitle={
-                        session
-                          ? "Signed in securely with Supabase Auth"
-                          : "Public browsing is read-only"
-                      }
-                    >
-                      <div className="settings-actions">
-                        {!session ? (
-                          <Button onClick={() => setModal("auth")}>
-                            <LogIn size={16} /> Sign in / create account
-                          </Button>
-                        ) : (
-                          <>
-                            <Button onClick={() => setModal("league")}>
-                              <Plus size={16} /> Create league
-                            </Button>
+                      {!s.teams.length && (
+                        <Empty title="Meet your first team">
+                          Register a team and complete the coach questionnaire.
+                        </Empty>
+                      )}
+                    </>
+                  )}
+                  {view === "Schedule" && (
+                    <>
+                      <div className="schedule-toolbar">
+                        <div className="inline-actions">
+                          <Badge tone="green">
+                            {published
+                              ? `Published · v${published.number}`
+                              : "No published schedule"}
+                          </Badge>
+                          <span className="small-muted">
+                            All times {s.league.timezone} · 60-minute games ·
+                            30-minute rest
+                          </span>
+                        </div>
+                        {isAdmin && (
+                          <div className="inline-actions">
+                            <Field label="Round">
+                              <input
+                                type="number"
+                                min="1"
+                                max="500"
+                                value={round + 1}
+                                onChange={(e) =>
+                                  setRound(
+                                    Math.max(0, Number(e.target.value) - 1),
+                                  )
+                                }
+                              />
+                            </Field>
                             <Button
-                              variant="secondary"
                               disabled={busy}
-                              onClick={() => void createDemo()}
+                              onClick={() =>
+                                void act(
+                                  () =>
+                                    api("/api/schedule", {
+                                      method: "POST",
+                                      body: JSON.stringify({
+                                        league: selected,
+                                        round,
+                                        useMeta: false,
+                                      }),
+                                    }),
+                                  "Schedule draft saved. Review before publishing.",
+                                )
+                              }
                             >
-                              <Sparkles size={16} /> Create private demo
+                              <Sparkles size={16} /> Generate next round
                             </Button>
-                            <Button
-                              variant="ghost"
-                              onClick={() => void supabase?.auth.signOut()}
-                            >
-                              Sign out
-                            </Button>
-                          </>
+                          </div>
                         )}
                       </div>
-                    </Panel>
-                  </div>
-                  {isAdmin && (
+                      {drafts.map((v) => (
+                        <Panel
+                          key={v.id}
+                          title={`Draft schedule · version ${v.number}`}
+                          subtitle={v.explanation}
+                          action={
+                            <Badge tone="orange">Approval required</Badge>
+                          }
+                        >
+                          <FixtureTable s={s} version={v.id} />
+                          <div className="approval-bar">
+                            <p>
+                              <ShieldCheck size={15} /> Publishing replaces all
+                              future fixtures in the current schedule and queues
+                              coach notifications.
+                            </p>
+                            <div className="inline-actions">
+                              <Button
+                                variant="secondary"
+                                disabled={busy}
+                                onClick={() =>
+                                  void act(
+                                    () =>
+                                      cmd("reject_schedule", {
+                                        version_id: v.id,
+                                      }),
+                                    "Draft rejected. The published schedule is unchanged.",
+                                  )
+                                }
+                              >
+                                Reject draft
+                              </Button>
+                              <Button
+                                disabled={busy}
+                                onClick={() =>
+                                  void act(
+                                    () =>
+                                      cmd("publish_schedule", {
+                                        version_id: v.id,
+                                      }),
+                                    "Schedule published. Coach notifications are queued.",
+                                  )
+                                }
+                              >
+                                <CheckCheck size={16} /> Approve & publish
+                              </Button>
+                            </div>
+                          </div>
+                        </Panel>
+                      ))}
+                      <Panel
+                        title="Published fixtures"
+                        subtitle={
+                          published?.explanation ??
+                          "Only approved schedules appear on the public site."
+                        }
+                      >
+                        {published ? (
+                          <FixtureTable s={s} version={published.id} />
+                        ) : (
+                          <Empty title="No schedule published yet">
+                            Generate a feasible draft, review it and approve
+                            publication.
+                          </Empty>
+                        )}
+                      </Panel>
+                      {s.versions.filter((v) =>
+                        ["superseded", "rejected"].includes(v.status),
+                      ).length > 0 && (
+                        <Panel title="Version history">
+                          <div className="history-list">
+                            {s.versions
+                              .filter((v) =>
+                                ["superseded", "rejected"].includes(v.status),
+                              )
+                              .map((v) => (
+                                <details key={v.id}>
+                                  <summary>
+                                    Version {v.number} <Badge>{v.status}</Badge>
+                                    <span>
+                                      {time(v.created_at, s?.league.timezone)}
+                                    </span>
+                                  </summary>
+                                  <p>{v.explanation}</p>
+                                  <FixtureTable s={s} version={v.id} />
+                                </details>
+                              ))}
+                          </div>
+                        </Panel>
+                      )}
+                    </>
+                  )}
+                  {view === "Scoresheets" && (
+                    <>
+                      {canScore && (
+                        <Panel
+                          title="Capture the final whistle"
+                          subtitle="Upload a scoresheet photo. Extract, review, then confirm the result."
+                        >
+                          <Form
+                            busy={busy}
+                            submitDisabled={!scoreImage || scoreCaptureBusy}
+                            submit={"Upload and review"}
+                            onSubmit={async (f) => {
+                              const game_id = String(f.get("game_id")),
+                                file = scoreImage;
+                              if (!file?.size)
+                                return notify(
+                                  "Choose a scoresheet image",
+                                  true,
+                                );
+                              if (file.size > 6 * 1024 * 1024)
+                                return notify(
+                                  "Maximum image size is 6 MB",
+                                  true,
+                                );
+                              if (scoreCaptureBusy)
+                                return notify(
+                                  "Confirm your photo before uploading",
+                                  true,
+                                );
+                              setScoreUploadStage(
+                                "Preparing a private upload…",
+                              );
+                              try {
+                                await act(
+                                  async () => {
+                                    if (!supabase || !session)
+                                      throw new Error("Sign in first");
+                                    const ext =
+                                      file.type === "image/png"
+                                        ? "png"
+                                        : file.type === "image/webp"
+                                          ? "webp"
+                                          : "jpg";
+                                    const hash = Array.from(
+                                      new Uint8Array(
+                                        await crypto.subtle.digest(
+                                          "SHA-256",
+                                          await file.arrayBuffer(),
+                                        ),
+                                      ),
+                                    )
+                                      .map((b) =>
+                                        b.toString(16).padStart(2, "0"),
+                                      )
+                                      .join("");
+                                    const path = `${selected}/${session.user.id}/${hash}.${ext}`;
+                                    setScoreUploadStage(
+                                      "Uploading your scoresheet privately…",
+                                    );
+                                    const { error } = await supabase.storage
+                                      .from("scoresheets")
+                                      .upload(path, file, {
+                                        upsert: false,
+                                        contentType: file.type,
+                                      });
+                                    if (
+                                      error &&
+                                      !/already exists|Duplicate/i.test(
+                                        error.message,
+                                      )
+                                    )
+                                      throw error;
+                                    const game = s.games.find(
+                                      (g) => g.id === game_id,
+                                    )!;
+                                    const empty: Extraction = {
+                                      homeTeam: teamName(game.home_team_id),
+                                      awayTeam: teamName(game.away_team_id),
+                                      homeScore: null,
+                                      awayScore: null,
+                                      confidence: 0,
+                                      warnings: [
+                                        "Manual entry. No AI extraction was performed.",
+                                      ],
+                                      players: [],
+                                    };
+                                    setScoreUploadStage(
+                                      health?.meta
+                                        ? "Processing the scoresheet for review…"
+                                        : "Saving for manual review. Live AI processing is paused…",
+                                    );
+                                    const result = await api(
+                                      "/api/scoresheet",
+                                      {
+                                        method: "POST",
+                                        body: JSON.stringify({
+                                          league: selected,
+                                          game_id,
+                                          path,
+                                          mode: health?.meta
+                                            ? "meta"
+                                            : "manual",
+                                          extraction: empty,
+                                        }),
+                                      },
+                                    );
+                                    const fresh = (await api(
+                                      `/api/league?id=${selected}&public=false`,
+                                    )) as Snapshot;
+                                    setSnapshot(fresh);
+                                    const saved = fresh.scoresheets.find(
+                                      (sh) => sh.id === result.id,
+                                    );
+                                    if (saved) await openSheet(saved);
+                                    setScoreImage(null);
+                                  },
+                                  health?.meta
+                                    ? "Extraction saved for human review. No official result recorded."
+                                    : "Photo saved for manual review. Meta requests are not enabled.",
+                                );
+                              } finally {
+                                setScoreUploadStage("");
+                              }
+                            }}
+                          >
+                            <Field label="Published game">
+                              <select name="game_id" required>
+                                <option value="">Choose a game</option>
+                                {officialFixtures
+                                  .filter(
+                                    (f) =>
+                                      s.role !== "coach" ||
+                                      s.teams.some(
+                                        (t) =>
+                                          t.coach_id === session?.user.id &&
+                                          [
+                                            f.home_team_id,
+                                            f.away_team_id,
+                                          ].includes(t.id),
+                                      ),
+                                  )
+                                  .map((f) => (
+                                    <option key={f.game_id} value={f.game_id}>
+                                      {teamName(f.home_team_id)} vs{" "}
+                                      {teamName(f.away_team_id)} ·{" "}
+                                      {date(f.starts_at, s?.league.timezone)}
+                                    </option>
+                                  ))}
+                              </select>
+                            </Field>
+                            <ImageCapture
+                              key={selected}
+                              kind="scoresheet"
+                              value={scoreImage}
+                              onChange={setScoreImage}
+                              disabled={busy}
+                              onBusyChange={setScoreCaptureBusy}
+                              inputLabel="Scoresheet photo (JPEG, PNG, WebP · up to 6 MB)"
+                              previewAlt="Selected scoresheet preview"
+                            />
+                            {!health?.meta && (
+                              <p className="capture-privacy">
+                                Live AI processing is paused. Your photo will
+                                open in manual review; no result becomes
+                                official until an administrator confirms it.
+                              </p>
+                            )}
+                            {scoreUploadStage && (
+                              <div
+                                role="status"
+                                className="guardian-upload-progress"
+                              >
+                                <progress aria-label="Secure scoresheet upload progress" />
+                                <p>{scoreUploadStage}</p>
+                              </div>
+                            )}
+                            {s.league.is_demo && (
+                              <a
+                                className="text-link"
+                                href="/demo/scoresheet.png"
+                                download
+                              >
+                                Download fictional demo scoresheet{" "}
+                                <ArrowDown size={14} />
+                              </a>
+                            )}
+                          </Form>
+                        </Panel>
+                      )}
+                      <Panel
+                        title="Scoresheet review queue"
+                        subtitle={
+                          s.role === "public"
+                            ? "Original scoresheets and youth information are private."
+                            : "Every official result has a human review step."
+                        }
+                      >
+                        {s.scoresheets.length ? (
+                          <div className="sheet-grid">
+                            {s.scoresheets.map((sh) => (
+                              <div className="sheet-card" key={sh.id}>
+                                <FileImage size={24} />
+                                <div>
+                                  <b>
+                                    {teamName(
+                                      s.games.find((g) => g.id === sh.game_id)
+                                        ?.home_team_id ?? "",
+                                    )}{" "}
+                                    vs{" "}
+                                    {teamName(
+                                      s.games.find((g) => g.id === sh.game_id)
+                                        ?.away_team_id ?? "",
+                                    )}
+                                  </b>
+                                  <p>
+                                    {sh.source === "meta"
+                                      ? "Meta Muse Spark"
+                                      : "Manual entry"}{" "}
+                                    · {time(sh.created_at, s?.league.timezone)}
+                                  </p>
+                                </div>
+                                <Badge
+                                  tone={
+                                    sh.status === "confirmed"
+                                      ? "green"
+                                      : "orange"
+                                  }
+                                >
+                                  {sh.status}
+                                </Badge>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => void openSheet(sh)}
+                                >
+                                  Review <ArrowRight size={14} />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <Empty title="No scoresheets to review">
+                            {canScore
+                              ? "Choose a published game and upload its scoresheet."
+                              : "Sign in with the appropriate role to upload and review scoresheets."}
+                          </Empty>
+                        )}
+                      </Panel>
+                    </>
+                  )}
+                  {view === "Standings" && (
                     <>
                       <Panel
-                        title="League access"
-                        subtitle="An invited person must have an existing Courtside account."
-                      >
-                        <Form
-                          busy={busy}
-                          submit="Add league member"
-                          onSubmit={async (f) => {
-                            await act(
-                              () =>
-                                cmd("invite_member", {
-                                  email: f.get("email"),
-                                  role: f.get("role"),
-                                }),
-                              "League membership updated.",
-                            );
-                          }}
-                        >
-                          <Field label="Account email">
-                            <input name="email" type="email" required />
-                          </Field>
-                          <Field label="Role">
-                            <select name="role">
-                              <option value="coach">Coach · own teams</option>
-                              <option value="scorekeeper">
-                                Scorekeeper · confirm results
-                              </option>
-                              <option value="referee">
-                                Referee · read league schedule
-                              </option>
-                            </select>
-                          </Field>
-                        </Form>
-                      </Panel>
-                      <Panel
-                        title="Assign a team coach"
-                        subtitle="Add the account as a league member first. Reassignment clears the previous coach’s phone and SMS consent."
-                      >
-                        <Form
-                          busy={busy}
-                          submit="Assign coach"
-                          onSubmit={async (f) => {
-                            await act(
-                              () =>
-                                cmd("assign_coach", {
-                                  team_id: f.get("team_id"),
-                                  email: f.get("email"),
-                                }),
-                              "Team coach assigned.",
-                            );
-                          }}
-                        >
-                          <Field label="Team to assign">
-                            <select name="team_id" required>
-                              {s.teams.map((t) => (
-                                <option key={t.id} value={t.id}>
-                                  {t.name}
-                                </option>
-                              ))}
-                            </select>
-                          </Field>
-                          <Field label="Coach account email">
-                            <input name="email" type="email" required />
-                          </Field>
-                        </Form>
-                      </Panel>
-                      <Panel
-                        title="Public league site"
-                        subtitle="Public data excludes player identities, documents and coach contact information."
-                      >
-                        <div className="inline-actions">
-                          <a
-                            href={`/league/${s.league.slug}/website`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="button button-secondary"
+                        title="Season standings"
+                        subtitle="2 points for a win · 1 for a draw · Verified results only"
+                        action={
+                          <select
+                            aria-label="Standings division"
+                            value={divisionFilter}
+                            onChange={(e) => setDivisionFilter(e.target.value)}
                           >
-                            <ExternalLink size={15} /> Open branded website
-                          </a>
+                            <option value="">All divisions</option>
+                            {s.divisions.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name}
+                              </option>
+                            ))}
+                          </select>
+                        }
+                      >
+                        <StandingsTable
+                          rows={table.filter(
+                            (row) =>
+                              !divisionFilter ||
+                              row.team.division_id === divisionFilter,
+                          )}
+                        />
+                      </Panel>
+                      <Panel title="Latest confirmed results">
+                        <div className="results-grid">
+                          {verified.map((g) => (
+                            <div className="result-card" key={g.id}>
+                              <Badge tone="green">
+                                <Check size={12} /> Verified
+                              </Badge>
+                              <div>
+                                <span>{teamName(g.home_team_id)}</span>
+                                <b>{g.home_score}</b>
+                              </div>
+                              <div>
+                                <span>{teamName(g.away_team_id)}</span>
+                                <b>{g.away_score}</b>
+                              </div>
+                              <small>
+                                {g.played_at
+                                  ? time(g.played_at, s?.league.timezone)
+                                  : "Confirmed game"}
+                              </small>
+                            </div>
+                          ))}
+                        </div>
+                        {!verified.length && (
+                          <Empty title="The season is waiting for its first result">
+                            Confirmed scoresheets will update standings and
+                            ratings here.
+                          </Empty>
+                        )}
+                      </Panel>
+                      {canWrite && (
+                        <Panel
+                          title="Verified player statistics"
+                          subtitle="Recorded values from confirmed scoresheets. A dash means the statistic was not recorded; it is never inferred."
+                        >
+                          {s.statistics?.length ? (
+                            <div className="table-wrap">
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>Team / jersey</th>
+                                    <th>Game</th>
+                                    <th>Points</th>
+                                    <th>Rebounds</th>
+                                    <th>Assists</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {s.statistics
+                                    .filter(
+                                      (stat) =>
+                                        !divisionFilter ||
+                                        s.teams.find(
+                                          (t) => t.id === stat.team_id,
+                                        )?.division_id === divisionFilter,
+                                    )
+                                    .map((stat) => {
+                                      const game = s.games.find(
+                                        (g) => g.id === stat.game_id,
+                                      );
+                                      return (
+                                        <tr
+                                          key={`${stat.game_id}:${stat.team_id}:${stat.jersey}`}
+                                        >
+                                          <td>
+                                            {teamName(stat.team_id)} · #
+                                            {stat.jersey}
+                                          </td>
+                                          <td>
+                                            {game
+                                              ? `${teamName(game.home_team_id)} vs ${teamName(game.away_team_id)}`
+                                              : "Confirmed game"}
+                                          </td>
+                                          <td>{stat.points ?? "—"}</td>
+                                          <td>{stat.rebounds ?? "—"}</td>
+                                          <td>{stat.assists ?? "—"}</td>
+                                        </tr>
+                                      );
+                                    })}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <Empty title="No player statistics recorded">
+                              Confirm explicitly recorded statistics during
+                              scoresheet review to show them here.
+                            </Empty>
+                          )}
+                        </Panel>
+                      )}
+                    </>
+                  )}
+                  {view === "Competitive balance" && (
+                    <>
+                      <div className="info-banner">
+                        <ShieldCheck size={20} />
+                        <div>
+                          <b>
+                            Three verified games. One evidence-based
+                            recommendation.
+                          </b>
+                          <p>
+                            A team with three consecutive wins or losses and an
+                            average margin of at least 15 points may move one
+                            tier. Every change requires your approval.
+                          </p>
+                        </div>
+                        {isAdmin && (
                           <Button
                             variant="secondary"
                             disabled={busy}
                             onClick={() =>
                               void act(
-                                () =>
-                                  cmd("configure_public", { enabled: true }),
-                                "Public schedule enabled. Team registrations are open.",
+                                () => cmd("propose_balance"),
+                                "Competitive evidence checked. Review any new proposals.",
                               )
                             }
                           >
-                            Enable public site & registration
+                            <RefreshCw size={15} /> Evaluate balance
                           </Button>
-                          <Button
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() =>
-                              void act(
-                                () =>
-                                  cmd("configure_public", { enabled: false }),
-                                "Public site and registration closed.",
-                              )
-                            }
-                          >
-                            Close public access
-                          </Button>
-                        </div>
-                      </Panel>
-                      <Panel
-                        title="Audit trail"
-                        subtitle="Database-generated records of impactful actions"
-                      >
-                        <div className="audit-list">
-                          {s.audit.map((a) => (
-                            <div key={a.id}>
-                              <Activity size={14} />
-                              <b>{a.action.replaceAll("_", " ")}</b>
-                              <span>
-                                {time(a.created_at, s?.league.timezone)}
-                              </span>
+                        )}
+                      </div>
+                      {pendingProposals.map((p) => (
+                        <Panel
+                          key={p.id}
+                          title={teamName(p.team_id)}
+                          subtitle="DIVISION ADJUSTMENT PROPOSAL"
+                          action={
+                            <Badge tone="orange">Needs your decision</Badge>
+                          }
+                        >
+                          <div className="proposal-path">
+                            <span>{divisionName(p.from_division_id)}</span>
+                            <ArrowRight size={22} />
+                            <span>{divisionName(p.to_division_id)}</span>
+                          </div>
+                          <p className="proposal-reason">{p.reason}</p>
+                          <div className="evidence-stats">
+                            {Object.entries(p.evidence).map(([k, v]) => (
+                              <div key={k}>
+                                <small>{k.replaceAll("_", " ")}</small>
+                                <b>
+                                  {typeof v === "number"
+                                    ? Number(v.toFixed(1))
+                                    : String(v)}
+                                </b>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="approval-bar">
+                            <p>
+                              Approval updates placement. Generate and review a
+                              revised schedule before publishing new fixtures.
+                            </p>
+                            <div className="inline-actions">
+                              <Button
+                                variant="secondary"
+                                disabled={busy}
+                                onClick={() =>
+                                  void act(
+                                    () =>
+                                      cmd("decide_proposal", {
+                                        proposal_id: p.id,
+                                        approve: false,
+                                      }),
+                                    "Division proposal rejected.",
+                                  )
+                                }
+                              >
+                                Keep current division
+                              </Button>
+                              <Button
+                                disabled={busy}
+                                onClick={() =>
+                                  void act(
+                                    () =>
+                                      cmd("decide_proposal", {
+                                        proposal_id: p.id,
+                                        approve: true,
+                                      }),
+                                    "Division adjustment approved. Generate a revised schedule next.",
+                                  )
+                                }
+                              >
+                                <Check size={16} /> Approve adjustment
+                              </Button>
                             </div>
-                          ))}
+                          </div>
+                        </Panel>
+                      ))}
+                      {!pendingProposals.length && (
+                        <Panel title="Competitive review">
+                          <Empty
+                            title={
+                              s.role === "public"
+                                ? "Division reviews are private"
+                                : "No pending division adjustments"
+                            }
+                          >
+                            {s.role === "public"
+                              ? "Administrators review individual evidence and placement proposals securely."
+                              : "Run an evaluation after three verified games. The engine proposes a move only when the evidence threshold is met."}
+                          </Empty>
+                        </Panel>
+                      )}
+                      <Panel
+                        title="Team rating monitor"
+                        subtitle="Elo ratings are recalculated from the complete verified result history."
+                      >
+                        <div className="rating-list">
+                          {[...s.teams]
+                            .sort((a, b) => b.rating - a.rating)
+                            .map((t) => (
+                              <div key={t.id}>
+                                <TeamMark name={t.name} />
+                                <b>{t.name}</b>
+                                <span>{divisionName(t.division_id)}</span>
+                                <div className="rating-bar">
+                                  <i
+                                    style={{
+                                      width: `${Math.max(5, Math.min(100, (t.rating - 700) / 8))}%`,
+                                    }}
+                                  />
+                                </div>
+                                <strong>{t.rating}</strong>
+                                <small
+                                  className={
+                                    t.rating >= t.initial_rating
+                                      ? "text-green"
+                                      : "text-orange"
+                                  }
+                                >
+                                  {t.rating >= t.initial_rating ? (
+                                    <ArrowUp size={12} />
+                                  ) : (
+                                    <ArrowDown size={12} />
+                                  )}{" "}
+                                  {Math.abs(t.rating - t.initial_rating)}
+                                </small>
+                              </div>
+                            ))}
                         </div>
                       </Panel>
                     </>
                   )}
-                  {canWrite &&
-                    !isAdmin &&
-                    s.teams
-                      .filter((t) => t.coach_id === session?.user.id)
-                      .map((t) => (
-                        <Panel key={t.id} title={`${t.name} · SMS preferences`}>
-                          <Form
-                            busy={busy}
-                            submit="Save preferences"
-                            onSubmit={async (f) => {
-                              await act(
-                                () =>
-                                  cmd("set_sms_consent", {
-                                    team_id: t.id,
-                                    phone: f.get("phone"),
-                                    consent: f.get("consent") === "on",
-                                  }),
-                                "SMS consent preferences saved.",
-                              );
-                            }}
+                  {view === "Courts & gyms" && (
+                    <>
+                      <div className="court-grid">
+                        {s.courts.map((c) => (
+                          <Panel
+                            key={c.id}
+                            title={c.name}
+                            subtitle={c.venue}
+                            action={<MapPin size={21} />}
                           >
-                            <Field label="Phone in international format">
-                              <input
-                                name="phone"
-                                defaultValue={t.phone ?? ""}
-                                placeholder="+14165550100"
-                              />
-                            </Field>
-                            <label className="checkbox-label">
-                              <input
-                                type="checkbox"
-                                name="consent"
-                                defaultChecked={t.sms_consent}
-                              />{" "}
-                              I consent to schedule SMS. I can opt out here at
-                              any time. Sending is currently disabled.
-                            </label>
-                          </Form>
+                            <div className="court-mini">
+                              <svg viewBox="0 0 280 130" aria-hidden="true">
+                                <rect
+                                  x="10"
+                                  y="10"
+                                  width="260"
+                                  height="110"
+                                  rx="3"
+                                />
+                                <path d="M140 10v110M10 35h45v60H10M270 35h-45v60h45" />
+                                <circle cx="140" cy="65" r="23" />
+                              </svg>
+                            </div>
+                            <div className="availability-list">
+                              {s.availability
+                                .filter((a) => a.court_id === c.id)
+                                .map((a) => (
+                                  <div key={a.id}>
+                                    <Clock3 size={14} />
+                                    <span>
+                                      {time(a.starts_at, s?.league.timezone)}
+                                      <small>
+                                        until{" "}
+                                        {time(a.ends_at, s?.league.timezone)}
+                                      </small>
+                                    </span>
+                                    <Badge tone="green">Confirmed</Badge>
+                                  </div>
+                                ))}
+                              {!s.availability.some(
+                                (a) => a.court_id === c.id,
+                              ) && (
+                                <p className="small-muted">
+                                  No confirmed availability.
+                                </p>
+                              )}
+                            </div>
+                            {isAdmin && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setModal("availability")}
+                              >
+                                <Plus size={14} /> Confirm availability
+                              </Button>
+                            )}
+                          </Panel>
+                        ))}
+                      </div>
+                      {!s.courts.length && (
+                        <Empty title="Give your season a home court">
+                          Add a venue and court, then confirm available time
+                          blocks.
+                        </Empty>
+                      )}
+                    </>
+                  )}
+                  {view === "Notifications" && (
+                    <Panel
+                      title={
+                        isAdmin
+                          ? "Coach notification history"
+                          : "Your team updates"
+                      }
+                      subtitle="In-app updates arrive when a schedule is published. External email delivery depends on provider configuration."
+                      action={
+                        isAdmin && (
+                          <Button
+                            disabled={busy}
+                            onClick={() =>
+                              void act(
+                                () =>
+                                  api("/api/notifications", {
+                                    method: "POST",
+                                    body: JSON.stringify({ league: selected }),
+                                  }),
+                                "Notification delivery attempts completed. Review each delivery state.",
+                              )
+                            }
+                          >
+                            <Send size={15} /> Process queue
+                          </Button>
+                        )
+                      }
+                    >
+                      {s.notifications.length ? (
+                        <div className="table-wrap">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Update</th>
+                                <th>Channel</th>
+                                <th>Status</th>
+                                <th>Attempts</th>
+                                <th>Details</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {s.notifications.map((n) => (
+                                <tr key={n.id}>
+                                  <td>
+                                    <b>{n.subject}</b>
+                                    <small>
+                                      {teamName(n.team_id)} ·{" "}
+                                      {time(n.created_at, s?.league.timezone)}
+                                    </small>
+                                  </td>
+                                  <td>
+                                    {n.channel === "in_app"
+                                      ? "In app"
+                                      : n.channel}
+                                  </td>
+                                  <td>
+                                    <Badge
+                                      tone={
+                                        ["accepted", "delivered"].includes(
+                                          n.status,
+                                        )
+                                          ? "green"
+                                          : n.status === "failed"
+                                            ? "orange"
+                                            : "neutral"
+                                      }
+                                    >
+                                      {n.channel === "in_app"
+                                        ? n.read_at
+                                          ? "Read"
+                                          : "Unread"
+                                        : n.status}
+                                    </Badge>
+                                  </td>
+                                  <td>
+                                    {n.channel === "in_app"
+                                      ? "—"
+                                      : `${n.attempts} / 5`}
+                                  </td>
+                                  <td>
+                                    {n.channel === "in_app" ? (
+                                      <>
+                                        <p>{n.body}</p>
+                                        <div className="inline-actions">
+                                          <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            onClick={() =>
+                                              changeView("Schedule")
+                                            }
+                                          >
+                                            View schedule
+                                          </Button>
+                                          {n.recipient_id ===
+                                            session?.user.id &&
+                                            !n.read_at && (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                disabled={busy}
+                                                onClick={() =>
+                                                  void act(
+                                                    () =>
+                                                      cmd(
+                                                        "mark_notification_read",
+                                                        {
+                                                          notification_id: n.id,
+                                                        },
+                                                      ),
+                                                    "Update marked as read.",
+                                                  )
+                                                }
+                                              >
+                                                Mark as read
+                                              </Button>
+                                            )}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      (n.last_error ??
+                                      (n.provider_id
+                                        ? "Provider message recorded"
+                                        : "Awaiting configured provider"))
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <Empty
+                          title={
+                            isAdmin
+                              ? "No updates queued yet"
+                              : "No team updates yet"
+                          }
+                        >
+                          Publishing a schedule adds an update to each coach’s
+                          inbox. External sending suppresses synthetic
+                          addresses.
+                        </Empty>
+                      )}
+                    </Panel>
+                  )}
+                  {view === "Settings" && (
+                    <>
+                      <div className="settings-grid">
+                        <Panel
+                          title="System integrations"
+                          subtitle="Actual server configuration status"
+                        >
+                          <div className="connection-list">
+                            {[
+                              [
+                                "Supabase",
+                                "Authoritative league database",
+                                health?.database,
+                              ],
+                              [
+                                "Meta Muse Spark",
+                                "Questionnaire, vision and operations agent",
+                                health?.meta,
+                              ],
+                              [
+                                "Resend",
+                                health?.emailMode === "test"
+                                  ? "Restricted to the authorized test inbox"
+                                  : "Transactional coach notifications",
+                                health?.email,
+                              ],
+                              [
+                                "Twilio",
+                                "Consent saved · sending disabled",
+                                false,
+                              ],
+                            ].map(([name, desc, ready]) => (
+                              <div key={String(name)}>
+                                <span className="connection-logo">
+                                  {String(name)[0]}
+                                </span>
+                                <div>
+                                  <b>{name}</b>
+                                  <small>{desc}</small>
+                                </div>
+                                <Badge tone={ready ? "green" : "orange"}>
+                                  {ready
+                                    ? name === "Resend" &&
+                                      health?.emailMode === "test"
+                                      ? "Test inbox only"
+                                      : "Connected"
+                                    : name === "Meta Muse Spark" &&
+                                        health?.metaConfigured
+                                      ? "Configured · paused"
+                                      : "Setup required"}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="form-note">
+                            Credentials stay on the server. See SETUP.md for the
+                            required environment variables.
+                          </p>
                         </Panel>
-                      ))}
+                        <Panel
+                          title="Your workspace"
+                          subtitle={
+                            session
+                              ? "Signed in securely with Supabase Auth"
+                              : "Public browsing is read-only"
+                          }
+                        >
+                          <div className="settings-actions">
+                            {!session ? (
+                              <Button onClick={() => setModal("auth")}>
+                                <LogIn size={16} /> Sign in / create account
+                              </Button>
+                            ) : (
+                              <>
+                                <Button onClick={() => setModal("league")}>
+                                  <Plus size={16} /> Create league
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  disabled={busy}
+                                  onClick={() => void createDemo()}
+                                >
+                                  <Sparkles size={16} /> Create private demo
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  disabled={!!localPreview}
+                                  onClick={() => void supabase?.auth.signOut()}
+                                >
+                                  Sign out
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </Panel>
+                      </div>
+                      {isAdmin && (
+                        <>
+                          <Panel
+                            title="League access"
+                            subtitle="An invited person must have an existing Courtside account."
+                          >
+                            <Form
+                              busy={busy}
+                              submit="Add league member"
+                              onSubmit={async (f) => {
+                                await act(
+                                  () =>
+                                    cmd("invite_member", {
+                                      email: f.get("email"),
+                                      role: f.get("role"),
+                                    }),
+                                  "League membership updated.",
+                                );
+                              }}
+                            >
+                              <Field label="Account email">
+                                <input name="email" type="email" required />
+                              </Field>
+                              <Field label="Role">
+                                <select name="role">
+                                  <option value="coach">
+                                    Coach · own teams
+                                  </option>
+                                  <option value="scorekeeper">
+                                    Scorekeeper · confirm results
+                                  </option>
+                                  <option value="referee">
+                                    Referee · read league schedule
+                                  </option>
+                                </select>
+                              </Field>
+                            </Form>
+                          </Panel>
+                          <Panel
+                            title="Assign a team coach"
+                            subtitle="Add the account as a league member first. Reassignment clears the previous coach’s phone and SMS consent."
+                          >
+                            <Form
+                              busy={busy}
+                              submit="Assign coach"
+                              onSubmit={async (f) => {
+                                await act(
+                                  () =>
+                                    cmd("assign_coach", {
+                                      team_id: f.get("team_id"),
+                                      email: f.get("email"),
+                                    }),
+                                  "Team coach assigned.",
+                                );
+                              }}
+                            >
+                              <Field label="Team to assign">
+                                <select name="team_id" required>
+                                  {s.teams.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </Field>
+                              <Field label="Coach account email">
+                                <input name="email" type="email" required />
+                              </Field>
+                            </Form>
+                          </Panel>
+                          <Panel
+                            title="Public league site"
+                            subtitle="Public data excludes player identities, documents and coach contact information."
+                          >
+                            <div className="inline-actions">
+                              <a
+                                href={`/league/${s.league.slug}/website`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="button button-secondary"
+                              >
+                                <ExternalLink size={15} /> Open branded website
+                              </a>
+                              <Button
+                                variant="secondary"
+                                disabled={busy}
+                                onClick={() =>
+                                  void act(
+                                    () =>
+                                      cmd("configure_public", {
+                                        enabled: true,
+                                      }),
+                                    "Public schedule enabled. Team registrations are open.",
+                                  )
+                                }
+                              >
+                                Enable public site & registration
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() =>
+                                  void act(
+                                    () =>
+                                      cmd("configure_public", {
+                                        enabled: false,
+                                      }),
+                                    "Public site and registration closed.",
+                                  )
+                                }
+                              >
+                                Close public access
+                              </Button>
+                            </div>
+                          </Panel>
+                          <Panel
+                            title="Audit trail"
+                            subtitle="Database-generated records of impactful actions"
+                          >
+                            <div className="audit-list">
+                              {s.audit.map((a) => (
+                                <div key={a.id}>
+                                  <Activity size={14} />
+                                  <b>{a.action.replaceAll("_", " ")}</b>
+                                  <span>
+                                    {time(a.created_at, s?.league.timezone)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </Panel>
+                        </>
+                      )}
+                      {canWrite &&
+                        !isAdmin &&
+                        s.teams
+                          .filter((t) => t.coach_id === session?.user.id)
+                          .map((t) => (
+                            <Panel
+                              key={t.id}
+                              title={`${t.name} · SMS preferences`}
+                            >
+                              <Form
+                                busy={busy}
+                                submit="Save preferences"
+                                onSubmit={async (f) => {
+                                  await act(
+                                    () =>
+                                      cmd("set_sms_consent", {
+                                        team_id: t.id,
+                                        phone: f.get("phone"),
+                                        consent: f.get("consent") === "on",
+                                      }),
+                                    "SMS consent preferences saved.",
+                                  );
+                                }}
+                              >
+                                <Field label="Phone in international format">
+                                  <input
+                                    name="phone"
+                                    defaultValue={t.phone ?? ""}
+                                    placeholder="+14165550100"
+                                  />
+                                </Field>
+                                <label className="checkbox-label">
+                                  <input
+                                    type="checkbox"
+                                    name="consent"
+                                    defaultChecked={t.sms_consent}
+                                  />{" "}
+                                  I consent to schedule SMS. I can opt out here
+                                  at any time. Sending is currently disabled.
+                                </label>
+                              </Form>
+                            </Panel>
+                          ))}
+                    </>
+                  )}
                 </>
               )}
-            </>
-          )}
-        </main>
-      </div>
+            </main>
+          </div>
+        </>
+      )}
       {modal && (
         <div
           className="modal-backdrop"
@@ -2508,7 +2784,9 @@ export function LeagueApp({
                       if (error) throw error;
                       if (data.session) {
                         setSession(data.session);
-                        setModal(null);
+                        setModal(createAfterAuth.current ? "league" : null);
+                        createAfterAuth.current = false;
+                        if (publicSlug) router.push("/");
                         notify("Signed in. Your workspace is ready.");
                       } else {
                         setModal(null);
@@ -2742,6 +3020,7 @@ export function LeagueApp({
               (organizerEnabled ? (
                 <OrganizerSetup
                   api={api}
+                  startMode={localPreview ? "guided" : undefined}
                   initialDraft={setupDraft}
                   onClose={() => {
                     setSetupDraft(undefined);

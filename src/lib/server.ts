@@ -23,6 +23,27 @@ export function db(token?: string) {
   });
 }
 export async function authenticate(request: Request) {
+  if (
+    request.headers
+      .get("cookie")
+      ?.split(";")
+      .some((value) => value.trim().startsWith("courtside_local_preview="))
+  ) {
+    const { localDemoEnabled, localDemoSession } =
+      await import("./local-demo-server");
+    if (localDemoEnabled(request)) {
+      try {
+        const session = await localDemoSession(request);
+        if (!session) throw Error("Missing session");
+        return { client: db(session.token), user: session.user };
+      } catch {
+        throw new ApiError(
+          "Local demo session or request origin is invalid",
+          401,
+        );
+      }
+    }
+  }
   const token = request.headers
     .get("authorization")
     ?.match(/^Bearer (.+)$/)?.[1];

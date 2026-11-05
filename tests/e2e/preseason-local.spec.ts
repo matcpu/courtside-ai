@@ -29,6 +29,11 @@ async function login(page: Page, email: string) {
   await d.getByLabel("Password", { exact: true }).fill("SyntheticPreview!2099");
   await d.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(d).toHaveCount(0);
+  const fixture = await (
+    await page.request.get("http://127.0.0.1:3302/__preview")
+  ).json();
+  await page.goto(`/workspace/${fixture.league}`);
+  await expect(page.getByLabel("Switch league")).toHaveValue(fixture.league);
 }
 async function call(page: Page, path: string, body?: unknown) {
   return page.evaluate(

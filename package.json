@@ -12,7 +12,8 @@
     "test:database:concurrency": "node scripts/test-launchpad-concurrency.mjs",
     "launchpad:review": "node scripts/review-launchpad.mjs",
     "test:e2e": "playwright test",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build",
+    "launchpad:interactive": "node scripts/start-interactive-demo.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",

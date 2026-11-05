@@ -1,5 +1,7 @@
 # Launchpad review guide
 
+**Current recording mode:** the running loopback development preview needs no credentials. Follow [INTERACTIVE_DEMO_REVIEW.md](INTERACTIVE_DEMO_REVIEW.md). The production-build/manual-account procedure below remains a separate normal-authentication check; do not restart the current backend or recording frontend to run it.
+
 This is an isolated feature branch, not a production release. PR [#1](https://github.com/matcpu/courtside-ai/pull/1) was inspected at `43414f96ec7eba6ff4f0ca6d6dc1b5abf7495d1f` and remains unmerged. Its `/league/[slug]/website` route, starter workspace, identity/social utilities and original tests are reused. The configured themes extend that route; `/league/[slug]` stays the existing portal. Legacy website CSS is namespaced so both paths can coexist. No second competing public website route was added.
 
 ## Start the local synthetic preview
@@ -17,7 +19,7 @@ The review harness does not implement hosted Auth email delivery, Storage signin
 - Complete five steps. Age categories and tier labels are editable; country eligibility is never inferred. The optional brief helper extracts count/location with explicit rules, not Meta.
 - **Save draft & exit** keeps an incomplete private draft. **Finish setup** atomically creates/configures a private season workspace. It neither publishes nor opens registration.
 - **Launchpad → Launch overview** shows saved identity, actual registration, questionnaire/review counts and confirmed court capacity. Use **Courts & gyms** to confirm dated slots; an address alone never counts as capacity. Existing game/rest/readiness constraints apply.
-- **League website** offers Courtside, Community and Arena themes, colours, normalized logo, public copy/contact and desktop/mobile preview. Save privately. The existing published revision stays visible until a separate explicit approval. Unpublish preserves history.
+- **League website** offers Scoreboard, Clubhouse and Arena themes, colours, normalized logo, public copy/contact and desktop/mobile preview. Save privately. The existing published revision stays visible until a separate explicit approval. Unpublish preserves history.
 - Create a private coach invitation before that account exists. Optionally choose an existing team. Copy the expiring link privately. The recipient signs in with the matching confirmed account, then accepts. Membership and team assignment are atomic; old/revoked/expired links fail. No email is sent.
 - **Brand & domain** gives rules-based naming ideas, a saved preference and explicit `.com` registration lookup. A lookup is a timestamped observation in the current view, not saved purchase/ownership evidence. Other suffixes, possible naming conflicts and handles require manual verification.
 - **Social starter kit** provides copyable public-fact templates. No account is created, connected or posted to. **LAUNCHPAD_AGENT_DESIGN.md** documents future tools; none are presented as a model run.
@@ -33,3 +35,11 @@ The review harness does not implement hosted Auth email delivery, Storage signin
 Deferred: reusable organization-level season grouping, advanced playoffs/pools/travel rules, recurring availability templates/blackouts, domain purchases/custom-domain verification, automated trademark/name-conflict checks, verified handle lookup, social account connection/publishing and live Muse Launchpad orchestration. No unsupported controls claim these work.
 
 Concurrency repair: `npm run test:database:concurrency` requires a disposable local PostgreSQL 17 service and `LAUNCHPAD_TEST_DATABASE_URL` pointing to a loopback-only `courtside_launchpad_test` database. It refuses hosted URLs, creates/deletes only generated test databases, and observes real independent-session row-lock waits. CI supplies an ephemeral PostgreSQL 17.11 service. The ordered loader applies Launchpad exactly once.
+
+## Website design review
+
+See [LAUNCHPAD_DESIGN_REVIEW.md](LAUNCHPAD_DESIGN_REVIEW.md) for the November 4 local redesign, exact current preview URLs, screenshot locations and five-step setup verification. The stored `courtside` and `community` theme keys now display as Scoreboard and Clubhouse; existing selections remain valid.
+
+## Connected product entry (local candidate)
+
+The root page now introduces Courtside AI instead of automatically selecting a reference or synthetic league. Sign in from the header, choose an authorized league, then open Launchpad. Public websites and the workspace share the existing authentication flow and link both ways. See [CONNECTED_EXPERIENCE_REVIEW.md](CONNECTED_EXPERIENCE_REVIEW.md) for exact current dashboard/demo URLs, credentials and screenshots. Legacy `/league/<slug>` URLs remain public and read-only; workspace links use `/workspace/<id>`. Do not restart the already-running backend on 3302 for this review.

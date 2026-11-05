@@ -229,6 +229,71 @@ export function setupBlockers(s: Setup) {
     b.push("Select at least one accepted proof-of-age document.");
   return b;
 }
+/** Step ownership is shared by inline validation and the final review links. */
+export function setupIssues(s: Setup): { message: string; step: number }[] {
+  const issues = setupBlockers(s).map((message) => ({
+    message,
+    step: /league name|primary city/.test(message)
+      ? 0
+      : /court/.test(message)
+        ? 2
+        : /roster cannot|proof-of-age/.test(message)
+          ? 3
+          : 1,
+  }));
+  const parsed = setupSchema.safeParse(s);
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) {
+      const key = String(issue.path[0]);
+      const step = [
+        "minRoster",
+        "maxRoster",
+        "retentionDays",
+        "allowedDocumentTypes",
+        "proofRequired",
+      ].includes(key)
+        ? 3
+        : key === "courts"
+          ? 2
+          : [
+                "season",
+                "start",
+                "end",
+                "opening",
+                "cutoff",
+                "registrationDeadline",
+                "rosterDeadline",
+                "verificationDeadline",
+                "divisions",
+              ].includes(key)
+            ? 1
+            : 0;
+      const label =
+        (
+          {
+            minRoster: "Minimum roster",
+            maxRoster: "Maximum roster",
+            retentionDays: "Document retention",
+          } as Record<string, string>
+        )[key] ?? key;
+      issues.push({ message: `${label}: ${issue.message}`, step });
+    }
+  }
+  return issues;
+}
+/** Date-only league settings must not shift a day in the viewer's timezone. */
+export function formatLeagueDate(value: string, fallback = "To be announced") {
+  if (!value) return fallback;
+  const date = new Date(`${value.slice(0, 10)}T12:00:00Z`);
+  return Number.isNaN(+date)
+    ? fallback
+    : new Intl.DateTimeFormat("en-CA", {
+        timeZone: "UTC",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }).format(date);
+}
 /** An upper bound, not a feasible-matchup promise. Merge overlaps per court. */
 export function courtCapacity(availability: Availability[], notBefore: number) {
   const byCourt = new Map<string, [number, number][]>();

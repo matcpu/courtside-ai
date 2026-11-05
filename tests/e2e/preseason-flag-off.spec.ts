@@ -38,7 +38,8 @@ test("Preseason remains configurable without a link to disabled expanded Launchp
   await d.getByLabel("Password", { exact: true }).fill(fixture.password);
   await d.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(d).toHaveCount(0);
-  await page.getByLabel("Switch league").selectOption(fixture.league);
+  await page.goto(`/workspace/${fixture.league}`);
+  await expect(page.getByLabel("Switch league")).toHaveValue(fixture.league);
   await nav("Preseason Onboarding");
   await expect(
     page.getByRole("button", { name: "League configuration", exact: true }),

@@ -1,5 +1,7 @@
 # Launchpad release gate and hosted acceptance plan
 
+**Current-design release attempt:** see [HOSTED_RELEASE_REVIEW.md](HOSTED_RELEASE_REVIEW.md). The current working tree, including the redesigned websites and connected local session, is the candidate being verified for Git/preview publication. Read-only hosted checks still find both reviewed migration versions/RPCs missing and no verified recoverable backup. TLS and permission to assume the CLI dump's postgres role are confirmed; the initial 42501 table probe did not assume that role. Production enablement remains NO-GO. No hosted migration or data mutation has occurred in this attempt.
+
 Prepared November 4, 2026 Eastern. **NO-GO for production enablement until the gates below pass. GO for PR review and CI.** No step in this plan authorizes a hosted migration, deployment, real message, model inference, purchase or publication. The original concurrency repair is preserved. The current review candidate also implements the requested Preseason UX redesign and explicit document policy; see the checkpoint below.
 
 ## Current Preseason UX checkpoint

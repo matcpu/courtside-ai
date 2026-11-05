@@ -36,6 +36,8 @@ Age eligibility, ratings, standings, proposal thresholds, conflict detection and
 
 ## Run locally
 
+For the currently running **credential-free local Launchpad recording demo**, open [127.0.0.1:3301](http://127.0.0.1:3301/) and follow [INTERACTIVE_DEMO_REVIEW.md](INTERACTIVE_DEMO_REVIEW.md). This development-only synthetic session is not deployed and cannot be enabled in production artifacts. Keep the existing adapter on port 3302 running.
+
 Use Node.js 24 LTS and npm. Dependencies are pinned and the cross-platform lockfile is committed.
 
 ```sh
@@ -47,7 +49,7 @@ npm run dev
 
 PowerShell: `Copy-Item .env.example .env.local`. Open `http://localhost:3000`.
 
-The only permitted hosted database is project `xdmkgoradmbnjofmbojs` in `ca-central-1`. Its migrations are already applied; do not run them again against a different project. For a fresh local Supabase instance, apply the ordered files in `supabase/migrations/`. See [SETUP.md](SETUP.md).
+The only permitted hosted database is project `xdmkgoradmbnjofmbojs` in `ca-central-1`. Hosted history currently ends at `20261029042847`; the two November 4 Launchpad/document-policy migrations are not applied. Do not enable Launchpad in hosted environments before the backup, approval and acceptance gates in [LAUNCHPAD_RELEASE.md](LAUNCHPAD_RELEASE.md). For a fresh local Supabase instance, apply the ordered files in `supabase/migrations/`. See [SETUP.md](SETUP.md).
 
 ```sh
 npm run typecheck
@@ -61,7 +63,7 @@ Database integration assertions are in `tests/database.sql`; execute only agains
 
 ## Demo access
 
-The landing page opens a public, read-only reference league with 12 fictional teams, 18 fictional historical results, confirmed example gym slots and future fixtures. No shared administrator password is published. Create and confirm your own account, then choose **Settings → Create private demo** to run mutations in an isolated workspace. [DEMO.md](DEMO.md) includes a three-minute script and recording checklist.
+The public, read-only reference league remains at `/league/northstar-demo`, with 12 fictional teams and 18 fictional historical results. No hosted administrator password is published. On the current **local review branch**, `/` is a welcoming product entry with a published Scoreboard demo, league creation and sign-in. Signed-in users explicitly choose an authorized league; `/workspace/<league-id>` connects its dashboard and published website. This entry/navigation change has not been deployed. See [CONNECTED_EXPERIENCE_REVIEW.md](CONNECTED_EXPERIENCE_REVIEW.md) for the running local URLs, synthetic accounts and tested boundaries. [DEMO.md](DEMO.md) includes a three-minute script and recording checklist.
 
 ## Hackathon contributions
 

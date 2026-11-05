@@ -1,11 +1,35 @@
 import type { CSSProperties } from "react";
-import type { SiteData } from "@/lib/launchpad";
+import { LeagueConnections } from "./league-connections";
+import { emptyWebsite, formatLeagueDate, type SiteData } from "@/lib/launchpad";
+import {
+  fixtureState,
+  gameCentre,
+  leagueInitials,
+  publicVenueName,
+  type PublicFixture,
+} from "@/lib/league-website";
+
 export function colourText(hex: string) {
   const rgb = [1, 3, 5]
     .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
     .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   const l = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
   return (l + 0.05) / 0.05 > 1.05 / (l + 0.05) ? "#000000" : "#ffffff";
+}
+function BasketballDetail() {
+  return (
+    <svg
+      className="site-basketball-detail"
+      viewBox="0 0 360 200"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path d="M-10 196a190 190 0 0 1 380 0v4H-10Z" fill="currentColor" />
+      <g stroke="var(--site-paper)" strokeWidth="3">
+        <path d="M180 8v192M-8 196h376M22 90c90 80 226 80 316 0M68 36c14 74 18 113-14 164M292 36c-14 74-18 113 14 164" />
+      </g>
+    </svg>
+  );
 }
 export function LeagueWebsite({
   data,
@@ -14,7 +38,25 @@ export function LeagueWebsite({
   data: SiteData;
   preview?: boolean;
 }) {
-  const { config: c, league: l } = data;
+  const { config: c, league: l } = data,
+    Root = preview ? "div" : "main";
+  const headline = c.headline === emptyWebsite.headline ? "" : c.headline;
+  const open =
+    l.registration === "open" && +new Date(l.registrationDeadline) > Date.now();
+  const registrationStatus = open ? "Registration open" : "Registration closed";
+  const location = [
+    ...new Set([l.city, l.region, l.country].filter(Boolean)),
+  ].join(", ");
+  const groups = [...new Set(data.divisions.map((d) => d.age_category))];
+  const venues = [...new Set(data.venues.map((v) => v.venue))].map((venue) => ({
+    venue,
+    courts: data.venues.filter((v) => v.venue === venue),
+  }));
+  const now = Date.now(),
+    games = gameCentre(data.fixtures, now),
+    hasFixtures = games.ordered.length > 0;
+  const hasStandings = data.standings.some((t) => t.played > 0);
+  const demo = /synthetic|fictional/i.test(`${l.name} ${l.season} ${c.about}`);
   const stamp = (v: string) =>
     new Intl.DateTimeFormat("en-CA", {
       timeZone: l.timezone,
@@ -22,302 +64,469 @@ export function LeagueWebsite({
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
+      timeZoneName: "short",
     }).format(new Date(v));
-  const open =
-    l.registration === "open" && +new Date(l.registrationDeadline) > Date.now();
-  const groups = [...new Set(data.divisions.map((d) => d.age_category))];
+  const matchDate = (v: string) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: l.timezone,
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(new Date(v));
+  const matchTime = (v: string) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: l.timezone,
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(new Date(v));
   const style = {
     "--site-brand": c.colour,
     "--site-accent": c.accent,
     "--site-brand-text": colourText(c.colour),
     "--site-accent-text": colourText(c.accent),
   } as CSSProperties;
+  const emblem = c.logo ? (
+    <img src={c.logo} alt={`${l.name} logo`} width={64} height={64} />
+  ) : (
+    <span className="site-monogram" aria-hidden="true">
+      {leagueInitials(l.name)}
+    </span>
+  );
+  const action = (
+    <a
+      className="site-cta"
+      href={
+        open ? "#registration" : hasFixtures ? "#schedule" : "#registration"
+      }
+    >
+      {open
+        ? "Register your team"
+        : hasFixtures
+          ? "Explore the games"
+          : "Registration details"}
+      <span aria-hidden="true">↗</span>
+    </a>
+  );
+  const dates = (
+    <>
+      {formatLeagueDate(l.start)} <span aria-hidden="true">–</span>{" "}
+      {formatLeagueDate(l.end)}
+    </>
+  );
+  const seasonCard = (
+    <aside className="site-season-card" aria-label="Season at a glance">
+      <div className="site-season-heading">
+        <span className="site-eyebrow">Season guide</span>
+        <span className="site-season-sport">Basketball</span>
+      </div>
+      <h2>{l.season}</h2>
+      <dl>
+        <div>
+          <dt>Season dates</dt>
+          <dd>{dates}</dd>
+        </div>
+        {location && (
+          <div>
+            <dt>Home base</dt>
+            <dd>{location}</dd>
+          </div>
+        )}
+        <div>
+          <dt>Team registration</dt>
+          <dd className="site-registration-state">{registrationStatus}</dd>
+        </div>
+      </dl>
+      {c.theme === "community" && <BasketballDetail />}
+    </aside>
+  );
+  const divisions = data.divisions.length > 0 && (
+    <section id="divisions" className="site-section site-divisions">
+      <div className="site-section-heading">
+        <div>
+          <span className="site-eyebrow">The competition</span>
+          <h2>Find your division.</h2>
+        </div>
+        <a href="#rules" className="site-text-link">
+          Age eligibility ↗
+        </a>
+      </div>
+      <div className="site-division-grid">
+        {groups.map((group) => (
+          <article key={group}>
+            <div className="site-division-title">
+              <span className="site-group">{group}</span>
+              <span>Basketball</span>
+            </div>
+            <ul>
+              {data.divisions
+                .filter((d) => d.age_category === group)
+                .map((d) => (
+                  <li key={`${group}-${d.tier}`}>
+                    <h3>{d.name}</h3>
+                    <p>
+                      Ages {d.min_age}–{d.max_age}
+                    </p>
+                  </li>
+                ))}
+            </ul>
+            <p className="site-division-cutoff">
+              Age on {formatLeagueDate(l.cutoff)}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+  const registration = (
+    <section id="registration" className="site-registration">
+      <div>
+        <span className="site-eyebrow">{l.season} registration</span>
+        <h2>{open ? "Bring your team to the court." : "Follow the season."}</h2>
+        <p>
+          {open
+            ? `Team registration closes ${stamp(l.registrationDeadline)}. Review divisions and eligibility before applying.`
+            : `Registration for ${l.season} is currently closed.`}
+        </p>
+        <a href="#rules" className="site-text-link">
+          Rules & eligibility ↗
+        </a>
+      </div>
+      {open && !preview ? (
+        <a className="site-cta" href={`/league/${l.slug}/register`}>
+          Start team registration <span aria-hidden="true">↗</span>
+        </a>
+      ) : (
+        <span className="site-status">
+          {open ? "Registration open · private preview" : registrationStatus}
+        </span>
+      )}
+    </section>
+  );
+  const fixtureCard = (f: PublicFixture, i: number) => {
+    const state = fixtureState(f, now),
+      final = state === "final";
+    return (
+      <article
+        key={`${f.starts_at}-${i}`}
+        className={`site-game site-game-${state}`}
+        data-fixture-state={state}
+      >
+        <div className="site-game-heading">
+          <span className={`site-game-status status-${state}`}>
+            {final
+              ? "Final"
+              : state === "upcoming"
+                ? "Upcoming"
+                : "Result pending"}
+          </span>
+          <time dateTime={f.starts_at}>{matchDate(f.starts_at)}</time>
+        </div>
+        <div
+          className="site-matchup"
+          role="group"
+          aria-label={`${f.home} vs ${f.away}${final ? `: ${f.home_score} – ${f.away_score}` : ""}`}
+        >
+          <div>
+            <strong>{f.home}</strong>
+            <span className="site-score">{final ? f.home_score : "—"}</span>
+          </div>
+          <div>
+            <strong>{f.away}</strong>
+            <span className="site-score">{final ? f.away_score : "—"}</span>
+          </div>
+        </div>
+        <div className="site-game-footer">
+          <span>{matchTime(f.starts_at)}</span>
+          <p>
+            {[f.court, publicVenueName(f.venue, demo)]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </div>
+      </article>
+    );
+  };
+  const fixtures = hasFixtures && (
+    <section id="schedule" className="site-section site-schedule">
+      <div className="site-section-heading">
+        <div>
+          <span className="site-eyebrow">Around the league</span>
+          <h2>{c.theme === "courtside" ? "Game centre." : "On the court."}</h2>
+        </div>
+        <p>
+          {games.upcoming.length > 0 && (
+            <span>{games.upcoming.length} upcoming</span>
+          )}
+          {games.final.length > 0 && <span>{games.final.length} final</span>}
+          {games.pending.length > 0 && (
+            <span>
+              {games.pending.length} result
+              {games.pending.length === 1 ? "" : "s"} pending
+            </span>
+          )}
+        </p>
+      </div>
+      <div className="site-featured-games">
+        {games.featured.map(fixtureCard)}
+      </div>
+      <details className="site-all-games">
+        <summary>
+          All {games.ordered.length} fixtures & results{" "}
+          <span aria-hidden="true">↗</span>
+        </summary>
+        <p className="site-archive-note">
+          Published fixtures · Times in {l.timezone}. Past unconfirmed games
+          remain result pending.
+        </p>
+        <div className="site-fixtures">{games.ordered.map(fixtureCard)}</div>
+      </details>
+    </section>
+  );
+  const standingsTable = (compact: boolean) => (
+    <div
+      className="site-table-wrap"
+      role="region"
+      aria-label={compact ? "Standings snapshot" : "Complete standings table"}
+      tabIndex={0}
+    >
+      <table>
+        <caption>
+          {compact
+            ? `League snapshot · ${Math.min(6, data.standings.length)} of ${data.standings.length} teams`
+            : "League-approved teams · Confirmed results only"}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Team</th>
+            {!compact && <th scope="col">Played</th>}
+            <th scope="col">W</th>
+            <th scope="col">L</th>
+            {!compact && <th scope="col">D</th>}
+            <th scope="col">Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(compact ? data.standings.slice(0, 6) : data.standings).map((t) => (
+            <tr key={t.name}>
+              <th scope="row">{t.name}</th>
+              {!compact && <td>{t.played}</td>}
+              <td>{t.wins}</td>
+              <td>{t.losses}</td>
+              {!compact && <td>{t.draws}</td>}
+              <td>
+                <b>{t.points}</b>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+  const table = hasStandings && (
+    <section id="standings" className="site-section site-standings">
+      <div className="site-section-heading">
+        <div>
+          <span className="site-eyebrow">The season so far</span>
+          <h2>Standings.</h2>
+        </div>
+      </div>
+      {standingsTable(true)}
+      <details className="site-all-standings">
+        <summary>Full standings · {data.standings.length} teams</summary>
+        {standingsTable(false)}
+      </details>
+    </section>
+  );
+  const places = venues.length > 0 && (
+    <section id="venues" className="site-section site-venues">
+      <div className="site-section-heading">
+        <div>
+          <span className="site-eyebrow">Home courts</span>
+          <h2>Where we play.</h2>
+        </div>
+        <p>
+          {venues.length} {venues.length === 1 ? "venue" : "venues"} ·{" "}
+          {data.venues.length} {data.venues.length === 1 ? "court" : "courts"}
+        </p>
+      </div>
+      <div className="site-venue-grid">
+        {venues.map(({ venue, courts }) => (
+          <article key={venue}>
+            <h3>{publicVenueName(venue, demo)}</h3>
+            <p>{courts.map((v) => v.name).join(" · ")}</p>
+            <small>Game times appear in published fixtures.</small>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+  const about = c.about && (
+    <section id="about" className="site-section site-about">
+      <span className="site-eyebrow">Our league</span>
+      <h2>Basketball{l.city ? ` in ${l.city}` : ""}.</h2>
+      <p>{c.about}</p>
+    </section>
+  );
+  const sections =
+    c.theme === "community"
+      ? [about, divisions, fixtures, table, places, registration]
+      : c.theme === "arena"
+        ? [fixtures, divisions, registration, table, places, about]
+        : [fixtures, table, divisions, places, registration, about];
+  const navigation = [
+    ...(c.theme === "courtside"
+      ? [
+          ["schedule", "Games", hasFixtures],
+          ["standings", "Standings", hasStandings],
+          ["divisions", "Divisions", data.divisions.length > 0],
+        ]
+      : [
+          ["divisions", "Divisions", data.divisions.length > 0],
+          ["schedule", "Games", hasFixtures],
+          ["standings", "Standings", hasStandings],
+        ]),
+    ["venues", "Venues", venues.length > 0],
+    ["rules", "Rules", true],
+    ["contact", "Contact", Boolean(c.contactEmail)],
+  ] as [string, string, boolean][];
   return (
-    <main className={`league-website site-${c.theme}`} style={style}>
+    <Root className={`league-website site-${c.theme}`} style={style}>
       <a href="#site-main" className="site-skip">
         Skip to league information
       </a>
       {preview && (
         <div className="site-preview-banner">
-          PRIVATE PREVIEW · Draft copy · No website publication or messages
+          Private preview · Unsaved changes are not public
         </div>
       )}
       <header className="site-header">
+        <a
+          className="site-back-link"
+          href="/"
+          target={preview ? "_blank" : undefined}
+          rel={preview ? "noreferrer" : undefined}
+        >
+          ← Back to Courtside AI
+        </a>
         <a className="site-brand" href="#home">
-          {c.logo ? (
-            <img src={c.logo} alt={`${l.name} logo`} width={52} height={52} />
-          ) : (
-            <span className="site-monogram" aria-hidden="true">
-              {l.name.slice(0, 2).toUpperCase()}
-            </span>
-          )}
+          {emblem}
           <span>
             {l.name}
-            <small>{l.season}</small>
+            <small>{l.season} · Basketball</small>
           </span>
         </a>
         <nav aria-label="League website">
-          <a href="#about">About</a>
-          <a href="#divisions">Divisions</a>
-          <a href="#schedule">Schedule</a>
-          <a href="#standings">Standings</a>
-          <a href="#venues">Venues</a>
-          <a href="#contact">Contact</a>
+          <LeagueConnections leagueId={l.id} header preview={preview} />
+          {navigation
+            .filter(([, , visible]) => visible)
+            .map(([id, label]) => (
+              <a key={id} href={`#${id}`}>
+                {label}
+              </a>
+            ))}
+          <a className="site-nav-registration" href="#registration">
+            Registration <span aria-hidden="true">↗</span>
+          </a>
         </nav>
       </header>
-      <section id="home" className="site-hero">
-        <div>
-          <span className="site-eyebrow">
-            YOUTH BASKETBALL · {[l.city, l.region].filter(Boolean).join(", ")}
-          </span>
-          <h1>{c.headline || l.name}</h1>
+      {demo && (
+        <aside
+          className="site-demo-disclosure"
+          aria-label="Demo league disclosure"
+        >
           <p>
-            {l.name} · {l.season}. Find your competition, prepare your team and
-            follow the season.
+            <strong>Demo league</strong> · All teams, venues and results are
+            fictional.
           </p>
-          <a className="site-cta" href="#registration">
-            {open ? "Register your team" : "Explore the season"}{" "}
-            <span aria-hidden="true">↗</span>
-          </a>
+        </aside>
+      )}
+      <section id="home" className="site-hero">
+        <div className="site-hero-identity">
+          <p className="site-eyebrow">
+            <span className="site-season-tag">{l.season}</span>
+            {location && <span>{location}</span>}
+          </p>
+          <h1>{l.name}</h1>
+          {headline && <p className="site-hero-headline">{headline}</p>}
+          <div className="site-hero-actions">
+            {action}
+            <span className="site-hero-registration">{registrationStatus}</span>
+          </div>
         </div>
-        <div className="site-court-art" aria-hidden="true">
-          <span />
-          <b>
-            {groups.length}
-            <small>AGE {groups.length === 1 ? "GROUP" : "GROUPS"}</small>
-          </b>
-        </div>
+        {seasonCard}
       </section>
-      <div id="site-main" className="site-content">
-        <section id="about" className="site-section site-about">
-          <div>
-            <span className="site-eyebrow">BELONG ON COURT</span>
-            <h2>
-              Built around the game.
-              <br />
-              Rooted in the community.
-            </h2>
-          </div>
-          <div>
-            <p className="site-copy">
-              {c.about ||
-                `${l.name} brings youth basketball teams together in ${l.city || "our community"}. Explore the configured divisions and eligibility requirements before registering.`}
-            </p>
-            <dl className="site-facts">
-              <div>
-                <dt>Season</dt>
-                <dd>
-                  {l.start || "To be announced"} — {l.end || "To be announced"}
-                </dd>
+      {c.theme === "arena" && (
+        <div className="site-season-line">
+          <span>Youth basketball</span>
+          <span>{l.season}</span>
+          {groups.length > 0 && <span>{groups.join(" / ")}</span>}
+          {l.city && <span>{l.city}</span>}
+        </div>
+      )}
+      <div id="site-main" className="site-content" tabIndex={-1}>
+        {sections.map(
+          (section, i) =>
+            section && (
+              <div className="site-module" key={i}>
+                {section}
               </div>
-              <div>
-                <dt>Region</dt>
-                <dd>
-                  {[l.city, l.region, l.country].filter(Boolean).join(", ") ||
-                    "To be confirmed"}
-                </dd>
-              </div>
-              <div>
-                <dt>Registered, approved teams</dt>
-                <dd>{data.teams.length}</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-        <section id="divisions" className="site-section">
-          <span className="site-eyebrow">FIND YOUR COMPETITION</span>
-          <h2>Age groups & divisions</h2>
-          <div className="site-division-grid">
-            {groups.map((group) => (
-              <article key={group}>
-                <span className="site-number">{group}</span>
-                <h3>{group} competition</h3>
-                <ul>
-                  {data.divisions
-                    .filter((d) => d.age_category === group)
-                    .map((d) => (
-                      <li key={`${group}-${d.tier}`}>
-                        <strong>{d.name}</strong>
-                        <span>
-                          Ages {d.min_age}–{d.max_age} on {l.cutoff}
-                        </span>
-                      </li>
-                    ))}
-                </ul>
-              </article>
-            ))}
-          </div>
-        </section>
-        <section id="registration" className="site-registration">
-          <div>
-            <span className="site-eyebrow">YOUR SEASON STARTS HERE</span>
-            <h2>
-              {open ? "Bring your team." : "Registration is being prepared."}
-            </h2>
-            <p>
-              {open
-                ? `Coach questionnaires are accepted until ${stamp(l.registrationDeadline)} (${l.timezone}). Teams remain subject to league placement and eligibility review.`
-                : "The league will announce registration when it is ready. Saving or publishing this website does not open registration."}
-            </p>
-          </div>
-          {open && !preview ? (
-            <a className="site-cta" href={`/league/${l.slug}/register`}>
-              Start team registration ↗
-            </a>
-          ) : (
-            <span className="site-status">
-              {open
-                ? "Registration open · preview only"
-                : "Registration closed"}
-            </span>
-          )}
-        </section>
-        <section id="schedule" className="site-section">
-          <span className="site-eyebrow">ON COURT</span>
-          <h2>Approved schedule & results</h2>
-          <p className="site-muted">
-            {l.timezone} · Only published fixtures and confirmed results appear
-            here.
-          </p>
-          {data.fixtures.length ? (
-            <div className="site-fixtures">
-              {data.fixtures.map((f, i) => (
-                <article key={`${f.starts_at}-${i}`}>
-                  <time dateTime={f.starts_at}>{stamp(f.starts_at)}</time>
-                  <div>
-                    <strong>{f.home}</strong>
-                    <span>
-                      {f.status === "confirmed"
-                        ? `${f.home_score} — ${f.away_score}`
-                        : "vs"}
-                    </span>
-                    <strong>{f.away}</strong>
-                  </div>
-                  <small>
-                    {f.court} · {f.venue}
-                  </small>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="site-empty">
-              The league has not published a schedule yet. Draft fixtures remain
-              private.
-            </p>
-          )}
-        </section>
-        <section id="standings" className="site-section">
-          <span className="site-eyebrow">THE SEASON SO FAR</span>
-          <h2>Official standings</h2>
-          {data.standings.length ? (
-            <div className="site-table-wrap">
-              <table>
-                <caption>Approved teams · confirmed results only</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Team</th>
-                    <th scope="col">Played</th>
-                    <th scope="col">W</th>
-                    <th scope="col">L</th>
-                    <th scope="col">D</th>
-                    <th scope="col">Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.standings.map((t) => (
-                    <tr key={t.name}>
-                      <th scope="row">{t.name}</th>
-                      <td>{t.played}</td>
-                      <td>{t.wins}</td>
-                      <td>{t.losses}</td>
-                      <td>{t.draws}</td>
-                      <td>{t.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="site-empty">
-              Standings will appear as teams are approved and official results
-              are confirmed.
-            </p>
-          )}
-        </section>
-        <section id="venues" className="site-section">
-          <span className="site-eyebrow">WHERE WE PLAY</span>
-          <h2>Venues & locations</h2>
-          {data.venues.length ? (
-            <div className="site-venue-grid">
-              {data.venues.map((v) => (
-                <article key={v.name}>
-                  <span aria-hidden="true">↗</span>
-                  <h3>{v.name}</h3>
-                  <p>{v.venue}</p>
-                  <small>
-                    Check the published schedule for confirmed game times.
-                  </small>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="site-empty">
-              Venues and confirmed availability are still being arranged.
-            </p>
-          )}
-        </section>
+            ),
+        )}
         <section id="rules" className="site-section site-rules">
-          <div>
-            <span className="site-eyebrow">FAIR PLAY, FROM DAY ONE</span>
-            <h2>Rules & eligibility</h2>
-            <p className="site-copy">
-              {c.rules ||
-                "Coaches submit team assessments. Guardians provide proof of age privately. Authorized league reviewers inspect documents and make eligibility decisions before teams become ready for scheduling."}
-            </p>
-          </div>
-          <ul>
-            <li>
-              Age is calculated on {l.cutoff} using the division ranges above.
-            </li>
-            <li>
-              Active rosters: {l.minRoster}–{l.maxRoster} players; guardian
-              consent and human document review required.
-            </li>
-            <li>
-              Only league-approved results and schedule changes become official.
-            </li>
-            <li>
-              Never send children’s identity documents through public contact
-              channels.
-            </li>
-          </ul>
+          <details>
+            <summary>
+              Rules & eligibility{" "}
+              <span>Age cutoff · Roster requirements · League rules</span>
+            </summary>
+            <div className="site-rules-content">
+              {c.rules && <p>{c.rules}</p>}
+              <ul>
+                <li>
+                  Age is calculated on {formatLeagueDate(l.cutoff)} using the
+                  configured division ranges above.
+                </li>
+                <li>
+                  Active rosters: {l.minRoster}–{l.maxRoster} players. League
+                  eligibility approval is required before scheduling.
+                </li>
+                <li>
+                  Submit any required guardian documents privately through your
+                  league invitation.
+                </li>
+              </ul>
+            </div>
+          </details>
         </section>
-        <section id="contact" className="site-section site-contact">
-          <div>
-            <span className="site-eyebrow">LET’S PLAY</span>
-            <h2>Talk to the league.</h2>
-            <p>Questions about registration, divisions or your next game?</p>
-          </div>
-          {c.contactEmail ? (
+        {c.contactEmail && (
+          <section id="contact" className="site-section site-contact">
+            <div>
+              <span className="site-eyebrow">League office</span>
+              <h2>Let’s talk basketball.</h2>
+            </div>
             <a
               className="site-cta"
               href={`mailto:${encodeURIComponent(c.contactEmail)}`}
             >
-              Email the league ↗
+              Email the league <span aria-hidden="true">↗</span>
             </a>
-          ) : (
-            <p>
-              Public contact details have not been published. Existing teams can
-              contact their league administrator privately.
-            </p>
-          )}
-        </section>
+          </section>
+        )}
       </div>
       <footer className="site-footer">
-        <strong>{l.name}</strong>
-        <p>{l.season} · Powered by COURTSIDE AI</p>
-        <a href="#home">Back to top ↑</a>
+        <div>
+          <strong>{l.name}</strong>
+          <p>
+            {l.season}
+            {location && ` · ${location}`}
+          </p>
+        </div>
+        <div>
+          {demo && <p>Demonstration league · Synthetic data</p>}
+          <LeagueConnections leagueId={l.id} preview={preview} />
+          <a href="#home">Back to top ↑</a>
+        </div>
       </footer>
-    </main>
+    </Root>
   );
 }

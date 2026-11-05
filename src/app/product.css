@@ -1,0 +1,456 @@
+.product-entry {
+  background: #f6f8f2;
+  color: #173d31;
+  min-height: 100vh;
+  font:
+    15px/1.6 "Segoe UI",
+    Arial,
+    sans-serif;
+}
+.product-entry :is(h1, h2, p) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.product-entry a {
+  color: inherit;
+  text-decoration: none;
+}
+.product-entry :is(a, button, input):focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 5px;
+}
+.product-entry button {
+  cursor: pointer;
+}
+.product-skip {
+  position: absolute;
+  top: -100px;
+  left: 20px;
+  padding: 12px;
+  background: white;
+  z-index: 20;
+}
+.product-skip:focus {
+  top: 10px;
+}
+.product-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 25px;
+  padding: 22px max(5%, calc((100% - 1296px) / 2));
+  background: #f6f8f2;
+  border-bottom: 1px solid #d2ddce;
+}
+.product-wordmark {
+  font-size: 29px;
+  font-weight: 800;
+  letter-spacing: -1.4px;
+  line-height: 1.1;
+}
+.product-wordmark > span {
+  font-size: 13px;
+  margin-left: 5px;
+  padding: 3px 4px;
+  background: #c7ee63;
+  letter-spacing: 0;
+}
+.product-wordmark small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+  margin-top: 8px;
+}
+.product-header nav {
+  display: flex;
+  align-items: center;
+  gap: 27px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.product-header nav > button:not(.product-button) {
+  padding: 10px 0;
+}
+.product-entry .product-button {
+  background: #174f3f;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 20px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 20px;
+}
+.product-entry .product-button:hover {
+  background: #103d30;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.product-main {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 5% 60px;
+  outline-offset: -5px;
+}
+.product-hero {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 7%;
+  padding: 76px 0 65px;
+  align-items: center;
+}
+.product-kicker {
+  font-size: 12px;
+  font-weight: 650;
+  display: block;
+  margin-bottom: 18px;
+}
+.product-hero h1 {
+  font-size: clamp(44px, 5.3vw, 76px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.06em;
+  margin-bottom: 25px;
+  text-wrap: balance;
+}
+.product-hero > div > p {
+  max-width: 600px;
+  font-size: 18px;
+  line-height: 1.65;
+}
+.product-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-top: 32px;
+}
+.product-actions .product-button {
+  background: #c7ee63;
+  color: #102b20;
+}
+.product-actions .product-button:hover {
+  background: #b9e454;
+}
+.product-secondary {
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  padding: 12px 0;
+}
+.product-hero > div > p.product-fine {
+  font-size: 11px;
+  margin-top: 16px;
+}
+.product-season {
+  background: #e9efe1;
+  border-top: 4px solid #174f3f;
+  padding: 30px;
+}
+.product-season ol {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 28px;
+  display: grid;
+  gap: 24px;
+}
+.product-season li {
+  display: flex;
+  gap: 18px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #c6d3bf;
+}
+.product-season li > span {
+  font-size: 12px;
+  font-weight: 750;
+  padding-top: 3px;
+}
+.product-season h2 {
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+.product-season li p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.product-demo-link {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 750;
+}
+.product-demo-link small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: 5px;
+}
+.product-access {
+  padding: 48px 0 30px;
+  max-width: 800px;
+}
+.product-access h1 {
+  font-size: 46px;
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+  margin-bottom: 16px;
+}
+.product-access p {
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+.product-leagues {
+  padding: 10px 0 35px;
+}
+.product-search {
+  display: grid;
+  gap: 7px;
+  max-width: 450px;
+  font-size: 12px;
+  font-weight: 650;
+  margin-bottom: 24px;
+}
+.product-search input {
+  border: 1px solid #b5c4af;
+  border-radius: 5px;
+  padding: 12px;
+  background: #fff;
+  color: #173d31;
+  font: inherit;
+}
+.product-league-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.product-league-card {
+  display: grid;
+  align-content: start;
+  gap: 13px;
+  border: 1px solid #c8d5c1;
+  border-top: 3px solid #174f3f;
+  background: #fff;
+  padding: 24px;
+  min-width: 0;
+}
+.product-league-card:hover {
+  border-color: #174f3f;
+  box-shadow: 0 5px 12px #173d3110;
+}
+.product-league-card > span {
+  font-size: 11px;
+}
+.product-league-card h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+.product-league-card p {
+  font-size: 13px;
+}
+.product-league-card > b {
+  background: #e5f4c4;
+  padding: 5px 9px;
+  font-size: 10px;
+  justify-self: start;
+}
+.product-league-card small {
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+.product-empty {
+  padding: 30px;
+  background: #e9efe1;
+  max-width: 700px;
+  display: grid;
+  gap: 18px;
+  justify-items: start;
+}
+.product-notice {
+  margin-top: 20px;
+  padding: 15px 18px;
+  border: 1px solid #c7d6b9;
+  background: #edf5e5;
+  font-size: 13px;
+}
+.product-error {
+  background: #fff0e9;
+  border-color: #dbb7a5;
+  color: #7a321d;
+}
+.product-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 25px;
+  padding: 27px 5%;
+  border-top: 1px solid #d2ddce;
+  font-size: 11px;
+}
+.site-product-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.site-header,
+.launchpad-legacy-site-header {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+.site-header > .site-back-link,
+.launchpad-legacy-site-header > .site-back-link {
+  flex: 0 0 100%;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 0;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.site-back-link:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 4px;
+}
+.site-product-links a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  padding: 5px 0;
+}
+.topbar-actions .workspace-website-link {
+  color: #174f3f;
+  background: #f2f7ed;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 8px 12px;
+  border: 1px solid #c9d6c4;
+  border-radius: 5px;
+}
+.breadcrumbs > a {
+  color: #315943;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+}
+.topbar-actions .workspace-sign-in {
+  padding: 10px 18px;
+  background: #174f3f;
+  color: #fff;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 700;
+}
+@media (max-width: 900px) {
+  .product-hero {
+    gap: 35px;
+    padding-top: 45px;
+  }
+  .product-hero h1 {
+    font-size: 51px;
+  }
+  .product-season {
+    padding: 24px;
+  }
+  .product-league-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 650px) {
+  .product-header {
+    padding: 17px 6%;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .product-wordmark {
+    font-size: 25px;
+  }
+  .product-header nav {
+    gap: 20px;
+    font-size: 12px;
+  }
+  .product-header .product-button {
+    font-size: 11px;
+    padding: 10px 12px;
+  }
+  .product-main {
+    padding-inline: 6%;
+  }
+  .product-hero {
+    grid-template-columns: 1fr;
+    padding-block: 36px;
+  }
+  .product-hero h1 {
+    font-size: 46px;
+  }
+  .product-hero > div > p {
+    font-size: 16px;
+  }
+  .product-actions {
+    gap: 10px 20px;
+    margin-top: 24px;
+  }
+  .product-season {
+    padding: 24px;
+  }
+  .product-season h2 {
+    font-size: 20px;
+  }
+  .product-access {
+    padding-top: 34px;
+  }
+  .product-access h1 {
+    font-size: 37px;
+  }
+  .product-league-grid {
+    grid-template-columns: 1fr;
+  }
+  .product-footer {
+    flex-direction: column;
+    gap: 8px;
+    padding-inline: 6%;
+  }
+  .site-product-links {
+    font-size: 11px;
+    gap: 8px 18px;
+  }
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 70px;
+    gap: 10px;
+    padding-block: 12px;
+  }
+  .topbar-actions {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .topbar-actions .workspace-website-link {
+    display: inline-flex;
+    font-size: 11px;
+  }
+  .topbar-actions .season-pill {
+    display: none;
+  }
+}

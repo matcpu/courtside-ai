@@ -25,7 +25,8 @@ import { Button } from "./ui/button";
 import { DocumentPolicyFields } from "./document-policy-fields";
 import {
   newSetup,
-  setupBlockers,
+  setupIssues,
+  formatLeagueDate,
   type Setup,
   type SetupDraft,
 } from "@/lib/launchpad";
@@ -75,14 +76,16 @@ export function OrganizerSetup({
   onComplete,
   onClose,
   initialDraft,
+  startMode,
 }: {
   api: LaunchApi;
   onComplete: (id: string) => Promise<void>;
   onClose: () => void;
   initialDraft?: SetupDraft;
+  startMode?: "guided";
 }) {
   const [mode, setMode] = useState<"guided" | "quick" | "copy" | null>(
-    initialDraft ? "guided" : null,
+    initialDraft ? "guided" : (startMode ?? null),
   );
   const [data, setData] = useState<Setup>(initialDraft?.data ?? newSetup);
   const [drafts, setDrafts] = useState<SetupDraft[]>([]),
@@ -97,6 +100,7 @@ export function OrganizerSetup({
     [saving, setSaving] = useState(false),
     [brief, setBrief] = useState(""),
     [category, setCategory] = useState("");
+  const [validationStep, setValidationStep] = useState<number | null>(null);
   const current = useRef<SetupDraft | undefined>(initialDraft),
     latest = useRef(data),
     saved = useRef(initialDraft ? JSON.stringify(initialDraft.data) : ""),
@@ -201,7 +205,27 @@ export function OrganizerSetup({
     setStep(0);
     setError("");
   };
-  const blockers = setupBlockers(data);
+  const issues = setupIssues(data);
+  const blockers = issues.map((issue) => issue.message);
+  const goStep = (target: number) => {
+    if (
+      target > step &&
+      target !== 4 &&
+      (step === 2 || step === 3) &&
+      issues.some((issue) => issue.step === step)
+    ) {
+      setValidationStep(step);
+      requestAnimationFrame(() =>
+        document.getElementById("setup-step-errors")?.focus(),
+      );
+      return;
+    }
+    setValidationStep(null);
+    setStep(target);
+    requestAnimationFrame(() =>
+      document.getElementById("setup-step-title")?.focus(),
+    );
+  };
   const closeSaved = async () => {
     setBusy(true);
     try {
@@ -362,7 +386,7 @@ export function OrganizerSetup({
           <button
             key={title}
             aria-current={step === i ? "step" : undefined}
-            onClick={() => setStep(i)}
+            onClick={() => goStep(i)}
           >
             <span>{i < step ? <Check size={16} /> : i + 1}</span>
             <strong>{title}</strong>
@@ -379,6 +403,24 @@ export function OrganizerSetup({
         <h3 id="setup-step-title" tabIndex={-1}>
           {steps[step]}
         </h3>
+        {validationStep === step &&
+          issues.some((issue) => issue.step === step) && (
+            <div
+              id="setup-step-errors"
+              className="launch-error"
+              role="alert"
+              tabIndex={-1}
+            >
+              <strong>Check this step before continuing</strong>
+              <ul>
+                {issues
+                  .filter((issue) => issue.step === step)
+                  .map((issue) => (
+                    <li key={issue.message}>{issue.message}</li>
+                  ))}
+              </ul>
+            </div>
+          )}
         {step === 0 && (
           <>
             <div className="setup-brief">
@@ -630,6 +672,18 @@ export function OrganizerSetup({
               <div className="setup-court" key={i}>
                 <Field label={`Court ${i + 1} name`}>
                   <input
+                    required
+                    aria-invalid={
+                      (validationStep === 2 &&
+                        (!c.name.trim() ||
+                          data.courts.some(
+                            (other, j) =>
+                              j !== i &&
+                              other.name.trim().toLowerCase() ===
+                                c.name.trim().toLowerCase(),
+                          ))) ||
+                      undefined
+                    }
                     value={c.name}
                     maxLength={100}
                     onChange={(e) =>
@@ -644,6 +698,10 @@ export function OrganizerSetup({
                 </Field>
                 <Field label={`Court ${i + 1} venue / address`}>
                   <input
+                    required
+                    aria-invalid={
+                      (validationStep === 2 && !c.venue.trim()) || undefined
+                    }
                     value={c.venue}
                     maxLength={180}
                     onChange={(e) =>
@@ -763,38 +821,129 @@ export function OrganizerSetup({
                     .join(", ")}{" "}
                   · {data.expectedTeams} expected teams
                 </p>
+                <button className="setup-edit-link" onClick={() => goStep(0)}>
+                  Edit league details ↗
+                </button>
               </article>
               <article>
                 <span>Season</span>
                 <strong>{data.season || "Season needed"}</strong>
                 <p>
-                  {data.start || "Start needed"} → {data.end || "End needed"} ·{" "}
+                  {formatLeagueDate(data.start, "Start needed")} –{" "}
+                  {formatLeagueDate(data.end, "End needed")}
+                </p>
+                <p>
+                  Opening day: {formatLeagueDate(data.opening, "Needed")}
+                  <br />
                   {data.timezone}
                 </p>
+                <button className="setup-edit-link" onClick={() => goStep(1)}>
+                  Edit season & dates ↗
+                </button>
               </article>
               <article>
                 <span>Competition</span>
                 <strong>{data.divisions.length} divisions</strong>
-                <p>
-                  Age cutoff {data.cutoff || "needed"} · roster {data.minRoster}
-                  –{data.maxRoster}
-                </p>
+                <p>Age cutoff: {formatLeagueDate(data.cutoff, "Needed")}</p>
+                <ul>
+                  {data.divisions.map((division, i) => (
+                    <li key={i}>
+                      <b>{division.name}</b> · {division.age_category} · ages{" "}
+                      {division.min_age}–{division.max_age}
+                    </li>
+                  ))}
+                </ul>
+                <button className="setup-edit-link" onClick={() => goStep(1)}>
+                  Edit divisions ↗
+                </button>
               </article>
               <article>
                 <span>Facilities</span>
-                <strong>{data.courts.length} courts in this plan</strong>
+                <strong>
+                  {data.courts.length}{" "}
+                  {data.courts.length === 1 ? "court" : "courts"}
+                  {data.courts.length > 0 &&
+                    ` · ${new Set(data.courts.map((court) => court.venue.trim())).size} ${new Set(data.courts.map((court) => court.venue.trim())).size === 1 ? "venue" : "venues"}`}
+                </strong>
+                {data.courts.length > 0 ? (
+                  <ul>
+                    {data.courts.map((court, i) => (
+                      <li key={i}>
+                        <b>{court.name || "Court name needed"}</b>
+                        <br />
+                        {court.venue || "Venue / address needed"}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>Add courts later in Courts & gyms.</p>
+                )}
                 <p>
                   Confirmed availability still required. Nothing scheduled or
                   published.
                 </p>
+                <button className="setup-edit-link" onClick={() => goStep(2)}>
+                  Edit facilities ↗
+                </button>
+              </article>
+              <article>
+                <span>Roster & eligibility</span>
+                <strong>
+                  {data.minRoster}–{data.maxRoster} active players per team
+                </strong>
+                <p>
+                  {data.proofRequired !== false
+                    ? `Proof required: ${data.allowedDocumentTypes.map((type) => ({ birth_certificate: "Birth certificate", passport: "Passport", government_id: "Government-issued ID" })[type]).join(", ") || "Select accepted documents"}`
+                    : "Guardian declaration · No document upload required"}
+                </p>
+                <p>
+                  Document retention: {data.retentionDays} days. Human
+                  eligibility approval required.
+                </p>
+                <button className="setup-edit-link" onClick={() => goStep(3)}>
+                  Edit rules & safety ↗
+                </button>
+              </article>
+              <article>
+                <span>Registration deadlines</span>
+                <strong>Ready before opening day</strong>
+                <dl className="setup-review-dates">
+                  <div>
+                    <dt>Questionnaire</dt>
+                    <dd>
+                      {formatLeagueDate(data.registrationDeadline, "Needed")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Roster</dt>
+                    <dd>{formatLeagueDate(data.rosterDeadline, "Needed")}</dd>
+                  </div>
+                  <div>
+                    <dt>Verification</dt>
+                    <dd>
+                      {formatLeagueDate(data.verificationDeadline, "Needed")}
+                    </dd>
+                  </div>
+                </dl>
+                <button className="setup-edit-link" onClick={() => goStep(1)}>
+                  Edit deadlines ↗
+                </button>
               </article>
             </div>
             {blockers.length > 0 ? (
               <div className="setup-guidance">
                 <h4>Complete these before finishing</h4>
                 <ul>
-                  {blockers.map((b) => (
-                    <li key={b}>{b}</li>
+                  {issues.map((issue) => (
+                    <li key={issue.message}>
+                      {issue.message}{" "}
+                      <button
+                        className="setup-edit-link"
+                        onClick={() => goStep(issue.step)}
+                      >
+                        Go to {steps[issue.step]} ↗
+                      </button>
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -819,7 +968,7 @@ export function OrganizerSetup({
         <Button
           variant="ghost"
           disabled={busy || step === 0}
-          onClick={() => setStep(step - 1)}
+          onClick={() => goStep(step - 1)}
         >
           <ArrowLeft size={16} /> Back
         </Button>
@@ -834,8 +983,12 @@ export function OrganizerSetup({
         {step < 4 ? (
           <Button
             onClick={() => {
-              setStep(step + 1);
-              document.getElementById("setup-step-title")?.focus();
+              if (issues.some((issue) => issue.step === step)) {
+                setValidationStep(step);
+                requestAnimationFrame(() =>
+                  document.getElementById("setup-step-errors")?.focus(),
+                );
+              } else goStep(step + 1);
             }}
           >
             Continue <ArrowRight size={16} />

@@ -1,3 +1,75 @@
+# Current-design release preparation — November 4, 2026 — PRODUCTION BLOCKED
+
+The owner requested committing/pushing the current design and verifying an existing-project Vercel preview before promotion. Read-only hosted checks confirm both reviewed Launchpad migrations are absent and both organizer/configured-site RPCs do not exist. No verified recoverable backup exists; the prior zero-byte roles file is not a backup. The first table probe failed with SQLSTATE 42501 because the CLI login role had not assumed postgres; follow-up confirms TLS and permission to assume that role, matching the official CLI dump template. Do not misreport that probe as missing credentials. No hosted mutation or production promotion may proceed through the backup/approval gates.
+
+Latest application source: TypeScript/isolated production build and 160 unit tests pass; full desktop local creation/customization/publication/return retested after removing newly introduced hardcoded local passwords. The existing local runtime remains active and the original backend has not restarted. Preview verification and Git publication are in progress; no remote pass is claimed yet. See [HOSTED_RELEASE_REVIEW.md](HOSTED_RELEASE_REVIEW.md) for exact limits and release steps. Earlier local-only/uncommitted checkpoints below are historical and do not imply a production release.
+
+---
+
+# Credential-free interactive Launchpad — November 4, 2026 — LOCAL / UNCOMMITTED
+
+The development-only homepage now establishes an isolated synthetic organizer session server-side. Create opens the guided wizard without credentials; Explore opens that session's populated Scoreboard; Open demo dashboard opens its authorized workspace. Tokens stay server-side behind an opaque HttpOnly/Strict cookie. Existing tenant membership authorization, private drafts and explicit website publication approval remain in force. Session bootstrap and cookie writes require same-origin requests. Activation requires the exact loopback adapter, development artifact and disabled outbound services; production artifacts cannot opt in via the preview flag.
+
+Verified: 6 desktop/mobile positive browser cases and 2 actual production-artifact negative cases; TypeScript and final production build; 160 unit tests / 22 files; isolated database/RLS/permission/clean-setup/upgrade assertions. Browser tests include immediate Create/Explore clicks, full setup/customization/local publication/return, separate-user tenant isolation, original-recording denial and forged-cookie/origin rejection. The original recording workspace baseline and all three design-review leagues' authoritative facts remain unchanged. The original backend PID 14516 on 3302 was not restarted; the development frontend remains running on 3301. No hosted change, migration, commit, push, merge, deployment, message, inference, billing or video edit occurred.
+
+See [INTERACTIVE_DEMO_REVIEW.md](INTERACTIVE_DEMO_REVIEW.md) for the credential-free recording path and session lifetime. Direct browser Storage upload workflows are outside this cookie-only Launchpad verification. Earlier manual-sign-in guides below describe normal production/authenticated mode, not the current automatic local session.
+
+---
+
+# Public website header return link — November 4, 2026 — LOCAL / UNCOMMITTED
+
+Added the visible “← Back to Courtside AI” anchor with direct `href="/"` to the shared Arena/Clubhouse/Scoreboard header and the legacy public website header. Logo, league navigation, footer/product links and authorization are preserved. The link wraps onto its own header row and retains visible keyboard focus.
+
+Verified signed-out homepage → Scoreboard → homepage, plus all three themes and the legacy website, on desktop and a narrow 320px mobile viewport. Two targeted browser tests pass with no horizontal overflow; 153 unit tests, TypeScript and production build pass. Current source matches the local built runtime, the original recording workspace baseline is unchanged and the original backend on 3302 remains running. No database mutation, hosted action, merge, deployment or commit occurred in this change. Screenshots: `.local/public-back-link`.
+
+---
+
+# Connected product experience — November 4, 2026 — LOCAL / UNCOMMITTED
+
+The existing Next.js app now opens a product entry at `/`, offering the published Scoreboard demo, league creation and prominent sign-in. The existing Supabase authentication form/session is reused. Successful root sign-in shows an explicit authorized league chooser; no first-public-league or unrelated remembered fallback is selected. `/workspace/<id>` and allowlisted `?view=` links identify the tenant; the original public portal URLs remain available.
+
+The private league-list API now distinguishes actual membership from public-row visibility using PostgreSQL private snapshots. A small authenticated navigation endpoint returns management/published-site metadata only. All three themes and the legacy website link back to the product and onboarding; only authorized admins see Manage league. Organizer headers link to the selected league's actually public website. Session/user changes clear private snapshots; league switching keeps navigation mounted while suppressing mismatched snapshots. Private reads and writes still require independent server/PostgreSQL authorization.
+
+Verified: current 76 source/asset files match the built local runtime; TypeScript and production build pass; 150 unit tests / 21 files and 32 desktop/mobile browser cases pass; isolated SQL/permissions/RLS/clean-bootstrap/upgrade checks pass. Actual password sign-in, explicit choice, A–E round trips, all themes, legacy portal/header sign-in, coach restrictions, 401/403 reads and publication denial, public redaction and atomic 409/no-partial-write regression are covered. The discovered mobile transition race is fixed and retested. Original recording workspace hash matches its baseline; all three review leagues retain ages 12–13, September 1 cutoff, 12 teams / 25 fixtures / 18 finals and the pending state. Meta remains false. The original backend PID 14516 on port 3302 was not restarted.
+
+See [CONNECTED_EXPERIENCE_REVIEW.md](CONNECTED_EXPERIENCE_REVIEW.md) for URLs, exact local synthetic credentials, screenshot boards and test scope. No hosted validation is claimed; mobile uses browser emulation. All changes remain local and uncommitted. No merge, push, deployment, migration, billing change, inference, message or video edit occurred.
+
+---
+
+# Design-v2 final data/disclosure check — November 4, 2026 — LOCAL / UNCOMMITTED
+
+Only the three populated Harbour Hoops design-review leagues were configured through authenticated atomic Launchpad edits: all three U14 divisions per league now have ages 12–13, retaining the September 1, 2026 cutoff. Production eligibility defaults and logic are unchanged. Before/after public data and core snapshots confirm unchanged teams, fixtures, courts/availability, scores, standings and schedule versions. The original recording workspace matches its baseline hash.
+
+Declared synthetic pages now show “Demo league · All teams, venues and results are fictional.” immediately below navigation, as a named accessible disclosure. The existing footer disclosure remains. Only the legacy terminal “· Fictional venue” annotation is omitted from demo venue presentation; stored names and real-league presentation remain intact. No results or venue records were rewritten.
+
+Verified: TypeScript/build, 147 unit tests / 20 files and all 6 design browser workflow tests pass. All three actual previews pass desktop/tablet/mobile checks for saved ages 12–13, September 1 cutoff, visible disclosure, normal fixture venue names, 12 teams / 25 fixtures / 18 confirmed results / 1 past pending result, and expandable complete standings/fixtures. Updated screenshots and per-theme division proof crops are in `.local/launchpad-design-v2-final`. The backend on 3302 remains the original PID 14516. No hosted write, migration, production/default change, commit, push, merge, deployment, inference or video edit occurred.
+
+---
+
+# Launchpad visual refinement 02 — November 4, 2026 — LOCAL / UNCOMMITTED
+
+The three configured website themes now have a brighter athletic Arena, a warm basketball-led Clubhouse and a compact Scoreboard game centre with a standings sidebar. An authored SVG HH monogram replaces the generic logo only on the four synthetic review websites, through the existing sanitized PNG upload contract. Real leagues retain uploaded logos or typographic initials; no hard-coded demo logo fallback was added.
+
+Four real featured games lead to an expandable complete published schedule; a six-team standings snapshot expands to all rows and columns. Presentation distinguishes upcoming, confirmed finals and past unconfirmed “Result pending” fixtures. No result/standings calculation changed. The 25-game review datasets remain 6 upcoming, 18 final and 1 pending. Original recording workspace and all review league facts matched before/after hashes. No original recording branding was changed. The original in-memory backend on port 3302 remains running.
+
+Verified: current source/asset hashes match the local built runtime; TypeScript (including current regression tests) and production build pass; 142 Vitest tests / 20 files pass; 6 desktop/mobile browser workflow tests pass including publication/privacy and atomic HTTP 409 rejection. Nine theme/width captures plus empty-season checks passed. Long names, no-logo fallback, three custom-colour pairs and 11,740 sampled text contrast checks ≥ 4.5 passed at 1440/768/390px. Actual builder logo upload/removal, theme and colour controls, mobile preview and disabled publication pending review were checked without saved/public mutations. No migration or SQL policy was changed; the prior database verification is unchanged rather than claimed as a fresh hosted audit.
+
+Artifacts: `.local/launchpad-design-v2` contains desktop/mobile/full-page/tablet screenshots, comparison.png, identity-board.png and favicon/display PNGs. Vector master: `public/demo/harbour-hoops-mark.svg`. See [LAUNCHPAD_DESIGN_REVIEW.md](LAUNCHPAD_DESIGN_REVIEW.md). No push, commit, merge, deployment, hosted write, feature-flag change, billing, Meta inference, messaging or video edit occurred. Mobile verification uses Chromium emulation, not physical devices.
+
+---
+
+# Launchpad website design review — November 4, 2026 — LOCAL ONLY
+
+On `codex/organizer-setup`, the existing public renderer now offers distinct Arena (athletic masthead), Clubhouse (community editorial) and Scoreboard (fixtures-first season hub) compositions. Saved theme keys remain compatible. League identity, real season dates, registration, actual division ranges and grouped courts/venues replace the tilted court graphic and zero-team promotion. Empty fixtures, standings, contact and their navigation are omitted. Rules remain accessible in a keyboard-operated disclosure. Only the existing redacted public contract is rendered; no SQL, RLS, authorization or publication control changed.
+
+Facilities and proof-policy errors are caught in their setup steps. Review includes friendly dates, division names/ages, roster bounds, court/venue details, deadlines and direct correction controls. The existing atomic finish and conflict response are preserved.
+
+Verified on the final local runtime: TypeScript and production build; 137 Vitest tests; the local SQL/RLS/permissions/clean-bootstrap/upgrade suite; 6 new desktop/mobile browser cases including HTTP 409 and no-partial-write checks. Actual screenshots and overflow/keyboard checks cover all three themes at 1440px, 768px and 390px, with both empty and fixture-populated synthetic leagues. The builder's logo, theme, narrow preview and extreme custom-colour foreground contrast were checked; private edits did not change saved/public revisions. The original recording league's workspace hash remains unchanged. The local database process was preserved.
+
+The app remains running at http://127.0.0.1:3301/. See [LAUNCHPAD_DESIGN_REVIEW.md](LAUNCHPAD_DESIGN_REVIEW.md) for review links, screenshots, tests and limitations. Changes are a local uncommitted review candidate, not a new PR/CI certification. No merge, push, deployment, hosted mutation, migration, Meta call, message, billing or video change occurred.
+
+---
+
 # Preseason onboarding UX candidate — November 4, 2026 — NOT DEPLOYED
 
 Implemented on `codex/organizer-setup`, preserving the completed PR #2 concurrency repair. Three sections separate league rules, selected-team preparation and human age review. Shared proof controls start new leagues without implied accepted documents, preserve saved choices and validate required selections. Guardian capture/upload requires an explicit single type, preview and consent; second-child invitations now exchange correctly in the same tab.
@@ -14,7 +86,7 @@ Earlier checkpoints below are historical; their counts describe those earlier co
 
 # Targeted Launchpad repair — November 4, 2026 Eastern — NOT HOSTED
 
-The confirmed stale-finish overwrite is repaired locally in implementation commit `c3f9ce9bd3351bc991567ec1a6a193e13fd63200`.  Existing-season drafts bind a trusted snapshot of live league/Preseason/division configuration under the league lock. Finish rechecks after any lock wait and before writes in the same transaction. Old private autosaves cannot rebase the snapshot; conflicts return HTTP 409 and instruct the administrator to reload/review in a fresh edit. No automatic merge, retry or silent discard is added.
+The confirmed stale-finish overwrite is repaired locally in implementation commit `c3f9ce9bd3351bc991567ec1a6a193e13fd63200`. Existing-season drafts bind a trusted snapshot of live league/Preseason/division configuration under the league lock. Finish rechecks after any lock wait and before writes in the same transaction. Old private autosaves cannot rebase the snapshot; conflicts return HTTP 409 and instruct the administrator to reload/review in a fresh edit. No automatic merge, retry or silent discard is added.
 
 The SQL is promoted to **one** ordered migration, `20261104164024_organizer_launchpad.sql`, generated with repository-pinned CLI 2.122.0. The proposal file and secondary loader path are removed. All ordered migrations load exactly once; repeated clean setup verifies order, RLS and permissions. No hosted migration has run.
 

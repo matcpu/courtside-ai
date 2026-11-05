@@ -4,6 +4,7 @@ import { ArrowRight, CalendarDays, MapPin, Trophy, Users } from "lucide-react";
 import { standings, type Snapshot } from "@/lib/domain";
 import { db } from "@/lib/server";
 import { LeagueWebsite as ConfiguredWebsite } from "@/components/league-website";
+import { LeagueConnections } from "@/components/league-connections";
 import type { SiteData } from "@/lib/launchpad";
 import "./website.css";
 
@@ -67,6 +68,9 @@ export default async function LeagueWebsite({
   return (
     <div className="launchpad-legacy-site">
       <header className="launchpad-legacy-site-header">
+        <Link className="site-back-link" href="/">
+          ← Back to Courtside AI
+        </Link>
         <Link
           href={`/league/${slug}/website`}
           className="launchpad-legacy-site-brand"
@@ -260,7 +264,7 @@ export default async function LeagueWebsite({
           <strong>{details.name}</strong>
           <span>{details.season_name}</span>
         </div>
-        <p>Powered by COURTSIDE AI · Public league information only</p>
+        <LeagueConnections leagueId={details.id} />
       </footer>
     </div>
   );

@@ -26,13 +26,20 @@ async function navigate(page: Page, name: string) {
 }
 async function login(page: Page, email = "launchpad-admin@example.invalid") {
   await page.goto("/");
-  await expect(page.getByText("12 approved for competition")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Run the league/ }),
+  ).toBeVisible();
   await navigate(page, "Sign in");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Email address").fill(email);
   await dialog.getByLabel("Password", { exact: true }).fill(password);
   await dialog.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(dialog).toHaveCount(0);
+  const fixture = await (
+    await page.request.get("http://127.0.0.1:3302/__preview")
+  ).json();
+  await page.goto(`/workspace/${fixture.league}`);
+  await expect(page.getByLabel("Switch league")).toHaveValue(fixture.league);
 }
 async function api(page: Page, action: string, payload: unknown) {
   return page.evaluate(
@@ -236,10 +243,9 @@ test("website themes, sanitized logo, draft isolation and explicit publication w
     const view = await page.context().newPage();
     await view.goto(`/league/${fixture.slug}/website`);
     await expect(
-      view.getByRole("heading", {
-        name: `A season for everyone. ${theme}`,
-        exact: true,
-      }),
+      view
+        .locator(".site-hero-headline")
+        .filter({ hasText: `A season for everyone. ${theme}` }),
     ).toBeVisible();
     expect(
       await view.evaluate(

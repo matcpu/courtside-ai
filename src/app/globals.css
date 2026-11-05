@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./launchpad.css";
+@import "./product.css";
 @theme {
   --font-sans: "Inter", "Segoe UI", Arial, sans-serif;
 }
