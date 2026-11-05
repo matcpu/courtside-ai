@@ -1,3 +1,15 @@
+# Production release verified — November 4, 2026 Eastern
+
+Live: https://courtside-ai-one.vercel.app/ . Application SHA `5a238d92979b740d44faae7c1250ef7ce9e10eef`; verified preview `dpl_7rSsi7LaGdBf83DxPQ6WGQ9RScGE` promoted to production `dpl_AUWpfztrZQXBK2aQmpAVuUZqJvJ4` through the existing Vercel project. Production metadata confirms that SHA. No PR was merged. Both organizer flags are enabled; local-preview authentication, Meta, notifications and SMS remain disabled. Public exploration is read-only; creation/management use normal authenticated, tenant-authorized synthetic accounts supplied privately.
+
+Passed: TypeScript/production build, 164 unit tests, GitHub CI including native PostgreSQL concurrency, nine hosted command/Auth checks, real hosted row-lock/no-partial-write checks, seven final enabled-preview browser cases, four fresh production public/authenticated desktop/mobile cases and two fresh production guardian-invitation cases. Actual private Storage uploads, signed access, resubmission and administrator decisions passed. Declaration approval remains distinct from document verification; requiring proof restores the scheduling gate. Pre-account invitations, user-metadata role-escalation denial, coach/anonymous private-document denial and direct Storage signing restrictions passed. A deterministic one-game opening draft includes only two ready synthetic teams and excludes the pending team; it remains unpublished.
+
+Applied only the separately approved versions `20261104164024`, `20261104183226` and `20261105010200`; all 31 historical versions were preserved. Existing application values were checked unchanged before isolated fixture creation. The encrypted manual backup passed a 66-table restore/digest rehearsal and key recovery, with restore instructions outside Git. The local recording workspace hash and review facts remain unchanged; backend 3302 is still PID 14516 and frontend 3301 remains running. No inference, real notification, billing change, video edit, submission or replacement infrastructure occurred. Automatic review blocked deletion of the stopped local restore-check folder; it remains ACL-restricted outside Git.
+
+Private credentials, current guardian invitation/refresh helper and synthetic proof are in the owner-only AppData JudgeAccess directory; no credentials are published in Git. The supplied video URL is https://youtu.be/92-UKcDYwko ; its content was not modified or newly reviewed in this release. Final entry submission remains the owner's action. Earlier checkpoints below are historical.
+
+---
+
 # Hosted database acceptance — November 4, 2026 Eastern — PREVIEW VERIFICATION IN PROGRESS
 
 The owner approved and the pinned CLI applied the exact third migration `20261105010200_postgrest_conflict_response.sql` after the verified backup. Direct hosted RPC stale conflicts now return HTTP 409 / PT409 promptly. Independent hosted connections observed a real row-lock wait; rejected stale finish preserved minimum roster 7 and the full fixture record graph. The two lingering synthetic conflict test requests were cancelled and verified inactive. All historical migration versions remain unchanged.

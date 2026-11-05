@@ -63,7 +63,7 @@ Database integration assertions are in `tests/database.sql`; execute only agains
 
 ## Demo access
 
-The public, read-only reference league remains at `/league/northstar-demo`, with 12 fictional teams and 18 fictional historical results. No hosted administrator password is published. On the current **local review branch**, `/` is a welcoming product entry with a published Scoreboard demo, league creation and sign-in. Signed-in users explicitly choose an authorized league; `/workspace/<league-id>` connects its dashboard and published website. This entry/navigation change has not been deployed. See [CONNECTED_EXPERIENCE_REVIEW.md](CONNECTED_EXPERIENCE_REVIEW.md) for the running local URLs, synthetic accounts and tested boundaries. [DEMO.md](DEMO.md) includes a three-minute script and recording checklist.
+The deployed homepage connects the public Scoreboard, read-only demo dashboard and secure organizer sign-in. [Explore Harbour Hoops](https://courtside-ai-one.vercel.app/league/league-36ba36ad-5d0e-457e-badb-cd294bd57578/website) without signup; the original `/league/northstar-demo` reference remains available. Signed-in users explicitly select an authorized league, with `/workspace/<league-id>` connecting its dashboard and published website. Guided/quick/copy setup, three website themes and explicit publication are deployed and verified on desktop/mobile. Temporary synthetic reviewer access is shared privately; no administrator password is published. Automatic credential-free administration remains local-only. See [STATUS.md](STATUS.md) for the exact production SHA and checks.
 
 ## Hackathon contributions
 
@@ -77,4 +77,4 @@ The [official participant guide](https://cerebralvalley.ai/e/meta-ai-developer-h
 
 **Camera capture:** Scoresheets and guardian proof use a shared live-preview, capture/retake/confirm control with native-camera and gallery fallbacks. Uploads stay private and require explicit submission. Physical device support is not certified by Chromium emulation; see [CAMERA_CAPTURE.md](CAMERA_CAPTURE.md).
 
-**Post-submission Launchpad proposal:** this branch reuses PR #1 and adds private organizer drafts, guided/copy/quick setup, a connected launch dashboard and versioned website themes. It is not deployed. See [local review instructions](LAUNCHPAD_REVIEW.md), [scope and safety plan](LAUNCHPAD_PLAN.md) and [future agent design](LAUNCHPAD_AGENT_DESIGN.md).
+**Launchpad release:** PR #2 incorporates PR #1's intended implementation and adds private organizer drafts, guided/copy/quick setup, a connected dashboard and versioned Scoreboard/Arena/Clubhouse websites. Production runs application SHA `5a238d92979b740d44faae7c1250ef7ce9e10eef` from the organizer branch; neither PR was merged. The future Launchpad agent remains a proposal. See [STATUS.md](STATUS.md) and [release history](LAUNCHPAD_RELEASE.md).

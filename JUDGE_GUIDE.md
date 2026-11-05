@@ -1,5 +1,7 @@
 # Judge walkthrough
 
+**November 4 deployed Launchpad:** start at https://courtside-ai-one.vercel.app/ to explore the public Scoreboard and read-only dashboard without signup. Guided/quick/copy setup and website management require normal secure sign-in. New Launchpad synthetic administrator/coach credentials and a tested production guardian invitation are in the representative's owner-only AppData JudgeAccess packet, outside Git. That packet includes a no-email refresh helper and clearly fictional proof image. The original private packet below remains for the genuine saved Meta evidence; no responses were fabricated or copied into the new Launchpad league. Live Meta and real notifications remain disabled.
+
 Open [the working public demonstration](https://courtside-ai-one.vercel.app/league/northstar-demo). No account or email signup is needed. All displayed league records are fictional.
 
 1. From Overview, choose **View schedule** to inspect published fixtures and confirmed courts.
