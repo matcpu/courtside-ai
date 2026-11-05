@@ -107,3 +107,38 @@ describe("preseason evidence and age-policy boundary", () => {
     expect(settingsSchema.safeParse(settings).success).toBe(false);
   });
 });
+
+it("requires an explicit accepted proof for a required policy while keeping readiness enforcement independent", () => {
+  const settings = {
+    enabled: true,
+    proof_required: true,
+    season_name: "Synthetic 2099",
+    season_start: "2099-03-07",
+    cutoff_date: "2099-01-01",
+    registration_status: "draft",
+    questionnaire_deadline: "2099-02-01T00:00:00Z",
+    roster_deadline: "2099-02-15T00:00:00Z",
+    verification_deadline: "2099-02-28T00:00:00Z",
+    min_roster: 5,
+    max_roster: 12,
+    document_retention_days: 14,
+    allowed_document_types: [],
+  };
+  expect(settingsSchema.safeParse(settings).success).toBe(false);
+  expect(
+    settingsSchema.safeParse({
+      ...settings,
+      allowed_document_types: ["passport"],
+    }).success,
+  ).toBe(true);
+  expect(
+    settingsSchema.parse({ ...settings, proof_required: false }).enabled,
+  ).toBe(true);
+  expect(
+    settingsSchema.safeParse({
+      ...settings,
+      proof_required: false,
+      allowed_document_types: ["school_card"],
+    }).success,
+  ).toBe(false);
+});

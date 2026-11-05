@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./launchpad.css";
+@import "./product.css";
 @theme {
   --font-sans: "Inter", "Segoe UI", Arial, sans-serif;
 }
@@ -2130,6 +2132,60 @@ td small {
 .preseason-stack {
   display: grid;
   gap: 22px;
+}
+.preseason-workspace [hidden] { display: none !important; }
+.preseason-intro { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.preseason-intro h2 { font-size: 23px; letter-spacing: -.5px; margin: 4px 0 8px; }
+.preseason-intro p:not(.eyebrow) { color: #57675d; font-size: 13px; }
+.preseason-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.preseason-nav .button[aria-pressed="true"] { background: #164d3b; border-color: #164d3b; color: white; }
+.preseason-team-content { display: grid; gap: 18px; }
+.preseason-team-picker { display: flex; align-items: end; gap: 12px; }
+.preseason-team-picker .field { flex: 1; max-width: 450px; }
+.preseason-team-status { border-top: 1px solid #e1e7dc; padding-top: 16px; margin-top: 16px; }
+.preseason-team-status .badge { margin-left: 10px; }
+.preseason-workspace .preseason-metrics { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.preseason-workspace .preseason-metrics small { font-size: 12px; color: #57675d; }
+.preseason-workspace .preseason-metrics strong { font-size: 24px; }
+.preseason-workspace .preseason-settings { padding: 0; }
+.preseason-workspace .preseason-settings h2 { font-size: 18px; }
+.preseason-workspace .preseason-settings h3 { margin: 8px 0 0; padding-top: 16px; border-top: 1px solid #e1e7dc; }
+.preseason-workspace .notice { font-size: 13px; }
+.preseason-workspace .preseason-section p { font-size: 13px; line-height: 1.6; }
+.preseason-workspace .form-grid { gap: 14px; }
+.preseason-workspace .field input,.preseason-workspace .field select { min-height: 42px; }
+.preseason-workspace .field span { font-size: 12px; }
+.preseason-assessment { padding: 18px 22px; }
+.preseason-assessment > summary,.preseason-divisions > summary { font-weight: 600; cursor: pointer; font-size: 14px; }
+.preseason-assessment > .preseason-section { padding: 20px 0 0; box-shadow: none; border: 0; background: transparent; }
+.preseason-divisions { border-top: 1px solid #e1e7dc; margin-top: 22px; padding-top: 18px; }
+.preseason-needs-review { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #e1e7dc; padding: 14px 0; }
+.preseason-needs-review small { display: block; margin-top: 5px; color: #57675d; }
+.document-policy { display: grid; gap: 14px; }
+.document-policy fieldset,.guardian-proof-choice { border: 1px solid #d5dfd2; border-radius: 8px; padding: 14px; min-width: 0; }
+.document-policy legend,.guardian-proof-choice legend { font-size: 13px; font-weight: 600; padding: 0 5px; }
+.policy-choices { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.policy-choices .checkbox-label { min-height: 40px; font-size: 13px; color: #243d30; }
+.policy-choices .checkbox-label input { width: 16px; min-width: 16px; height: 16px; padding: 0; flex: 0 0 16px; }
+.preseason-workspace .checkbox-label,.guardian-card .checkbox-label { color: #415647; font-size: 13px; }
+.preseason-workspace .form-note,.guardian-card .form-note,.document-policy .form-note { color: #526454; }
+.preseason-workspace .field,.guardian-card .field { color: #4b614c; }
+.preseason-workspace .document-policy legend { font-size: 13px; }
+.preseason-readiness { padding: 18px 22px; }
+.preseason-readiness > summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.preseason-readiness > .panel { border: 0; box-shadow: none; padding: 18px 0 0; }
+.preseason-roster-jump { margin-top: 14px; }
+.document-policy .form-note { margin: 6px 0; font-size: 12px; line-height: 1.6; }
+.preseason-workspace :is(button,input,select,textarea,summary):focus-visible,.document-policy input:focus-visible { outline: 3px solid #336e56; outline-offset: 3px; }
+@media(max-width:700px) {
+  .preseason-intro { align-items: start; flex-direction: column; gap: 12px; }
+  .preseason-workspace .preseason-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .preseason-nav { display: grid; grid-template-columns: 1fr; }
+  .preseason-nav .button { justify-content: start; }
+  .preseason-team-picker { flex-direction: column; align-items: stretch; }
+  .preseason-needs-review { align-items: start; flex-direction: column; }
+  .policy-choices { flex-direction: column; gap: 0; }
+  .preseason-team-status .badge { display: table; margin: 8px 0 0; }
 }
 .preseason-section {
   padding: 24px;

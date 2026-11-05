@@ -287,7 +287,7 @@ export function ImageCapture({
           onClick={() => void start()}
         >
           <Camera size={19} aria-hidden="true" />
-          Take photo
+          {kind === "document" ? "Take a photo" : "Take photo"}
         </Button>
         <Button
           type="button"
@@ -299,7 +299,9 @@ export function ImageCapture({
           }}
         >
           <ImagePlus size={19} aria-hidden="true" />
-          Upload existing image
+          {kind === "document"
+            ? "Upload an existing photo"
+            : "Upload existing image"}
         </Button>
       </div>
       <input

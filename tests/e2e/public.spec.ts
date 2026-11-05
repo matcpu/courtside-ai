@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 test("real public league dashboard and schedule", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/league/northstar-demo");
   await expect(
     page.getByRole("heading", { name: "Your league. In sync." }),
   ).toBeVisible();
@@ -52,7 +52,7 @@ test("private results cannot be read with public privileges", async ({
   );
 });
 test("public standings and team search work", async ({ page }, testInfo) => {
-  await page.goto("/");
+  await page.goto("/league/northstar-demo");
   await expect(page.getByText("12 approved for competition")).toBeVisible();
   if (testInfo.project.name === "mobile")
     await page.getByRole("button", { name: "Open navigation" }).click();
@@ -70,7 +70,7 @@ test("public standings and team search work", async ({ page }, testInfo) => {
 test("layout fits viewport and no client errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
+  await page.goto("/league/northstar-demo");
   await expect(page.getByText("12 approved for competition")).toBeVisible();
   expect(
     await page.evaluate(

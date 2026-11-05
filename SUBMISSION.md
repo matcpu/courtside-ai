@@ -16,7 +16,7 @@ Updated November 3, 2026. The November 3 public read-only check again returned t
 
 **Live product:** https://courtside-ai-one.vercel.app/
 
-**3-Minute Demo Video:** No owner-approved public video URL has been supplied. The local review recording/plan is tracked in STATUS.md and the review package. Do not submit a placeholder or publish the final export without owner approval.
+**3-Minute Demo Video:** Owner-supplied submission URL: https://youtu.be/92-UKcDYwko . No video was modified, published or newly reviewed during the production release. The representative retains final submission responsibility.
 
 **Most Viral X link:** Leave blank unless the representative independently chooses to publish a qualifying post. No social post has been made.
 
@@ -33,7 +33,7 @@ Updated November 3, 2026. The November 3 public read-only check again returned t
 | Most Viral X post link | Optional; intentionally blank |
 | Project Description | Prepared below, including public demonstration URL |
 | Public GitHub Repository | Public repository supplied |
-| 3-Minute Demo Video | Actual reviewed/public video URL still missing |
+| 3-Minute Demo Video | Owner supplied https://youtu.be/92-UKcDYwko ; final submission remains their action |
 | Describe your use of Meta products to build the submitted project | Actual questionnaire, vision and model-selected agent work; synthetic document study and limits documented |
 | Why are Meta's models important to your solution? | Prepared; no unsupported accuracy or impact claims |
 | Provide feedback from your experience using Meta products | Actual successes, observed summary error, tool recovery, bounded stop and document-study miss described below |
@@ -46,7 +46,7 @@ Visible labels mark Team Name, Project Description, repository, video, Meta-use 
 
 ## Project Description
 
-Explore the working public demonstration without signup: https://courtside-ai-one.vercel.app/league/northstar-demo . COURTSIDE AI coordinates preseason registration, uncertain division placement, private guardian verification, confirmed results and feasible schedule revisions. Actual Muse Spark responses interpret team-level questionnaires, recognize scoresheet images and select investigation/action tools that save competitive-adjustment proposals and schedule drafts. Real tool-error recovery and provider/action receipts make the work inspectable. Deterministic code owns age eligibility, ratings, standings and scheduling constraints; people approve placements, original-document decisions, official results, division changes and publication. Guardian proofs use private Storage and local consistency/reuse checks, never a real-document Meta pathway. A separate visibly fictional document experiment explores AI warning signs with explicit misses and authenticity unverified. All demonstrations use synthetic people and leagues. Temporary synthetic admin/coach accounts are available through a secure private packet; unrestricted email signup is unnecessary.
+Explore the working public demonstration without signup: https://courtside-ai-one.vercel.app/ . The connected homepage leads to the Scoreboard league website and read-only dashboard. Secure organizer accounts can use guided, quick or copied-season setup and customize/publish league websites. COURTSIDE AI coordinates preseason registration, uncertain division placement, private guardian verification, confirmed results and feasible schedule revisions. Actual saved Muse Spark responses interpret team-level questionnaires, recognize scoresheet images and select investigation/action tools that save competitive-adjustment proposals and schedule drafts. Real tool-error recovery and provider/action receipts make the work inspectable. Deterministic code owns age eligibility, ratings, standings and scheduling constraints; people approve placements, original-document decisions, official results, division changes and publication. Guardian proofs use private Storage and local consistency/reuse checks, never a real-document Meta pathway. A separate visibly fictional document experiment explores AI warning signs with explicit misses and authenticity unverified. All demonstrations use synthetic people and leagues. Temporary synthetic admin/coach accounts are available privately; unrestricted email signup is unnecessary. Live inference and real notifications remain disabled. Released application source: https://github.com/matcpu/courtside-ai/tree/5a238d92979b740d44faae7c1250ef7ce9e10eef .
 
 ## Describe your use of Meta products
 

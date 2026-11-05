@@ -8,8 +8,12 @@
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "test:database:local": "node scripts/test-launchpad.mjs",
+    "test:database:concurrency": "node scripts/test-launchpad-concurrency.mjs",
+    "launchpad:review": "node scripts/review-launchpad.mjs",
     "test:e2e": "playwright test",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build",
+    "launchpad:interactive": "node scripts/start-interactive-demo.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",
@@ -27,6 +31,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
     "@emnapi/core": "1.11.3",
     "@emnapi/wasi-threads": "1.2.3",
     "@playwright/test": "1.64.1",
@@ -35,6 +40,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "dotenv": "18.0.9",
+    "pg": "8.23.1",
     "prettier": "3.9.10",
     "supabase": "2.122.0",
     "tailwindcss": "4.3.3",

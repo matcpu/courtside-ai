@@ -13,7 +13,7 @@ This is an operations platform. It does not provide basketball coaching or evalu
 - Next.js App Router, TypeScript, Tailwind and a Radix/shadcn-style component foundation.
 - Real Supabase PostgreSQL, Auth and private Storage, with tenant membership authorization, RLS, composite tenant foreign keys and audited transactional commands.
 - Dedicated preseason setup and dashboard, comprehensive saved/resumable coach assessment, placement review/override, configurable roster readiness and opening-weekend scheduling gates.
-- Secure guardian invitations, real private proof uploads and consent, administrator document-review queue, resubmissions, decision history and retention/deletion controls. See [PRESEASON.md](PRESEASON.md) for precise security and verification limits.
+- Preseason separates season rules, teams/players and human age review. Required-proof leagues choose accepted documents explicitly; an optional declaration policy retains consent, deterministic eligibility checks and human approval, without claiming document verification. Secure guardian invitations, private proof uploads, resubmissions, decision history and retention/deletion controls remain. See [PRESEASON.md](PRESEASON.md) for precise security and verification limits.
 - Constraint-based round generation, confirmed court availability, 30-minute minimum rest, frozen completed fixtures and versioned publication.
 - Private scoresheet upload and human result review; corrections replay all official results to recalculate ratings. Missing statistics remain null or absent.
 - Evidence-based division proposals after three verified mismatches; rejection and stale-version checks.
@@ -36,6 +36,8 @@ Age eligibility, ratings, standings, proposal thresholds, conflict detection and
 
 ## Run locally
 
+For the currently running **credential-free local Launchpad recording demo**, open [127.0.0.1:3301](http://127.0.0.1:3301/) and follow [INTERACTIVE_DEMO_REVIEW.md](INTERACTIVE_DEMO_REVIEW.md). This development-only synthetic session is not deployed and cannot be enabled in production artifacts. Keep the existing adapter on port 3302 running.
+
 Use Node.js 24 LTS and npm. Dependencies are pinned and the cross-platform lockfile is committed.
 
 ```sh
@@ -47,7 +49,7 @@ npm run dev
 
 PowerShell: `Copy-Item .env.example .env.local`. Open `http://localhost:3000`.
 
-The only permitted hosted database is project `xdmkgoradmbnjofmbojs` in `ca-central-1`. Its migrations are already applied; do not run them again against a different project. For a fresh local Supabase instance, apply the ordered files in `supabase/migrations/`. See [SETUP.md](SETUP.md).
+The only permitted hosted database is project `xdmkgoradmbnjofmbojs` in `ca-central-1`. The two reviewed November 4 Launchpad/document-policy migrations and the separately approved `20261105010200` PostgREST conflict-response repair are applied after a verified encrypted backup; see [POSTGREST_CONFLICT_REPAIR.md](POSTGREST_CONFLICT_REPAIR.md). Hosted database acceptance passes; final runtime verification is recorded in [STATUS.md](STATUS.md). For a fresh local Supabase instance, apply the ordered files in `supabase/migrations/`. See [SETUP.md](SETUP.md).
 
 ```sh
 npm run typecheck
@@ -61,7 +63,7 @@ Database integration assertions are in `tests/database.sql`; execute only agains
 
 ## Demo access
 
-The landing page opens a public, read-only reference league with 12 fictional teams, 18 fictional historical results, confirmed example gym slots and future fixtures. No shared administrator password is published. Create and confirm your own account, then choose **Settings → Create private demo** to run mutations in an isolated workspace. [DEMO.md](DEMO.md) includes a three-minute script and recording checklist.
+The deployed homepage connects the public Scoreboard, read-only demo dashboard and secure organizer sign-in. [Explore Harbour Hoops](https://courtside-ai-one.vercel.app/league/league-36ba36ad-5d0e-457e-badb-cd294bd57578/website) without signup; the original `/league/northstar-demo` reference remains available. Signed-in users explicitly select an authorized league, with `/workspace/<league-id>` connecting its dashboard and published website. Guided/quick/copy setup, three website themes and explicit publication are deployed and verified on desktop/mobile. Temporary synthetic reviewer access is shared privately; no administrator password is published. Automatic credential-free administration remains local-only. See [STATUS.md](STATUS.md) for the exact production SHA and checks.
 
 ## Hackathon contributions
 
@@ -74,3 +76,5 @@ The [official participant guide](https://cerebralvalley.ai/e/meta-ai-developer-h
 [Feature audit](FEATURE_AUDIT.md) · [Preseason](PRESEASON.md) · [Meta evidence](META_HACKATHON.md) · [Architecture](ARCHITECTURE.md) · [Database](DATABASE.md) · [Setup](SETUP.md) · [Credits](CREDIT_SETUP.md) · [Tests](TESTING.md) · [Demo](DEMO.md) · [Status](STATUS.md)
 
 **Camera capture:** Scoresheets and guardian proof use a shared live-preview, capture/retake/confirm control with native-camera and gallery fallbacks. Uploads stay private and require explicit submission. Physical device support is not certified by Chromium emulation; see [CAMERA_CAPTURE.md](CAMERA_CAPTURE.md).
+
+**Launchpad release:** PR #2 incorporates PR #1's intended implementation and adds private organizer drafts, guided/copy/quick setup, a connected dashboard and versioned Scoreboard/Arena/Clubhouse websites. Production runs application SHA `5a238d92979b740d44faae7c1250ef7ce9e10eef` from the organizer branch; neither PR was merged. The future Launchpad agent remains a proposal. See [STATUS.md](STATUS.md) and [release history](LAUNCHPAD_RELEASE.md).

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { z } from "zod";
-import { authenticate, body, command, db, fail } from "@/lib/server";
+import { ApiError, authenticate, body, command, db, fail } from "@/lib/server";
 import { dispatch } from "@/lib/notifications";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,7 +16,45 @@ export async function GET(request: Request) {
         isPublic ? "public_leagues" : "my_leagues",
       );
       if (error) throw error;
-      return NextResponse.json(data, {
+      // my_leagues is subject to league RLS, which also permits public rows.
+      // A private snapshot is the authoritative membership check; public visibility
+      // must never turn a public reference league into the user's workspace.
+      const choices = isPublic
+        ? data
+        : (
+            await Promise.all(
+              (data ?? []).map(
+                async (row: {
+                  id: string;
+                  name: string;
+                  slug: string;
+                  is_demo: boolean;
+                  season_name: string;
+                }) => {
+                  const { data: member, error: denied } = await client.rpc(
+                    "league_snapshot",
+                    { p_league: row.id, p_public: false },
+                  );
+                  if (denied?.code === "42501") return null;
+                  if (denied)
+                    throw new ApiError(
+                      "Could not verify league memberships. Reload and try again.",
+                      503,
+                    );
+                  if (!member?.role) return null;
+                  return {
+                    id: row.id,
+                    name: row.name,
+                    slug: row.slug,
+                    is_demo: row.is_demo,
+                    season_name: row.season_name,
+                    role: member.role,
+                  };
+                },
+              ),
+            )
+          ).filter(Boolean);
+      return NextResponse.json(choices, {
         headers: { "Cache-Control": "private, no-store" },
       });
     }
