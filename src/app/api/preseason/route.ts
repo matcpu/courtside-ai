@@ -126,7 +126,11 @@ export async function POST(request: Request) {
         error.code === "42501"
           ? "You do not have permission for this preseason action"
           : error.message,
-        error.code === "42501" ? 403 : error.code === "40001" ? 409 : 400,
+        error.code === "42501"
+          ? 403
+          : error.code === "40001" || error.code === "PT409"
+            ? 409
+            : 400,
       );
     if (b.action === "open_document") {
       const signed = await documentStorage()

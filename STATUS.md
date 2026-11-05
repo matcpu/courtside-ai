@@ -1,3 +1,13 @@
+# Hosted backup and rollout — November 4, 2026 Eastern — REPAIR APPROVAL REQUIRED
+
+Owner approved the two reviewed migrations and isolated hosted synthetic fixtures, subject to verified backup. A protected manual backup outside Git was restored into a password-protected loopback PostgreSQL 17.11 cluster: all 66 table digests, including Auth/Storage metadata and 31 migration-history rows, matched. Recovery files are AES-256-GCM encrypted with a Windows DPAPI CurrentUser-protected key; ciphertext/plaintext and key recovery checks passed. Restore instructions accompany the files. Automatic cleanup review rejected deletion of the stopped restore-check folder; it remains ACL-restricted outside Git with no listening server.
+
+Applied exactly `20261104164024` and `20261104183226` through pinned CLI 2.122.0, using an isolated authoritative history mirror to preserve seven older repository/hosted timestamp differences. No hosted history repair, seed file, role script or vault update ran. All 31 historical versions and existing values in all 28 application tables are unchanged; newly added columns have their reviewed defaults. New table RLS/grants/direct-write denial and security advisors were checked. Existing advisor notices are unchanged.
+
+Hosted real Auth/tenant tests and the isolated published Scoreboard fixture passed (12 teams / 25 fixtures / 18 confirmed fictional results, ages 12–13). Setup conflict testing exposed PostgREST retrying deterministic SQLSTATE 40001 forever. The two synthetic requests were cancelled and verified inactive. No production promotion or feature enablement occurred. A narrowly scoped third migration is prepared and tested but requires distinct approval: [POSTGREST_CONFLICT_REPAIR.md](POSTGREST_CONFLICT_REPAIR.md). TypeScript/build, 163 unit tests and local SQL/rollback checks pass on that repair; native CI and hosted retest remain required. Local backend 3302 remains untouched; no email/SMS, inference, billing or video change occurred.
+
+---
+
 # Current-design release preparation — November 4, 2026 — PRODUCTION BLOCKED
 
 The owner requested committing/pushing the current design and verifying an existing-project Vercel preview before promotion. Read-only hosted checks confirm both reviewed Launchpad migrations are absent and both organizer/configured-site RPCs do not exist. No verified recoverable backup exists; the prior zero-byte roles file is not a backup. The first table probe failed with SQLSTATE 42501 because the CLI login role had not assumed postgres; follow-up confirms TLS and permission to assume that role, matching the official CLI dump template. Do not misreport that probe as missing credentials. No hosted mutation or production promotion may proceed through the backup/approval gates.

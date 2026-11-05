@@ -186,7 +186,7 @@ export async function safetyState(db, league) {
   return result;
 }
 export function assertConflict(error) {
-  assert.equal(error.code, "40001");
+  assert.equal(error.code, "PT409");
   assert.match(error.message, /Safety configuration changed/);
   return true;
 }

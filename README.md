@@ -49,7 +49,7 @@ npm run dev
 
 PowerShell: `Copy-Item .env.example .env.local`. Open `http://localhost:3000`.
 
-The only permitted hosted database is project `xdmkgoradmbnjofmbojs` in `ca-central-1`. Hosted history currently ends at `20261029042847`; the two November 4 Launchpad/document-policy migrations are not applied. Do not enable Launchpad in hosted environments before the backup, approval and acceptance gates in [LAUNCHPAD_RELEASE.md](LAUNCHPAD_RELEASE.md). For a fresh local Supabase instance, apply the ordered files in `supabase/migrations/`. See [SETUP.md](SETUP.md).
+The only permitted hosted database is project `xdmkgoradmbnjofmbojs` in `ca-central-1`. The two reviewed November 4 Launchpad/document-policy migrations were applied after a verified encrypted backup. A separately proposed PostgREST conflict-response repair is not yet approved/applied; see [POSTGREST_CONFLICT_REPAIR.md](POSTGREST_CONFLICT_REPAIR.md). Do not enable Launchpad before the remaining approval and acceptance gates in [LAUNCHPAD_RELEASE.md](LAUNCHPAD_RELEASE.md). For a fresh local Supabase instance, apply the ordered files in `supabase/migrations/`. See [SETUP.md](SETUP.md).
 
 ```sh
 npm run typecheck

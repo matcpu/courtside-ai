@@ -42,7 +42,7 @@ async function rpc(
         "Access denied. Check your role or invitation account and expiry.",
         403,
       );
-    if (error.code === "40001")
+    if (error.code === "40001" || error.code === "PT409")
       throw new ApiError(
         error.message?.includes("Safety configuration changed")
           ? "The league’s safety settings changed after this draft was opened. Close this draft, reload the current league and open a fresh edit to review the newer settings before finishing. Your draft has not overwritten them."

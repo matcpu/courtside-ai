@@ -1,5 +1,7 @@
 # Current design: hosted release candidate
 
+**Later checkpoint:** the verified encrypted backup and two approved hosted migrations are now complete. See [POSTGREST_CONFLICT_REPAIR.md](POSTGREST_CONFLICT_REPAIR.md) and [STATUS.md](STATUS.md) for the new, separately gated PostgREST conflict-response repair. The missing-schema statements below describe the first flags-off preview, not current hosted state. Production remains unchanged.
+
 This candidate preserves the current uncommitted organizer branch work: three redesigned website themes, HH demo identity, connected product entry/workspaces, improved setup validation/review and the explicitly development-only automatic synthetic session. It supersedes the old GitHub UI; PR #1 is not merged separately.
 
 ## Hosted blockers confirmed November 4, 2026
