@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { z } from "zod";
-import { ApiError, authenticate, body, command, db, fail } from "@/lib/server";
+import {
+  ApiError,
+  authenticate,
+  body,
+  command,
+  db,
+  fail,
+  requireSportRules,
+} from "@/lib/server";
 import { dispatch } from "@/lib/notifications";
+import { sportSchema, sportRulesSchema } from "@/lib/sports";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 export async function GET(request: Request) {
@@ -76,6 +85,7 @@ export async function GET(request: Request) {
   }
 }
 const allowed = [
+  "configure_sport",
   "create_league",
   "configure_public",
   "invite_member",
@@ -106,6 +116,8 @@ export async function POST(request: Request) {
       })
       .parse(await body(request));
     if (b.action === "create_league") {
+      if (b.payload.sport || b.payload.sportRules)
+        await requireSportRules(client);
       z.object({
         name: z.string().min(2).max(100),
         season: z.string().min(2).max(80),
@@ -113,6 +125,16 @@ export async function POST(request: Request) {
         demo: z.boolean().optional(),
       }).parse(b.payload);
     } else if (!b.league) throw new Error("League required");
+    if (b.action === "configure_sport") {
+      await requireSportRules(client);
+      b.payload = z
+        .object({
+          sport: sportSchema,
+          sportRules: sportRulesSchema,
+          expected_sport_revision: z.number().int().positive(),
+        })
+        .parse(b.payload);
+    }
     const result = await command(client, b.league, b.action, b.payload);
     if (
       b.action === "publish_schedule" &&

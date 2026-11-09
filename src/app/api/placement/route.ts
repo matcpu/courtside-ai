@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authenticate, body, ApiError, fail, reserveAI } from "@/lib/server";
+import {
+  authenticate,
+  body,
+  ApiError,
+  fail,
+  reserveAI,
+  snapshot,
+} from "@/lib/server";
 import {
   preseasonQuestionnaire,
   placementInterpretation,
@@ -22,6 +29,12 @@ export async function POST(request: Request) {
       b = z
         .object({ league: z.uuid(), team_id: z.uuid() })
         .parse(await body(request));
+    const league = await snapshot(client, b.league);
+    if (league.league.sport && league.league.sport !== "basketball")
+      throw new ApiError(
+        "AI placement is currently basketball-only. Hockey assessments require human review.",
+        400,
+      );
     if (!metaIsEnabled())
       throw new ApiError(
         "Meta placement interpretation is paused. No API call was made.",

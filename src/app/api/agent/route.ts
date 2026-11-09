@@ -41,6 +41,14 @@ export async function POST(request: Request) {
     league = b.league;
     const initialSnapshot = await snapshot(context.client, league);
     admin(initialSnapshot);
+    if (
+      initialSnapshot.league.sport &&
+      initialSnapshot.league.sport !== "basketball"
+    )
+      throw new ApiError(
+        "The operations agent is currently basketball-only. Hockey requires manual administrator review.",
+        400,
+      );
     if (!metaIsEnabled())
       throw new ApiError(
         "Meta requests are disabled. No API call was made.",

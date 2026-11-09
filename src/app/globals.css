@@ -2937,3 +2937,31 @@ td small {
     max-height: 380px;
   }
 }
+
+/* Shared, responsive sport policy editor. */
+.sport-rule-fields {
+  min-width: 0;
+  margin: 16px 0;
+  border: 1px solid #d5dfd2;
+  border-radius: 8px;
+  padding: 16px;
+}
+.sport-rule-fields legend {
+  font-weight: 700;
+  padding: 0 6px;
+}
+.sport-rule-fields .two-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.sport-rule-fields .checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .sport-rule-fields .two-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

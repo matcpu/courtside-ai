@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { LeagueWebsite, colourText } from "../src/components/league-website";
+import { defaultSportRules } from "../src/lib/sports";
 import {
   emptyWebsite,
   formatLeagueDate,
@@ -48,6 +49,55 @@ export const site: SiteData = {
 };
 const render = (data: SiteData) =>
   renderToStaticMarkup(createElement(LeagueWebsite, { data }));
+
+it.each(["arena", "community", "courtside"] as const)(
+  "%s presents hockey without basketball copy or invented player data",
+  (theme) => {
+    const html = render({
+      ...site,
+      config: { ...site.config, theme, headline: "Synthetic hockey season" },
+      league: {
+        ...site.league,
+        sport: "hockey",
+        sport_rules: defaultSportRules("hockey"),
+      },
+      venues: [{ name: "Synthetic Rink", venue: "Synthetic Arena" }],
+      fixtures: [
+        {
+          home: "Synthetic Alpha",
+          away: "Synthetic Beta",
+          court: "Synthetic Rink",
+          venue: "Synthetic Arena",
+          starts_at: "2026-11-01T12:00:00Z",
+          status: "confirmed",
+          home_score: 4,
+          away_score: 3,
+          decision: "overtime",
+        },
+      ],
+      standings: [
+        {
+          name: "Synthetic Alpha",
+          played: 1,
+          wins: 1,
+          losses: 0,
+          draws: 0,
+          overtimeLosses: 0,
+          points: 2,
+          differential: 1,
+        },
+      ],
+    });
+    expect(html).toContain("Hockey");
+    expect(html).toContain("1 rink");
+    expect(html).toContain("Final · OT");
+    expect(html).toContain("OT/SO L");
+    expect(html).not.toContain("Basketball");
+    expect(html).not.toContain('class="site-basketball-detail"');
+    for (const field of ["birth_date", "guardian_email", "document_path"])
+      expect(html).not.toContain(field);
+  },
+);
 describe("public league presentation", () => {
   it.each(["arena", "community", "courtside"] as const)(
     "%s suppresses empty competition and contact modules without hiding eligibility",

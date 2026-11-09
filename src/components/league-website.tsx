@@ -1,3 +1,4 @@
+import { leagueSport } from "@/lib/sports";
 import type { CSSProperties } from "react";
 import { LeagueConnections } from "./league-connections";
 import { emptyWebsite, formatLeagueDate, type SiteData } from "@/lib/launchpad";
@@ -40,6 +41,7 @@ export function LeagueWebsite({
 }) {
   const { config: c, league: l } = data,
     Root = preview ? "div" : "main";
+  const { sport, profile } = leagueSport(l);
   const headline = c.headline === emptyWebsite.headline ? "" : c.headline;
   const open =
     l.registration === "open" && +new Date(l.registrationDeadline) > Date.now();
@@ -118,7 +120,7 @@ export function LeagueWebsite({
     <aside className="site-season-card" aria-label="Season at a glance">
       <div className="site-season-heading">
         <span className="site-eyebrow">Season guide</span>
-        <span className="site-season-sport">Basketball</span>
+        <span className="site-season-sport">{profile.name}</span>
       </div>
       <h2>{l.season}</h2>
       <dl>
@@ -137,7 +139,9 @@ export function LeagueWebsite({
           <dd className="site-registration-state">{registrationStatus}</dd>
         </div>
       </dl>
-      {c.theme === "community" && <BasketballDetail />}
+      {sport === "basketball" && c.theme === "community" && (
+        <BasketballDetail />
+      )}
     </aside>
   );
   const divisions = data.divisions.length > 0 && (
@@ -156,7 +160,7 @@ export function LeagueWebsite({
           <article key={group}>
             <div className="site-division-title">
               <span className="site-group">{group}</span>
-              <span>Basketball</span>
+              <span>{profile.name}</span>
             </div>
             <ul>
               {data.divisions
@@ -182,7 +186,11 @@ export function LeagueWebsite({
     <section id="registration" className="site-registration">
       <div>
         <span className="site-eyebrow">{l.season} registration</span>
-        <h2>{open ? "Bring your team to the court." : "Follow the season."}</h2>
+        <h2>
+          {open
+            ? `Bring your team to the ${profile.facility}.`
+            : "Follow the season."}
+        </h2>
         <p>
           {open
             ? `Team registration closes ${stamp(l.registrationDeadline)}. Review divisions and eligibility before applying.`
@@ -215,7 +223,7 @@ export function LeagueWebsite({
         <div className="site-game-heading">
           <span className={`site-game-status status-${state}`}>
             {final
-              ? "Final"
+              ? `Final${f.decision === "overtime" ? " · OT" : f.decision === "shootout" ? " · SO" : ""}`
               : state === "upcoming"
                 ? "Upcoming"
                 : "Result pending"}
@@ -252,7 +260,11 @@ export function LeagueWebsite({
       <div className="site-section-heading">
         <div>
           <span className="site-eyebrow">Around the league</span>
-          <h2>{c.theme === "courtside" ? "Game centre." : "On the court."}</h2>
+          <h2>
+            {c.theme === "courtside"
+              ? "Game centre."
+              : `On the ${profile.facility}.`}
+          </h2>
         </div>
         <p>
           {games.upcoming.length > 0 && (
@@ -301,7 +313,8 @@ export function LeagueWebsite({
             <th scope="col">Team</th>
             {!compact && <th scope="col">Played</th>}
             <th scope="col">W</th>
-            <th scope="col">L</th>
+            <th scope="col">L (all)</th>
+            {sport === "hockey" && <th scope="col">OT/SO L</th>}
             {!compact && <th scope="col">D</th>}
             <th scope="col">Pts</th>
           </tr>
@@ -313,6 +326,7 @@ export function LeagueWebsite({
               {!compact && <td>{t.played}</td>}
               <td>{t.wins}</td>
               <td>{t.losses}</td>
+              {sport === "hockey" && <td>{t.overtimeLosses ?? 0}</td>}
               {!compact && <td>{t.draws}</td>}
               <td>
                 <b>{t.points}</b>
@@ -342,12 +356,13 @@ export function LeagueWebsite({
     <section id="venues" className="site-section site-venues">
       <div className="site-section-heading">
         <div>
-          <span className="site-eyebrow">Home courts</span>
+          <span className="site-eyebrow">Home {profile.facility}s</span>
           <h2>Where we play.</h2>
         </div>
         <p>
           {venues.length} {venues.length === 1 ? "venue" : "venues"} ·{" "}
-          {data.venues.length} {data.venues.length === 1 ? "court" : "courts"}
+          {data.venues.length}{" "}
+          {data.venues.length === 1 ? profile.facility : `${profile.facility}s`}
         </p>
       </div>
       <div className="site-venue-grid">
@@ -364,7 +379,10 @@ export function LeagueWebsite({
   const about = c.about && (
     <section id="about" className="site-section site-about">
       <span className="site-eyebrow">Our league</span>
-      <h2>Basketball{l.city ? ` in ${l.city}` : ""}.</h2>
+      <h2>
+        {profile.name}
+        {l.city ? ` in ${l.city}` : ""}.
+      </h2>
       <p>{c.about}</p>
     </section>
   );
@@ -413,7 +431,9 @@ export function LeagueWebsite({
           {emblem}
           <span>
             {l.name}
-            <small>{l.season} · Basketball</small>
+            <small>
+              {l.season} · {profile.name}
+            </small>
           </span>
         </a>
         <nav aria-label="League website">
@@ -458,7 +478,7 @@ export function LeagueWebsite({
       </section>
       {c.theme === "arena" && (
         <div className="site-season-line">
-          <span>Youth basketball</span>
+          <span>Youth {profile.name.toLowerCase()}</span>
           <span>{l.season}</span>
           {groups.length > 0 && <span>{groups.join(" / ")}</span>}
           {l.city && <span>{l.city}</span>}
@@ -502,7 +522,7 @@ export function LeagueWebsite({
           <section id="contact" className="site-section site-contact">
             <div>
               <span className="site-eyebrow">League office</span>
-              <h2>Let’s talk basketball.</h2>
+              <h2>Let’s talk {profile.name.toLowerCase()}.</h2>
             </div>
             <a
               className="site-cta"

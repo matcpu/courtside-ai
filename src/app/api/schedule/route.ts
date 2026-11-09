@@ -13,6 +13,7 @@ import {
 import { roundRobin, schedule } from "@/lib/domain";
 import { dataBoundary, metaJSON } from "@/lib/meta";
 import { seasonStartInstant } from "@/lib/preseason";
+import { leagueSport } from "@/lib/sports";
 export const maxDuration = 60;
 export async function draftSchedule(
   client: Awaited<ReturnType<typeof authenticate>>["client"],
@@ -22,6 +23,7 @@ export async function draftSchedule(
 ) {
   const s = await snapshot(client, league);
   admin(s);
+  const { rules, profile } = leagueSport(s.league);
   const published = s.versions.find((v) => v.status === "published");
   const locked = s.fixtures.filter(
     (f) =>
@@ -47,8 +49,8 @@ export async function draftSchedule(
     pairs,
     s.availability,
     locked,
-    60,
-    30,
+    rules.gameMinutes,
+    rules.restMinutes,
     new Date(
       Math.max(
         Date.now(),
@@ -65,7 +67,7 @@ export async function draftSchedule(
       `No feasible schedule: ${generated.unscheduled.length} games need more confirmed court time. No draft was saved.`,
       409,
     );
-  let explanation = `Round ${round + 1}: ${pairs.length} games assigned to confirmed courts. Minimum 30-minute rest enforced; ${locked.length} completed fixtures retained. All future fixtures in the prior version will be replaced on approval.`,
+  let explanation = `Round ${round + 1}: ${pairs.length} games assigned to confirmed ${profile.facility}s. ${rules.gameMinutes}-minute slots and minimum ${rules.restMinutes}-minute rest enforced; ${locked.length} completed fixtures retained. All future fixtures in the prior version will be replaced on approval.`,
     ai = false;
   if (useMeta) {
     await reserveAI(client, league, "schedule_explanation");
@@ -78,7 +80,7 @@ export async function draftSchedule(
         games: pairs.length,
         locked: locked.length,
         previousVersion: published?.number ?? 0,
-        restMinutes: 30,
+        restMinutes: rules.restMinutes,
       }),
     );
     explanation = text.explanation;

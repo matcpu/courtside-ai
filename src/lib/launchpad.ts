@@ -1,9 +1,19 @@
 import { z } from "zod";
 import type { Availability, Snapshot } from "./domain";
+import {
+  defaultSportRules,
+  sportSchema,
+  sportRulesSchema,
+  type Sport,
+  type SportRules,
+} from "./sports.ts";
 
 const date = z.union([z.literal(""), z.iso.date()]);
 const text = (max: number) => z.string().max(max);
 export const setupSchema = z.object({
+  // Omission by an older client must preserve an existing league's policy.
+  sport: sportSchema.optional(),
+  sportRules: sportRulesSchema.optional(),
   name: text(100),
   kind: z.enum(["competitive", "recreational", "tournament", "other"]),
   country: text(80),
@@ -87,6 +97,8 @@ export const emptyWebsite: Website = {
 export type SiteData = {
   config: Website;
   league: {
+    sport?: Sport;
+    sport_rules?: SportRules;
     id: string;
     name: string;
     slug: string;
@@ -112,6 +124,7 @@ export type SiteData = {
   }[];
   teams: { id: string; name: string; division_id: string | null }[];
   fixtures: {
+    decision?: import("./sports").Decision;
     home: string;
     away: string;
     court: string;
@@ -122,6 +135,7 @@ export type SiteData = {
     status: string;
   }[];
   standings: {
+    overtimeLosses?: number;
     name: string;
     played: number;
     wins: number;
@@ -134,6 +148,8 @@ export type SiteData = {
 };
 export function newSetup(): Setup {
   return {
+    sport: "basketball",
+    sportRules: defaultSportRules(),
     name: "",
     kind: "competitive",
     country: "Canada",
@@ -251,6 +267,7 @@ export function setupIssues(s: Setup): { message: string; step: number }[] {
         "retentionDays",
         "allowedDocumentTypes",
         "proofRequired",
+        "sportRules",
       ].includes(key)
         ? 3
         : key === "courts"
@@ -295,7 +312,11 @@ export function formatLeagueDate(value: string, fallback = "To be announced") {
       }).format(date);
 }
 /** An upper bound, not a feasible-matchup promise. Merge overlaps per court. */
-export function courtCapacity(availability: Availability[], notBefore: number) {
+export function courtCapacity(
+  availability: Availability[],
+  notBefore: number,
+  gameMinutes = 60,
+) {
   const byCourt = new Map<string, [number, number][]>();
   for (const a of availability.filter((a) => a.confirmed)) {
     const start = Math.max(+new Date(a.starts_at), notBefore),
@@ -317,7 +338,7 @@ export function courtCapacity(availability: Availability[], notBefore: number) {
     }
     for (const [a, b] of merged) {
       minutes += (b - a) / 60000;
-      slots += Math.floor((b - a) / 3600000);
+      slots += Math.floor((b - a) / (gameMinutes * 60000));
     }
   }
   return { minutes, slots };

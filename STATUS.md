@@ -1,3 +1,15 @@
+# Multi-sport rules — November 9, 2026 — LOCAL REVIEW CANDIDATE
+
+Branch `codex/multi-sport-rules`, based on organizer PR #2 head `f5ebf745b9dc7f9af6354ffc0c558a1718c359b8`. This work is not deployed. Production remains the previously verified basketball release below. PR #2 is open/unmerged; this candidate is a separate stacked review, not a replacement merge of PR #1.
+
+Implemented: basketball/hockey selection in setup and legacy creation; versioned configurable standings/result/scheduling policies; hockey regulation/overtime/shootout final-score review; sport-aware workspace/public websites; admin-only audited atomic rule changes; no retroactive rule reinterpretation after publication/results; stale Settings and Launchpad conflicts; older clients omitting sport fields preserve existing policy. Basketball scoring defaults and all existing routes remain. Hockey player stats, calibrated placement, Meta recognition/operations, soccer, volleyball and adult/open-age support remain unfinished. See [MULTISPORT.md](MULTISPORT.md) for the assumption audit, contracts, review workflow, release gates and roadmap.
+
+Verified locally: TypeScript and isolated production build; 180 Vitest tests; 96 sport PostgreSQL assertions; existing Launchpad/proof-policy/database SQL suites; 106 existing native multi-session assertions plus both new sport/Launchpad race directions; clean migration/permission/RLS setup; upgrade preservation of all 28 existing public-table data digests. All eight desktop/mobile browser cases pass, including the old-client preservation path, private upload, authenticated human review, standings, explicit local website publication and role boundaries. Screenshots use only the separate synthetic 3401/3402 runtime; hosted Auth/Storage/PostgREST acceptance for this migration is not claimed. All official-result and website publication paths retain authenticated human approval.
+
+New migration `20261109132517_sport_rules.sql` was generated with pinned CLI 2.122.0 and applied **only to disposable local databases**. No production/hosted writes, deployments, model inference, emails/SMS, payment activation, billing changes or video edits occurred. Branch-specific Vercel Git deployment is disabled in source. The original recording backend 3302 remains PID 14516 and frontend 3301 PID 29056. GitHub CI status is reported on the review PR; local passes are not a claim of hosted acceptance.
+
+---
+
 # Production release verified — November 4, 2026 Eastern
 
 Live: https://courtside-ai-one.vercel.app/ . Application SHA `5a238d92979b740d44faae7c1250ef7ce9e10eef`; verified preview `dpl_7rSsi7LaGdBf83DxPQ6WGQ9RScGE` promoted to production `dpl_AUWpfztrZQXBK2aQmpAVuUZqJvJ4` through the existing Vercel project. Production metadata confirms that SHA. No PR was merged. Both organizer flags are enabled; local-preview authentication, Meta, notifications and SMS remain disabled. Public exploration is read-only; creation/management use normal authenticated, tenant-authorized synthetic accounts supplied privately.

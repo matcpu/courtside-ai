@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
+  "git": { "deploymentEnabled": { "codex/multi-sport-rules": false } },
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "crons": [{ "path": "/api/retention", "schedule": "0 7 * * *" }]
