@@ -11,6 +11,8 @@ import {
 const date = z.union([z.literal(""), z.iso.date()]);
 const text = (max: number) => z.string().max(max);
 export const setupSchema = z.object({
+  organization_id: z.uuid().optional(),
+  program_id: z.uuid().optional(),
   // Omission by an older client must preserve an existing league's policy.
   sport: sportSchema.optional(),
   sportRules: sportRulesSchema.optional(),

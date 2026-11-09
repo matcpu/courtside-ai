@@ -2,7 +2,7 @@
 import pg from "pg";
 import { randomUUID } from "node:crypto";
 import { initializeTestDatabase } from "./local-database.mjs";
-export async function nativeTestDatabase() {
+export async function nativeTestDatabase({ baselineCapacity = true } = {}) {
   const source = process.env.LAUNCHPAD_TEST_DATABASE_URL;
   if (!source)
     throw Error(
@@ -51,7 +51,7 @@ export async function nativeTestDatabase() {
     },
   };
   try {
-    return await initializeTestDatabase(db);
+    return await initializeTestDatabase(db, { baselineCapacity });
   } catch (e) {
     await db.close();
     throw e;

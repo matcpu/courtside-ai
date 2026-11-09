@@ -56,6 +56,7 @@ export function ProductEntry({
           <small>League operations, connected.</small>
         </a>
         <nav aria-label="Product navigation">
+          {signedIn && <a href="/organizations">Organizations & plans</a>}
           {demo && (
             <a
               href={demo.href}

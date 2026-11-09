@@ -78,18 +78,22 @@ export function OrganizerSetup({
   onComplete,
   onClose,
   initialDraft,
+  initialData,
   startMode,
 }: {
   api: LaunchApi;
   onComplete: (id: string) => Promise<void>;
   onClose: () => void;
   initialDraft?: SetupDraft;
+  initialData?: Setup;
   startMode?: "guided";
 }) {
   const [mode, setMode] = useState<"guided" | "quick" | "copy" | null>(
     initialDraft ? "guided" : (startMode ?? null),
   );
-  const [data, setData] = useState<Setup>(initialDraft?.data ?? newSetup);
+  const [data, setData] = useState<Setup>(
+    initialDraft?.data ?? initialData ?? newSetup,
+  );
   const [drafts, setDrafts] = useState<SetupDraft[]>([]),
     [sources, setSources] = useState<
       { id: string; name: string; season: string }[]

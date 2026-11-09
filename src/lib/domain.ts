@@ -236,6 +236,8 @@ export type Snapshot = {
     assists: number | null;
   }[];
   league: {
+    organization_id?: string;
+    program_id?: string;
     sport?: Sport;
     sport_rules?: SportRules;
     sport_revision?: number;

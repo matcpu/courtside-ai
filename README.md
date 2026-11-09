@@ -1,5 +1,7 @@
 # Courtside AI
 
+**SaaS foundations review candidate (not deployed):** this separate branch is stacked on PR #3. It adds organizations, multiple leagues/seasons, owner/admin/member roles, private invitation links, PostgreSQL-enforced capacity/tenant boundaries, customer plan management and restricted platform operations. Stripe is test-only and disabled by default; actual provider Sandbox and hosted Supabase acceptance remain unverified. See [SAAS.md](SAAS.md) for implementation/tests/limits and [SAAS_DEPLOYMENT.md](SAAS_DEPLOYMENT.md) for the separate approval-gated rollout and rollback plan. No hosted migration or production deployment is included.
+
 **Multi-sport review candidate (not deployed):** this branch adds configurable basketball/hockey rules, sport selection, manual hockey result review, overtime/shootout standings, audited atomic policy changes and sport-aware public sites. [MULTISPORT.md](MULTISPORT.md) contains the code/schema audit, local acceptance workflow, migration/rollback gates and soccer/volleyball/recreational roadmap. Hockey AI recognition, player statistics and automatic balancing are not implemented; commercial SaaS readiness is not claimed. The live links below still describe the existing basketball release.
 
 **The league that learns as it plays.**

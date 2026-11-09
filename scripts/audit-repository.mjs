@@ -8,7 +8,7 @@ const env = existsSync(".env.local") ? parse(readFileSync(".env.local")) : {};
 const privateValues = Object.entries(env)
   .filter(
     ([k, v]) =>
-      /API_KEY|SERVICE_ROLE|CRON_SECRET|AUTH_TOKEN|EMAIL_TEST_RECIPIENT/.test(
+      /API_KEY|SERVICE_ROLE|CRON_SECRET|AUTH_TOKEN|EMAIL_TEST_RECIPIENT|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET/.test(
         k,
       ) &&
       !k.startsWith("NEXT_PUBLIC_") &&
@@ -56,6 +56,10 @@ while (offset < batch.length) {
   if (bytes.includes(0)) continue;
   const source = bytes.toString("utf8");
   const patterns = [
+    [
+      "stripe-secret",
+      /\b(?:[sr]k_(?:test|live)_[A-Za-z0-9]{20,}|whsec_[A-Za-z0-9]{20,})\b/,
+    ],
     ["private-key", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],
     [
       "provider-secret",

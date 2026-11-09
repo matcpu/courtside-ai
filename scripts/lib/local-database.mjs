@@ -3,7 +3,10 @@
 import { PGlite } from "@electric-sql/pglite";
 import fs from "node:fs";
 import path from "node:path";
-export async function initializeTestDatabase(db, { beforeMigration } = {}) {
+export async function initializeTestDatabase(
+  db,
+  { beforeMigration, baselineCapacity = false } = {},
+) {
   await db.exec(
     `
     do $$begin
@@ -42,10 +45,16 @@ export async function initializeTestDatabase(db, { beforeMigration } = {}) {
       throw new Error(`Local migration ${file}: ${e.message}`);
     }
   }
+  // Explicit fixture-only capacities for legacy suites creating many leagues.
+  // SaaS authorization/quota tests use the real migration defaults instead.
+  if (baselineCapacity)
+    await db.exec(
+      `update public.saas_plans set limits='{"programs":10000,"seasons":10000,"members":10000}'::jsonb`,
+    );
   return db;
 }
-export async function localDatabase() {
-  return initializeTestDatabase(new PGlite());
+export async function localDatabase(options = {}) {
+  return initializeTestDatabase(new PGlite(), options);
 }
 export async function asUser(db, actor, fn, role = "authenticated") {
   return db.transaction(async (tx) => {

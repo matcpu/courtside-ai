@@ -848,6 +848,7 @@ export function LeagueApp({
                 <b>{view}</b>
               </div>
               <div className="topbar-actions">
+                {session && <a href={s?.league.organization_id?`/organizations?organization=${encodeURIComponent(s.league.organization_id)}`:"/organizations"}>Organization</a>}
                 <span className="season-pill">
                   <span className="live-dot" />
                   {s?.league.season_name ?? "Fall 2026"}

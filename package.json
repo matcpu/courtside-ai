@@ -12,6 +12,9 @@
     "test:database:sports": "node scripts/test-sports.mjs",
     "test:database:sports-upgrade": "node scripts/test-sports-upgrade.mjs",
     "test:database:sports-concurrency": "node scripts/test-sports-concurrency.mjs",
+    "test:database:saas": "node scripts/test-saas.mjs",
+    "test:database:saas-upgrade": "node scripts/test-saas-upgrade.mjs",
+    "test:database:saas-concurrency": "node scripts/test-saas-concurrency.mjs",
     "test:database:concurrency": "node scripts/test-launchpad-concurrency.mjs",
     "launchpad:review": "node scripts/review-launchpad.mjs",
     "test:e2e": "playwright test",
@@ -29,6 +32,7 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "sharp": "0.35.5",
+    "stripe": "23.1.0",
     "tailwind-merge": "3.7.0",
     "tesseract.js": "7.0.0",
     "zod": "4.6.7"

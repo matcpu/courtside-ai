@@ -1,3 +1,19 @@
+# SaaS foundations — November 9, 2026 — LOCAL REVIEW CANDIDATE
+
+Branch `codex/saas-foundations`, based on exact PR #3 head `23b2e9572239b8b385bcd3efe5e3ccfaaa2ff5cd`. PR #2 and PR #3 are unchanged. Separate stacked draft review; no merge, hosted migration or production deployment. Branch-specific Vercel Git deployment is disabled.
+
+Implemented: organizations, league programs with multiple existing-style season workspaces, owner/admin/member roles, confirmed-account invitations, owner transfer, explicit league-role delegation/revocation, database-locked capacities and Free/Starter/Pro configuration without prices. Organization roles never implicitly authorize private leagues or Storage. Existing explicit league permissions, youth privacy, result/schedule approvals, public routes and basketball/hockey rules remain authoritative. Customer organization/plan UI and dedicated database-role-restricted platform aggregate view are included.
+
+Stripe is test-mode only and disabled by default: server-resolved Checkout/Portal, stable reservations/idempotency keys, request binding, SDK raw-body signatures, replay receipts, fenced reconciliation against current provider state, downgrade/data-preservation policy and owner recovery. Unit tests use real signature verification with simulated provider responses. The connected Stripe account requires reauthentication; no account API call, checkout or payment was performed. No prices, provider resources or secret values were created or committed.
+
+Verified locally: TypeScript, isolated production build and 194 Vitest tests; 56 SaaS PostgreSQL assertions; six native multi-session SaaS lock-wait cases; existing 106 native Launchpad assertions, 30 native proof-policy assertions, repeatable clean setup and both sport/Launchpad race directions; legacy upgrade preserving all 29 pre-existing public-table digests and existing sport upgrade preserving all 28 original digests; eight desktop/mobile organization/invite/platform/account-switch browser cases with screenshots. Existing Launchpad/proof-policy and basketball/hockey SQL suites pass with the additive migrations. Production dependency audit reports zero vulnerabilities. GitHub CI results are reported on the separate draft PR; local synthetic adapters are not hosted Auth/Storage/PostgREST acceptance.
+
+New ordered migrations `20261109174521_organization_saas_foundations.sql` and `20261109174822_test_subscription_foundations.sql` are applied only to disposable local databases. Legacy owner migration groups active owners, quarantines stale/ownerless ownership without granting access and preserves existing capacity. Read-only hosted metadata confirms the sport/organization migrations are not installed. Hosted backup/upgrade/acceptance and actual Stripe Sandbox acceptance remain release blockers. Periodic reconciliation, operational recovery, commercial policy/taxes and live payments are unfinished. See [SAAS.md](SAAS.md) and separate [SAAS_DEPLOYMENT.md](SAAS_DEPLOYMENT.md).
+
+The separate synthetic review uses 3501/3502. Original recording ports 3301/3302 are untouched. No hosted writes, payments, real notifications, Meta inference, billing/domain changes, infrastructure provisioning or video edits occurred.
+
+---
+
 # Multi-sport rules — November 9, 2026 — LOCAL REVIEW CANDIDATE
 
 Branch `codex/multi-sport-rules`, based on organizer PR #2 head `f5ebf745b9dc7f9af6354ffc0c558a1718c359b8`. This work is not deployed. Production remains the previously verified basketball release below. PR #2 is open/unmerged; this candidate is a separate stacked review, not a replacement merge of PR #1.

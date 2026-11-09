@@ -6,18 +6,18 @@ import { PGlite } from "@electric-sql/pglite";
 import { initializeTestDatabase, asUser } from "./lib/local-database.mjs";
 import { defaultSportRules } from "../src/lib/sports.ts";
 let before;
-const fingerprint = async (db) => {
+const fingerprint = async (db, originalTables) => {
   const tables = (
     await db.query(
       "select tablename from pg_tables where schemaname='public' and tablename<>'sport_rule_revisions' order by tablename",
     )
   ).rows.map((r) => r.tablename);
   const result = {};
-  for (const table of tables) {
+  for (const table of originalTables ?? tables) {
     assert.match(table, /^[a-z_]+$/);
     const value =
       table === "leagues"
-        ? "to_jsonb(t)-'sport'-'sport_rules'-'sport_revision'"
+        ? "to_jsonb(t)-'sport'-'sport_rules'-'sport_revision'-'organization_id'-'program_id'"
         : table === "games"
           ? "to_jsonb(t)-'decision'-'result_rules'-'result_sport_revision'"
           : "to_jsonb(t)";
@@ -44,7 +44,7 @@ try {
     },
   });
   assert.ok(before);
-  assert.deepEqual(await fingerprint(db), before);
+  assert.deepEqual(await fingerprint(db, Object.keys(before)), before);
   const leagues = (
     await db.query("select sport,sport_rules from public.leagues")
   ).rows;
