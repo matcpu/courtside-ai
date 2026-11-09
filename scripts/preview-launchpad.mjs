@@ -13,7 +13,7 @@ if (
 )
   throw Error("Invalid loopback review ports");
 const backendOrigin = `http://127.0.0.1:${reviewPort}`;
-const db = await localDatabase();
+const db = await localDatabase({ baselineCapacity: true });
 const objects = new Map(),
   storageTokens = new Map();
 const serviceKey = "synthetic-local-storage-service-only";
@@ -119,6 +119,11 @@ await asUser(db, admin.id, (tx) =>
   ]),
 );
 const rpcNames = new Set([
+  "organization_command",
+  "platform_overview",
+  "billing_access",
+  "billing_service",
+  "saas_capabilities",
   "sport_capabilities",
   "organizer_command",
   "public_launch_site",
@@ -134,6 +139,12 @@ const rpcNames = new Set([
   "finalize_age_upload",
   "document_screening",
 ]);
+const saasFixtures =
+  process.env.LAUNCHPAD_REVIEW_SAAS === "true"
+    ? await (
+        await import("./lib/saas-review-fixtures.mjs")
+      ).saasReviewFixtures(db, admin, coach, outsider)
+    : undefined;
 const server = http.createServer(async (req, res) => {
   const allowedOrigins = new Set([
     `http://127.0.0.1:${frontendPort}`,
@@ -304,6 +315,7 @@ const server = http.createServer(async (req, res) => {
       return json({
         synthetic: true,
         sports: sportsFixtures,
+        saas: saasFixtures,
         auth: "Local contract adapter, not hosted Supabase Auth",
         league: league_id,
         slug: (

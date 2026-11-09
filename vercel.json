@@ -1,6 +1,11 @@
 {
   "framework": "nextjs",
-  "git": { "deploymentEnabled": { "codex/multi-sport-rules": false } },
+  "git": {
+    "deploymentEnabled": {
+      "codex/multi-sport-rules": false,
+      "codex/saas-foundations": false
+    }
+  },
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "crons": [{ "path": "/api/retention", "schedule": "0 7 * * *" }]

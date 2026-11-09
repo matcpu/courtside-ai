@@ -67,6 +67,7 @@ const env = {
   META_API_ENABLED: "false",
   NOTIFICATIONS_ENABLED: "false",
   SMS_ENABLED: "false",
+  STRIPE_TEST_ENABLED: "false",
 };
 const run = (args) =>
   new Promise((resolve, reject) => {

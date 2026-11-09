@@ -36,6 +36,8 @@ jobs:
       - run: npm run test:database:local
       - run: npm run test:database:sports
       - run: npm run test:database:sports-upgrade
+      - run: npm run test:database:saas
+      - run: npm run test:database:saas-upgrade
       - run: npm run test:database:concurrency
         env:
           # Ephemeral local CI service only; never hosted Supabase credentials.
@@ -44,4 +46,7 @@ jobs:
         env:
           LAUNCHPAD_TEST_DATABASE_URL: postgresql://postgres:synthetic-ci-only@127.0.0.1:5432/courtside_launchpad_test
       - run: npm run build
+      - run: npm run test:database:saas-concurrency
+        env:
+          LAUNCHPAD_TEST_DATABASE_URL: postgresql://postgres:synthetic-ci-only@127.0.0.1:5432/courtside_launchpad_test
       - run: node scripts/check-ocr-bundle.mjs

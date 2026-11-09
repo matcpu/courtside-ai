@@ -5,7 +5,7 @@ import { localDatabase, asUser, organizer } from "./lib/local-database.mjs";
 import { newSetup } from "../src/lib/launchpad.ts";
 import { sequentialSafetyChecks } from "./lib/launchpad-safety-cases.mjs";
 import { assertTestSchema } from "./lib/assert-test-schema.mjs";
-const db = await localDatabase();
+const db = await localDatabase({ baselineCapacity: true });
 let checks = 0;
 const admin = "cc000000-0000-4000-8000-000000000001",
   other = "cc000000-0000-4000-8000-000000000002",
