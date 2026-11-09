@@ -1,5 +1,7 @@
 # Courtside AI
 
+**Multi-sport review candidate (not deployed):** this branch adds configurable basketball/hockey rules, sport selection, manual hockey result review, overtime/shootout standings, audited atomic policy changes and sport-aware public sites. [MULTISPORT.md](MULTISPORT.md) contains the code/schema audit, local acceptance workflow, migration/rollback gates and soccer/volleyball/recreational roadmap. Hockey AI recognition, player statistics and automatic balancing are not implemented; commercial SaaS readiness is not claimed. The live links below still describe the existing basketball release.
+
 **The league that learns as it plays.**
 
 Autonomous youth basketball league operations for the Meta Global AI Developer Hackathon. Coaches register teams; administrators approve placements; a deterministic engine schedules confirmed courts; scorekeepers review scoresheet extractions; verified results update standings and Elo ratings; the operations agent prepares evidence-based division and schedule proposals for human approval.

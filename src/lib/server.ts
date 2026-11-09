@@ -82,6 +82,15 @@ export async function reserveAI(
       429,
     );
 }
+/** Fail closed if a new client reaches the pre-sport database during rollout. */
+export async function requireSportRules(client: SupabaseClient) {
+  const { data, error } = await client.rpc("sport_capabilities");
+  if (error || data?.version !== 1)
+    throw new ApiError(
+      "Sport rules database rollout is pending. No setup change was saved.",
+      503,
+    );
+}
 export async function command(
   client: SupabaseClient,
   league: string | null,
@@ -97,6 +106,7 @@ export async function command(
     const msg = error.message;
     if (error.code === "42501")
       throw new ApiError("You do not have permission for this action", 403);
+    if (error.code === "PT409") throw new ApiError(msg, 409);
     if (error.code === "23505")
       throw new ApiError(
         "This record already exists. Duplicate submissions are blocked.",

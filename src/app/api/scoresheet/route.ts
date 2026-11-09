@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import { leagueSport } from "@/lib/sports";
 import { z } from "zod";
 import {
   ApiError,
@@ -36,6 +37,12 @@ export async function POST(request: Request) {
     const s = await snapshot(client, b.league),
       game = s.games.find((g) => g.id === b.game_id);
     if (!game) throw new ApiError("Game not found");
+    const { sport, rules } = leagueSport(s.league);
+    if (sport !== "basketball" && b.mode === "meta")
+      throw new ApiError(
+        "Hockey uses manual team score review. Image recognition is currently basketball-only.",
+        400,
+      );
     if (
       !["admin", "scorekeeper"].includes(s.role) &&
       !s.teams.some(
@@ -75,7 +82,10 @@ export async function POST(request: Request) {
         503,
       );
     if (s.scoresheets.some((sheet) => sheet.sha256 === sha256))
-      throw new ApiError("This exact image is already submitted. Inspect its saved evidence; no model call was made.",409);
+      throw new ApiError(
+        "This exact image is already submitted. Inspect its saved evidence; no model call was made.",
+        409,
+      );
     if (b.mode === "meta") {
       assertMetaScope("scoresheet", b.league, user.id);
       await reserveAI(client, b.league, "scoresheet");
@@ -110,7 +120,7 @@ export async function POST(request: Request) {
           )
         : b.extraction;
     if (!extraction) throw new ApiError("Manual extraction is required");
-    const warnings = validateExtraction(extraction, home, away);
+    const warnings = validateExtraction(extraction, home, away, rules, sport);
     const result = await command(client, b.league, "submit_scoresheet", {
       game_id: b.game_id,
       sha256,

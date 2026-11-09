@@ -4,6 +4,15 @@ import http from "node:http";
 import { randomUUID, randomBytes } from "node:crypto";
 import { localDatabase, asUser, organizer } from "./lib/local-database.mjs";
 import { newSetup } from "../src/lib/launchpad.ts";
+const reviewPort = Number(process.env.LAUNCHPAD_REVIEW_BACKEND_PORT ?? 3302);
+const frontendPort = Number(process.env.LAUNCHPAD_REVIEW_FRONTEND_PORT ?? 3301);
+if (
+  ![reviewPort, frontendPort].every(
+    (p) => Number.isInteger(p) && p >= 1024 && p <= 65535,
+  )
+)
+  throw Error("Invalid loopback review ports");
+const backendOrigin = `http://127.0.0.1:${reviewPort}`;
 const db = await localDatabase();
 const objects = new Map(),
   storageTokens = new Map();
@@ -31,6 +40,14 @@ const addUser = async (email) => {
 const admin = await addUser("launchpad-admin@example.invalid"),
   coach = await addUser("launchpad-coach@example.invalid"),
   outsider = await addUser("launchpad-outsider@example.invalid");
+let sportsFixtures;
+if (process.env.LAUNCHPAD_REVIEW_SPORTS === "true") {
+  const { sportsReviewFixtures } =
+    await import("./lib/sports-review-fixtures.mjs");
+  sportsFixtures = {};
+  for (const size of ["desktop", "mobile"])
+    sportsFixtures[size] = await sportsReviewFixtures(db, admin, coach, size);
+}
 const call = (user, action, p) =>
   asUser(db, user.id, (tx) => organizer(tx, action, p));
 const base = {
@@ -102,6 +119,7 @@ await asUser(db, admin.id, (tx) =>
   ]),
 );
 const rpcNames = new Set([
+  "sport_capabilities",
   "organizer_command",
   "public_launch_site",
   "league_command",
@@ -118,8 +136,8 @@ const rpcNames = new Set([
 ]);
 const server = http.createServer(async (req, res) => {
   const allowedOrigins = new Set([
-    "http://127.0.0.1:3301",
-    "http://localhost:3301",
+    `http://127.0.0.1:${frontendPort}`,
+    `http://localhost:${frontendPort}`,
   ]);
   if (allowedOrigins.has(req.headers.origin))
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
@@ -140,7 +158,7 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify(value));
   };
   try {
-    const url = new URL(req.url, "http://127.0.0.1:3302");
+    const url = new URL(req.url, backendOrigin);
     const actor = sessions.get(
       req.headers.authorization?.replace(/^Bearer /, ""),
     );
@@ -160,11 +178,27 @@ const server = http.createServer(async (req, res) => {
           "",
         )
         .replace(/^\/storage\/v1\/object\//, "");
+      const [bucket, ...objectParts] = path.split("/");
+      const objectName = objectParts.join("/");
+      const mayRead = async () =>
+        actor &&
+        (
+          await asUser(db, actor.id, (tx) =>
+            tx.query(
+              "select id from storage.objects where bucket_id=$1 and name=$2",
+              [bucket, objectName],
+            ),
+          )
+        ).rows.length > 0;
       if (
         req.method === "POST" &&
         /\/(upload\/sign|sign)\//.test(url.pathname)
       ) {
-        if (!isService) return json({ message: "Private storage" }, 403);
+        if (
+          !isService &&
+          (url.pathname.includes("/upload/sign/") || !(await mayRead()))
+        )
+          return json({ message: "Private storage" }, 403);
         const token = randomBytes(24).toString("hex");
         const upload = url.pathname.includes("/upload/sign/");
         storageTokens.set(token, {
@@ -177,6 +211,37 @@ const server = http.createServer(async (req, res) => {
             ? { url: `/object/upload/sign/${path}?token=${token}`, token }
             : { signedURL: `/object/sign/${path}?token=${token}` },
         );
+      }
+      if (req.method === "POST" && !url.pathname.includes("/sign/")) {
+        if (!actor || bucket !== "scoresheets")
+          return json({ message: "Private storage" }, 403);
+        const form = await new Response(bytes, {
+          headers: { "Content-Type": req.headers["content-type"] },
+        }).formData();
+        const file = [...form.values()].find((v) => typeof v !== "string");
+        if (
+          !file ||
+          file.size > 6 * 1024 * 1024 ||
+          !["image/png", "image/jpeg", "image/webp"].includes(file.type)
+        )
+          return json({ message: "Invalid scoresheet image" }, 400);
+        // Exercise actual PostgreSQL Storage RLS, not a client demo flag.
+        await asUser(db, actor.id, (tx) =>
+          tx.query(
+            "insert into storage.objects(bucket_id,name,owner,metadata) values($1,$2,$3,$4)",
+            [
+              bucket,
+              objectName,
+              actor.id,
+              JSON.stringify({ mimetype: file.type, size: file.size }),
+            ],
+          ),
+        );
+        objects.set(path, {
+          bytes: Buffer.from(await file.arrayBuffer()),
+          mime: file.type,
+        });
+        return json({ Key: path, Id: path });
       }
       const capability = storageTokens.get(url.searchParams.get("token"));
       const signed =
@@ -210,7 +275,7 @@ const server = http.createServer(async (req, res) => {
         return json({ Key: path });
       }
       if (req.method === "GET") {
-        if (!isService && (!signed || capability.upload))
+        if (!isService && !(signed && !capability.upload) && !(await mayRead()))
           return json({ message: "Private storage" }, 403);
         const item = objects.get(path);
         if (!item) return json({ message: "Not found" }, 404);
@@ -238,6 +303,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/__preview")
       return json({
         synthetic: true,
+        sports: sportsFixtures,
         auth: "Local contract adapter, not hosted Supabase Auth",
         league: league_id,
         slug: (
@@ -348,9 +414,9 @@ const server = http.createServer(async (req, res) => {
     return json({ message: e.message, code: e.code ?? "P0001" }, 400);
   }
 });
-server.listen(3302, "127.0.0.1", () =>
+server.listen(reviewPort, "127.0.0.1", () =>
   console.log(
-    "Synthetic PostgreSQL/Auth contract adapter: http://127.0.0.1:3302 (local only; no hosted changes)",
+    `Synthetic PostgreSQL/Auth contract adapter: ${backendOrigin} (local only; no hosted changes)`,
   ),
 );
 const close = () => {

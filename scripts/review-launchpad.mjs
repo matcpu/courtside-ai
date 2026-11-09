@@ -10,7 +10,21 @@ if (process.argv.includes("--help")) {
   process.exit(0);
 }
 const root = process.cwd(),
-  record = path.join(root, ".local", "launchpad-preview.json");
+  reviewPort = Number(process.env.LAUNCHPAD_REVIEW_FRONTEND_PORT ?? 3301),
+  backendPort = Number(process.env.LAUNCHPAD_REVIEW_BACKEND_PORT ?? 3302),
+  record = path.join(
+    root,
+    ".local",
+    reviewPort === 3301
+      ? "launchpad-preview.json"
+      : `launchpad-preview-${reviewPort}.json`,
+  );
+if (
+  ![reviewPort, backendPort].every(
+    (p) => Number.isInteger(p) && p >= 1024 && p <= 65535,
+  )
+)
+  throw Error("Invalid loopback review ports");
 const directory = fs.mkdtempSync(
   path.join(os.tmpdir(), "courtside-launchpad-review-"),
 );
@@ -43,7 +57,9 @@ if (!["true", "false"].includes(organizerFlag))
   throw Error("Invalid local review organizer flag");
 const env = {
   ...process.env,
-  NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:3302",
+  NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${backendPort}`,
+  LAUNCHPAD_REVIEW_BACKEND_PORT: String(backendPort),
+  LAUNCHPAD_REVIEW_FRONTEND_PORT: String(reviewPort),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "synthetic-preview-publishable",
   ORGANIZER_SETUP_ENABLED: organizerFlag,
   NEXT_PUBLIC_ORGANIZER_SETUP_ENABLED: organizerFlag,
@@ -72,8 +88,8 @@ fs.writeFileSync(
   record,
   JSON.stringify({
     directory,
-    origin: "http://127.0.0.1:3301",
-    backend: "http://127.0.0.1:3302",
+    origin: `http://127.0.0.1:${reviewPort}`,
+    backend: `http://127.0.0.1:${backendPort}`,
     exitCode: 0,
     organizerEnabled: organizerFlag,
   }),
@@ -92,7 +108,7 @@ if (!process.argv.includes("--build-only")) {
       "--hostname",
       "127.0.0.1",
       "--port",
-      "3301",
+      String(reviewPort),
     ],
     { cwd: directory, env, stdio: "inherit" },
   );

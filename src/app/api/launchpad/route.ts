@@ -2,7 +2,13 @@ import { createHash, randomBytes } from "node:crypto";
 import sharp from "sharp";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authenticate, body, fail, ApiError } from "@/lib/server";
+import {
+  authenticate,
+  body,
+  fail,
+  ApiError,
+  requireSportRules,
+} from "@/lib/server";
 import { normalizeDomain, setupSchema, websiteSchema } from "@/lib/launchpad";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -89,6 +95,8 @@ export async function POST(request: Request) {
       })
       .parse(await body(request, 450000));
     let p = b.payload;
+    if (b.action === "save_draft" || b.action === "finish")
+      await requireSportRules(client);
     let token: string | undefined;
     if (b.action === "save_draft")
       p = z

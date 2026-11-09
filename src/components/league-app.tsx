@@ -67,6 +67,8 @@ import {
   type Team,
 } from "@/lib/domain";
 import { Button } from "./ui/button";
+import { SportSettings } from "./sport-settings";
+import { leagueSport, resultErrors } from "@/lib/sports";
 import { PreseasonOnboarding } from "./preseason-onboarding";
 import { ImageCapture } from "./image-capture";
 import { MetaActivity } from "./meta-activity";
@@ -573,7 +575,9 @@ export function LeagueApp({
         s?.games.find((g) => g.id === f.game_id)?.status !== "confirmed",
     ),
     verified = s?.games.filter((g) => g.status === "confirmed") ?? [],
-    table = s ? standings(s.teams, s.games) : [];
+    table = s ? standings(s.teams, s.games, leagueSport(s.league).rules) : [];
+  const sport = leagueSport(s?.league);
+  const canRecognizeScoresheet = !!health?.meta && sport.sport === "basketball";
   const changeView = (v: View) => {
     setView(v);
     setMenu(false);
@@ -705,7 +709,7 @@ export function LeagueApp({
               <div>
                 <b>{s?.league.name ?? "Your league"}</b>
                 <small>
-                  {s?.league.season_name ?? "Basketball operations"}
+                  {s?.league.season_name ?? `${sport.profile.name} operations`}
                 </small>
               </div>
               <ChevronDown size={15} />
@@ -731,12 +735,20 @@ export function LeagueApp({
                 .map(([title, Icon]) => (
                   <button
                     key={title}
-                    aria-label={title}
+                    aria-label={
+                      title === "Courts & gyms"
+                        ? sport.profile.facilities
+                        : title
+                    }
                     className={view === title ? "active" : ""}
                     onClick={() => changeView(title)}
                   >
                     <Icon size={18} />
-                    <span>{title}</span>
+                    <span>
+                      {title === "Courts & gyms"
+                        ? sport.profile.facilities
+                        : title}
+                    </span>
                     {title === "Scoresheets" && pendingSheets.length > 0 && (
                       <span className="nav-count">{pendingSheets.length}</span>
                     )}
@@ -924,7 +936,11 @@ export function LeagueApp({
                         : "LEAGUE EXPLORER"}
                   </div>
                   <h1>
-                    {view === "Overview" ? "Your league. In sync." : view}
+                    {view === "Overview"
+                      ? "Your league. In sync."
+                      : view === "Courts & gyms"
+                        ? sport.profile.facilities
+                        : view}
                   </h1>
                   <p>
                     {
@@ -991,7 +1007,7 @@ export function LeagueApp({
                   )}
                   {view === "Courts & gyms" && isAdmin && (
                     <Button onClick={() => setModal("court")}>
-                      <Plus size={16} /> Add court
+                      <Plus size={16} /> Add {sport.profile.facility}
                     </Button>
                   )}
                 </div>
@@ -1095,7 +1111,7 @@ export function LeagueApp({
                             Explore league intelligence <ArrowRight size={16} />
                           </button>
                         </div>
-                        <CourtArt />
+                        {sport.sport === "basketball" && <CourtArt />}
                         <div className="hero-footnote">
                           <ShieldCheck size={13} /> Human approved. Always.
                         </div>
@@ -1342,7 +1358,9 @@ export function LeagueApp({
                         await refreshChoices(selected);
                         await load();
                       }}
-                      metaEnabled={health?.meta ?? false}
+                      metaEnabled={
+                        sport.sport === "basketball" && (health?.meta ?? false)
+                      }
                       signedIn={!!session}
                       divisions={s.divisions}
                       onOpenLaunchpad={
@@ -1546,8 +1564,9 @@ export function LeagueApp({
                               : "No published schedule"}
                           </Badge>
                           <span className="small-muted">
-                            All times {s.league.timezone} · 60-minute games ·
-                            30-minute rest
+                            All times {s.league.timezone} ·{" "}
+                            {sport.rules.gameMinutes}-minute games ·
+                            {sport.rules.restMinutes}-minute rest
                           </span>
                         </div>
                         {isAdmin && (
@@ -1766,7 +1785,7 @@ export function LeagueApp({
                                       players: [],
                                     };
                                     setScoreUploadStage(
-                                      health?.meta
+                                      canRecognizeScoresheet
                                         ? "Processing the scoresheet for review…"
                                         : "Saving for manual review. Live AI processing is paused…",
                                     );
@@ -1778,7 +1797,7 @@ export function LeagueApp({
                                           league: selected,
                                           game_id,
                                           path,
-                                          mode: health?.meta
+                                          mode: canRecognizeScoresheet
                                             ? "meta"
                                             : "manual",
                                           extraction: empty,
@@ -1795,7 +1814,7 @@ export function LeagueApp({
                                     if (saved) await openSheet(saved);
                                     setScoreImage(null);
                                   },
-                                  health?.meta
+                                  canRecognizeScoresheet
                                     ? "Extraction saved for human review. No official result recorded."
                                     : "Photo saved for manual review. Meta requests are not enabled.",
                                 );
@@ -1839,7 +1858,7 @@ export function LeagueApp({
                               inputLabel="Scoresheet photo (JPEG, PNG, WebP · up to 6 MB)"
                               previewAlt="Selected scoresheet preview"
                             />
-                            {!health?.meta && (
+                            {!canRecognizeScoresheet && (
                               <p className="capture-privacy">
                                 Live AI processing is paused. Your photo will
                                 open in manual review; no result becomes
@@ -1933,7 +1952,7 @@ export function LeagueApp({
                     <>
                       <Panel
                         title="Season standings"
-                        subtitle="2 points for a win · 1 for a draw · Verified results only"
+                        subtitle={`${sport.rules.winPoints} points for a win · ${sport.rules.drawPoints} for a draw · ${sport.rules.overtimeLossPoints} for an OT/SO loss · Confirmed results only`}
                         action={
                           <select
                             aria-label="Standings division"
@@ -1987,7 +2006,7 @@ export function LeagueApp({
                           </Empty>
                         )}
                       </Panel>
-                      {canWrite && (
+                      {canWrite && sport.sport === "basketball" && (
                         <Panel
                           title="Verified player statistics"
                           subtitle="Recorded values from confirmed scoresheets. A dash means the statistic was not recorded; it is never inferred."
@@ -2049,159 +2068,171 @@ export function LeagueApp({
                       )}
                     </>
                   )}
-                  {view === "Competitive balance" && (
-                    <>
-                      <div className="info-banner">
-                        <ShieldCheck size={20} />
-                        <div>
-                          <b>
-                            Three verified games. One evidence-based
-                            recommendation.
-                          </b>
-                          <p>
-                            A team with three consecutive wins or losses and an
-                            average margin of at least 15 points may move one
-                            tier. Every change requires your approval.
-                          </p>
-                        </div>
-                        {isAdmin && (
-                          <Button
-                            variant="secondary"
-                            disabled={busy}
-                            onClick={() =>
-                              void act(
-                                () => cmd("propose_balance"),
-                                "Competitive evidence checked. Review any new proposals.",
-                              )
-                            }
-                          >
-                            <RefreshCw size={15} /> Evaluate balance
-                          </Button>
-                        )}
-                      </div>
-                      {pendingProposals.map((p) => (
-                        <Panel
-                          key={p.id}
-                          title={teamName(p.team_id)}
-                          subtitle="DIVISION ADJUSTMENT PROPOSAL"
-                          action={
-                            <Badge tone="orange">Needs your decision</Badge>
-                          }
-                        >
-                          <div className="proposal-path">
-                            <span>{divisionName(p.from_division_id)}</span>
-                            <ArrowRight size={22} />
-                            <span>{divisionName(p.to_division_id)}</span>
-                          </div>
-                          <p className="proposal-reason">{p.reason}</p>
-                          <div className="evidence-stats">
-                            {Object.entries(p.evidence).map(([k, v]) => (
-                              <div key={k}>
-                                <small>{k.replaceAll("_", " ")}</small>
-                                <b>
-                                  {typeof v === "number"
-                                    ? Number(v.toFixed(1))
-                                    : String(v)}
-                                </b>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="approval-bar">
+                  {view === "Competitive balance" &&
+                    sport.sport !== "basketball" && (
+                      <Panel title="Hockey placement is human-led">
+                        <p>
+                          Review team assessments and approve placements in
+                          Preseason Onboarding. Basketball balancing thresholds
+                          and the operations agent are unavailable for hockey.
+                        </p>
+                      </Panel>
+                    )}
+                  {view === "Competitive balance" &&
+                    sport.sport === "basketball" && (
+                      <>
+                        <div className="info-banner">
+                          <ShieldCheck size={20} />
+                          <div>
+                            <b>
+                              Three verified games. One evidence-based
+                              recommendation.
+                            </b>
                             <p>
-                              Approval updates placement. Generate and review a
-                              revised schedule before publishing new fixtures.
+                              A team with three consecutive wins or losses and
+                              an average margin of at least 15 points may move
+                              one tier. Every change requires your approval.
                             </p>
-                            <div className="inline-actions">
-                              <Button
-                                variant="secondary"
-                                disabled={busy}
-                                onClick={() =>
-                                  void act(
-                                    () =>
-                                      cmd("decide_proposal", {
-                                        proposal_id: p.id,
-                                        approve: false,
-                                      }),
-                                    "Division proposal rejected.",
-                                  )
-                                }
-                              >
-                                Keep current division
-                              </Button>
-                              <Button
-                                disabled={busy}
-                                onClick={() =>
-                                  void act(
-                                    () =>
-                                      cmd("decide_proposal", {
-                                        proposal_id: p.id,
-                                        approve: true,
-                                      }),
-                                    "Division adjustment approved. Generate a revised schedule next.",
-                                  )
-                                }
-                              >
-                                <Check size={16} /> Approve adjustment
-                              </Button>
-                            </div>
                           </div>
-                        </Panel>
-                      ))}
-                      {!pendingProposals.length && (
-                        <Panel title="Competitive review">
-                          <Empty
-                            title={
-                              s.role === "public"
-                                ? "Division reviews are private"
-                                : "No pending division adjustments"
+                          {isAdmin && (
+                            <Button
+                              variant="secondary"
+                              disabled={busy}
+                              onClick={() =>
+                                void act(
+                                  () => cmd("propose_balance"),
+                                  "Competitive evidence checked. Review any new proposals.",
+                                )
+                              }
+                            >
+                              <RefreshCw size={15} /> Evaluate balance
+                            </Button>
+                          )}
+                        </div>
+                        {pendingProposals.map((p) => (
+                          <Panel
+                            key={p.id}
+                            title={teamName(p.team_id)}
+                            subtitle="DIVISION ADJUSTMENT PROPOSAL"
+                            action={
+                              <Badge tone="orange">Needs your decision</Badge>
                             }
                           >
-                            {s.role === "public"
-                              ? "Administrators review individual evidence and placement proposals securely."
-                              : "Run an evaluation after three verified games. The engine proposes a move only when the evidence threshold is met."}
-                          </Empty>
-                        </Panel>
-                      )}
-                      <Panel
-                        title="Team rating monitor"
-                        subtitle="Elo ratings are recalculated from the complete verified result history."
-                      >
-                        <div className="rating-list">
-                          {[...s.teams]
-                            .sort((a, b) => b.rating - a.rating)
-                            .map((t) => (
-                              <div key={t.id}>
-                                <TeamMark name={t.name} />
-                                <b>{t.name}</b>
-                                <span>{divisionName(t.division_id)}</span>
-                                <div className="rating-bar">
-                                  <i
-                                    style={{
-                                      width: `${Math.max(5, Math.min(100, (t.rating - 700) / 8))}%`,
-                                    }}
-                                  />
+                            <div className="proposal-path">
+                              <span>{divisionName(p.from_division_id)}</span>
+                              <ArrowRight size={22} />
+                              <span>{divisionName(p.to_division_id)}</span>
+                            </div>
+                            <p className="proposal-reason">{p.reason}</p>
+                            <div className="evidence-stats">
+                              {Object.entries(p.evidence).map(([k, v]) => (
+                                <div key={k}>
+                                  <small>{k.replaceAll("_", " ")}</small>
+                                  <b>
+                                    {typeof v === "number"
+                                      ? Number(v.toFixed(1))
+                                      : String(v)}
+                                  </b>
                                 </div>
-                                <strong>{t.rating}</strong>
-                                <small
-                                  className={
-                                    t.rating >= t.initial_rating
-                                      ? "text-green"
-                                      : "text-orange"
+                              ))}
+                            </div>
+                            <div className="approval-bar">
+                              <p>
+                                Approval updates placement. Generate and review
+                                a revised schedule before publishing new
+                                fixtures.
+                              </p>
+                              <div className="inline-actions">
+                                <Button
+                                  variant="secondary"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void act(
+                                      () =>
+                                        cmd("decide_proposal", {
+                                          proposal_id: p.id,
+                                          approve: false,
+                                        }),
+                                      "Division proposal rejected.",
+                                    )
                                   }
                                 >
-                                  {t.rating >= t.initial_rating ? (
-                                    <ArrowUp size={12} />
-                                  ) : (
-                                    <ArrowDown size={12} />
-                                  )}{" "}
-                                  {Math.abs(t.rating - t.initial_rating)}
-                                </small>
+                                  Keep current division
+                                </Button>
+                                <Button
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void act(
+                                      () =>
+                                        cmd("decide_proposal", {
+                                          proposal_id: p.id,
+                                          approve: true,
+                                        }),
+                                      "Division adjustment approved. Generate a revised schedule next.",
+                                    )
+                                  }
+                                >
+                                  <Check size={16} /> Approve adjustment
+                                </Button>
                               </div>
-                            ))}
-                        </div>
-                      </Panel>
-                    </>
-                  )}
+                            </div>
+                          </Panel>
+                        ))}
+                        {!pendingProposals.length && (
+                          <Panel title="Competitive review">
+                            <Empty
+                              title={
+                                s.role === "public"
+                                  ? "Division reviews are private"
+                                  : "No pending division adjustments"
+                              }
+                            >
+                              {s.role === "public"
+                                ? "Administrators review individual evidence and placement proposals securely."
+                                : "Run an evaluation after three verified games. The engine proposes a move only when the evidence threshold is met."}
+                            </Empty>
+                          </Panel>
+                        )}
+                        <Panel
+                          title="Team rating monitor"
+                          subtitle="Elo ratings are recalculated from the complete verified result history."
+                        >
+                          <div className="rating-list">
+                            {[...s.teams]
+                              .sort((a, b) => b.rating - a.rating)
+                              .map((t) => (
+                                <div key={t.id}>
+                                  <TeamMark name={t.name} />
+                                  <b>{t.name}</b>
+                                  <span>{divisionName(t.division_id)}</span>
+                                  <div className="rating-bar">
+                                    <i
+                                      style={{
+                                        width: `${Math.max(5, Math.min(100, (t.rating - 700) / 8))}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <strong>{t.rating}</strong>
+                                  <small
+                                    className={
+                                      t.rating >= t.initial_rating
+                                        ? "text-green"
+                                        : "text-orange"
+                                    }
+                                  >
+                                    {t.rating >= t.initial_rating ? (
+                                      <ArrowUp size={12} />
+                                    ) : (
+                                      <ArrowDown size={12} />
+                                    )}{" "}
+                                    {Math.abs(t.rating - t.initial_rating)}
+                                  </small>
+                                </div>
+                              ))}
+                          </div>
+                        </Panel>
+                      </>
+                    )}
                   {view === "Courts & gyms" && (
                     <>
                       <div className="court-grid">
@@ -2416,6 +2447,24 @@ export function LeagueApp({
                   )}
                   {view === "Settings" && (
                     <>
+                      {isAdmin && canWrite && (
+                        <SportSettings
+                          key={`${s.league.id}:${s.league.sport_revision}`}
+                          league={s.league}
+                          locked={
+                            s.games.some((g) => g.status === "confirmed") ||
+                            s.versions.some((v) =>
+                              ["published", "superseded"].includes(v.status),
+                            )
+                          }
+                          save={(payload) =>
+                            act(
+                              () => cmd("configure_sport", payload),
+                              "Competition rules saved.",
+                            )
+                          }
+                        />
+                      )}
                       <div className="settings-grid">
                         <Panel
                           title="System integrations"
@@ -2942,11 +2991,11 @@ export function LeagueApp({
             )}
             {modal === "court" && (
               <>
-                <h2>Add a home court.</h2>
+                <h2>Add a home {sport.profile.facility}.</h2>
                 <p>Availability must be confirmed separately.</p>
                 <Form
                   busy={busy}
-                  submit="Add court"
+                  submit={`Add ${sport.profile.facility}`}
                   onSubmit={async (f) => {
                     const result = await act(
                       () =>
@@ -2959,10 +3008,10 @@ export function LeagueApp({
                     if (result) setModal(null);
                   }}
                 >
-                  <Field label="Court name">
+                  <Field label={`${sport.profile.facilityName} name`}>
                     <input name="name" required maxLength={100} />
                   </Field>
-                  <Field label="Gym / venue">
+                  <Field label="Facility / venue">
                     <input name="venue" required maxLength={150} />
                   </Field>
                 </Form>
@@ -2970,7 +3019,7 @@ export function LeagueApp({
             )}
             {modal === "availability" && (
               <>
-                <h2>Confirm court time.</h2>
+                <h2>Confirm {sport.profile.facility} time.</h2>
                 <p>
                   Enter local league time ({s?.league.timezone}). Only confirmed
                   time can be scheduled.
@@ -3059,6 +3108,7 @@ export function LeagueApp({
                               name: f.get("name"),
                               season: f.get("season"),
                               cutoff: f.get("cutoff"),
+                              sport: f.get("sport"),
                             },
                           }),
                         });
@@ -3073,6 +3123,12 @@ export function LeagueApp({
                         minLength={2}
                         maxLength={100}
                       />
+                    </Field>
+                    <Field label="Sport">
+                      <select name="sport">
+                        <option value="basketball">Basketball</option>
+                        <option value="hockey">Hockey</option>
+                      </select>
                     </Field>
                     <Field label="Season">
                       <input name="season" defaultValue="Fall 2026" required />
@@ -3313,7 +3369,7 @@ export function LeagueApp({
                     <input
                       type="number"
                       min={0}
-                      max={300}
+                      max={sport.rules.maxScore}
                       value={extraction.homeScore ?? ""}
                       onChange={(e) => {
                         setReviewed(false);
@@ -3331,7 +3387,7 @@ export function LeagueApp({
                     <input
                       type="number"
                       min={0}
-                      max={300}
+                      max={sport.rules.maxScore}
                       value={extraction.awayScore ?? ""}
                       onChange={(e) => {
                         setReviewed(false);
@@ -3346,6 +3402,29 @@ export function LeagueApp({
                     />
                   </Field>
                 </div>
+                <Field label="Result decision">
+                  <select
+                    value={extraction.decision ?? "regulation"}
+                    onChange={(e) => {
+                      setReviewed(false);
+                      setExtraction({
+                        ...extraction,
+                        decision: e.target.value as
+                          "regulation" | "overtime" | "shootout",
+                      });
+                    }}
+                  >
+                    <option value="regulation">Regulation</option>
+                    {sport.rules.allowOvertime && (
+                      <option value="overtime">Overtime</option>
+                    )}
+                    {sport.rules.allowShootout && (
+                      <option value="shootout">
+                        Shootout (final score includes deciding goal)
+                      </option>
+                    )}
+                  </select>
+                </Field>
                 <div className="review-warnings">
                   {[
                     ...extraction.warnings,
@@ -3359,6 +3438,8 @@ export function LeagueApp({
                         s?.games.find((g) => g.id === sheet.game_id)
                           ?.away_team_id ?? "",
                       ),
+                      sport.rules,
+                      sport.sport,
                     ),
                   ].map((w, i) => (
                     <p key={i}>
@@ -3429,7 +3510,15 @@ export function LeagueApp({
                           busy ||
                           !reviewed ||
                           extraction.homeScore === null ||
-                          extraction.awayScore === null
+                          extraction.awayScore === null ||
+                          resultErrors(
+                            extraction.homeScore,
+                            extraction.awayScore,
+                            extraction.decision ?? "regulation",
+                            sport.rules,
+                          ).length > 0 ||
+                          (sport.sport === "hockey" &&
+                            extraction.players.length > 0)
                         }
                         onClick={() =>
                           void act(async () => {
@@ -3526,7 +3615,9 @@ function StandingsTable({ rows }: { rows: ReturnType<typeof standings> }) {
             <th>Team</th>
             <th>GP</th>
             <th>W</th>
-            <th>L</th>
+            <th>L (all)</th>
+            <th>OT/SO L</th>
+            <th>D</th>
             <th>+/-</th>
             <th>PTS</th>
             <th>Rating</th>
@@ -3545,6 +3636,8 @@ function StandingsTable({ rows }: { rows: ReturnType<typeof standings> }) {
               <td>{r.played}</td>
               <td>{r.wins}</td>
               <td>{r.losses}</td>
+              <td>{r.overtimeLosses}</td>
+              <td>{r.draws}</td>
               <td
                 className={
                   r.for - r.against >= 0 ? "text-green" : "text-orange"

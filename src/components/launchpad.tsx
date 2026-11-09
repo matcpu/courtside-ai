@@ -26,6 +26,7 @@ import {
 } from "@/lib/launchpad";
 import type { Snapshot } from "@/lib/domain";
 import type { PreseasonData } from "@/lib/preseason";
+import { leagueSport } from "@/lib/sports";
 import { seasonStartInstant } from "@/lib/preseason";
 type Workspace = {
   setup: Setup | null;
@@ -250,6 +251,7 @@ export function Launchpad({
     pending = w.preseason.players.filter(
       (p) => p.verification_status === "pending",
     ).length;
+  const { rules, profile } = leagueSport(s.league);
   const capacity = courtCapacity(
     s.availability.filter((a) => s.courts.some((c) => c.id === a.court_id)),
     Math.max(
@@ -258,6 +260,7 @@ export function Launchpad({
         ? +new Date(seasonStartInstant(w.setup.opening, s.league.timezone))
         : Date.now(),
     ),
+    rules.gameMinutes,
   );
   const expectedGames = w.setup
     ? Math.ceil((w.setup.expectedTeams * w.setup.gamesPerTeam) / 2)
@@ -326,10 +329,11 @@ export function Launchpad({
               <small>Authorized humans decide eligibility</small>
             </article>
             <article>
-              <span>Confirmed court capacity</span>
+              <span>Confirmed {profile.facility} capacity</span>
               <strong>{capacity.slots} slots</strong>
               <small>
-                60-minute upper bound · {expectedGames ?? "?"} planned games
+                {rules.gameMinutes}-minute upper bound · {expectedGames ?? "?"}{" "}
+                planned games
               </small>
             </article>
           </div>

@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  decisionSchema,
+  defaultSportRules,
+  resultErrors,
+  type Sport,
+  type SportRules,
+} from "./sports.ts";
 
 export const questionnaireSchema = z.object({
   yearsTogether: z.number().int().min(0).max(15),
@@ -61,6 +68,7 @@ export const playerStatSchema = z.object({
   assists: z.number().int().min(0).max(100).nullable(),
 });
 export const extractionSchema = z.object({
+  decision: decisionSchema.optional(),
   homeTeam: z.string().nullable(),
   awayTeam: z.string().nullable(),
   homeScore: z.number().int().min(0).max(300).nullable(),
@@ -70,10 +78,26 @@ export const extractionSchema = z.object({
   players: z.array(playerStatSchema).max(40),
 });
 export type Extraction = z.infer<typeof extractionSchema>;
-export function validateExtraction(e: Extraction, home: string, away: string) {
+export function validateExtraction(
+  e: Extraction,
+  home: string,
+  away: string,
+  rules = defaultSportRules(),
+  sport: Sport = "basketball",
+) {
   const errors: string[] = [];
-  if (e.homeScore === null || e.awayScore === null)
-    errors.push("Both final scores must be reviewed and entered.");
+  errors.push(
+    ...resultErrors(
+      e.homeScore,
+      e.awayScore,
+      e.decision ?? "regulation",
+      rules,
+    ),
+  );
+  if (sport !== "basketball" && e.players.length)
+    errors.push(
+      "Hockey currently supports team scores only. Remove basketball player statistics.",
+    );
   if (
     e.homeTeam?.trim().toLowerCase() !== home.trim().toLowerCase() ||
     e.awayTeam?.trim().toLowerCase() !== away.trim().toLowerCase()
@@ -126,6 +150,7 @@ export type Availability = {
   confirmed: boolean;
 };
 export type Game = {
+  decision?: import("./sports").Decision;
   id: string;
   home_team_id: string;
   away_team_id: string;
@@ -211,6 +236,9 @@ export type Snapshot = {
     assists: number | null;
   }[];
   league: {
+    sport?: Sport;
+    sport_rules?: SportRules;
+    sport_revision?: number;
     id: string;
     name: string;
     slug: string;
@@ -239,6 +267,7 @@ export type Snapshot = {
   players: Player[];
 };
 export type Standing = {
+  overtimeLosses: number;
   team: Team;
   played: number;
   wins: number;
@@ -248,11 +277,25 @@ export type Standing = {
   against: number;
   points: number;
 };
-export function standings(teams: Team[], games: Game[]): Standing[] {
+/** Same Unicode scalar ordering as PostgreSQL UTF-8 COLLATE "C", independent of browser locale. */
+export function compareTeamNames(a: string, b: string): number {
+  const left = Array.from(a, (c) => c.codePointAt(0)!);
+  const right = Array.from(b, (c) => c.codePointAt(0)!);
+  for (let i = 0; i < Math.min(left.length, right.length); i++) {
+    if (left[i] !== right[i]) return left[i] - right[i];
+  }
+  return left.length - right.length;
+}
+export function standings(
+  teams: Team[],
+  games: Game[],
+  rules: SportRules = defaultSportRules(),
+): Standing[] {
   return teams
     .filter((t) => t.status === "approved")
     .map((team) => {
       const row: Standing = {
+        overtimeLosses: 0,
         team,
         played: 0,
         wins: 0,
@@ -278,19 +321,26 @@ export function standings(teams: Team[], games: Game[]): Standing[] {
         row.against += b;
         if (a > b) {
           row.wins++;
-          row.points += 2;
+          row.points += rules.winPoints;
         } else if (a === b) {
           row.draws++;
-          row.points++;
-        } else row.losses++;
+          row.points += rules.drawPoints;
+        } else {
+          row.losses++;
+          if (g.decision === "overtime" || g.decision === "shootout") {
+            row.overtimeLosses++;
+            row.points += rules.overtimeLossPoints;
+          } else row.points += rules.lossPoints;
+        }
       }
       return row;
     })
     .sort(
       (a, b) =>
         b.points - a.points ||
+        (rules.tieBreak === "wins" ? b.wins - a.wins : 0) ||
         b.for - b.against - (a.for - a.against) ||
-        a.team.name.localeCompare(b.team.name),
+        compareTeamNames(a.team.name, b.team.name),
     );
 }
 

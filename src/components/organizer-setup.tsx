@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { DocumentPolicyFields } from "./document-policy-fields";
+import { SportRulesFields } from "./sport-rules-fields";
+import { defaultSportRules, sportProfiles } from "@/lib/sports";
 import {
   newSetup,
   setupIssues,
@@ -445,6 +447,25 @@ export function OrganizerSetup({
             </div>
             <div className="setup-fields">
               {field("name", "League name")}
+              <Field label="Sport">
+                <select
+                  value={data.sport ?? "basketball"}
+                  onChange={(e) => {
+                    const sport = e.target.value as Setup["sport"];
+                    setData((previous) => ({
+                      ...previous,
+                      sport,
+                      sportRules: defaultSportRules(sport),
+                    }));
+                  }}
+                >
+                  {Object.entries(sportProfiles).map(([key, profile]) => (
+                    <option key={key} value={key}>
+                      {profile.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
               <Field label="League type">
                 <select
                   value={data.kind}
@@ -664,13 +685,16 @@ export function OrganizerSetup({
         {step === 2 && (
           <>
             <p>
-              Already have gyms? Add court identities now, or continue and
-              arrange them later. A venue is not a booking: confirmed dated
-              availability is added in Courts & gyms after setup.
+              Add your {sportProfiles[data.sport ?? "basketball"].facility}{" "}
+              identities now, or continue and arrange them later. A venue is not
+              a booking: confirmed dated availability is added in Courts & gyms
+              after setup.
             </p>
             {data.courts.map((c, i) => (
               <div className="setup-court" key={i}>
-                <Field label={`Court ${i + 1} name`}>
+                <Field
+                  label={`${sportProfiles[data.sport ?? "basketball"].facilityName} ${i + 1} name`}
+                >
                   <input
                     required
                     aria-invalid={
@@ -696,7 +720,9 @@ export function OrganizerSetup({
                     }
                   />
                 </Field>
-                <Field label={`Court ${i + 1} venue / address`}>
+                <Field
+                  label={`${sportProfiles[data.sport ?? "basketball"].facilityName} ${i + 1} venue / address`}
+                >
                   <input
                     required
                     aria-invalid={
@@ -734,7 +760,8 @@ export function OrganizerSetup({
                 patch("courts", [...data.courts, { name: "", venue: "" }])
               }
             >
-              <Plus size={16} /> Add a court
+              <Plus size={16} /> Add a{" "}
+              {sportProfiles[data.sport ?? "basketball"].facility}
             </Button>
             <div className="setup-guidance">
               <strong>
@@ -744,15 +771,26 @@ export function OrganizerSetup({
               <p>
                 No dated court slots are saved in this draft. Confirm
                 availability after finishing setup; the dashboard then counts
-                merged 60-minute court slots. Team readiness, division matchups
-                and 30-minute team rest still constrain feasibility. Copies
-                start with fresh availability.
+                merged{" "}
+                {(data.sportRules ?? defaultSportRules(data.sport)).gameMinutes}
+                -minute facility slots. Team readiness, division matchups and{" "}
+                {(data.sportRules ?? defaultSportRules(data.sport)).restMinutes}
+                -minute team rest still constrain feasibility. Copies start with
+                fresh availability.
               </p>
             </div>
           </>
         )}
         {step === 3 && (
           <>
+            <SportRulesFields
+              sport={data.sport ?? "basketball"}
+              rules={data.sportRules ?? defaultSportRules(data.sport)}
+              onChange={(sport, sportRules) =>
+                setData((previous) => ({ ...previous, sport, sportRules }))
+              }
+              disabled={busy}
+            />
             <div className="setup-fields">
               {field("minRoster", "Minimum active roster", "number")}
               {field("maxRoster", "Maximum active roster", "number")}
@@ -790,8 +828,11 @@ export function OrganizerSetup({
                 retain human approvals.
               </li>
               <li>
-                Current scheduling uses 60-minute games and at least 30-minute
-                rest for a team.
+                Scheduling uses{" "}
+                {(data.sportRules ?? defaultSportRules(data.sport)).gameMinutes}
+                -minute slots and at least{" "}
+                {(data.sportRules ?? defaultSportRules(data.sport)).restMinutes}
+                -minute rest for a team.
               </li>
               <li>
                 Notifications use the existing in-app inbox. Email remains
@@ -843,7 +884,24 @@ export function OrganizerSetup({
               </article>
               <article>
                 <span>Competition</span>
-                <strong>{data.divisions.length} divisions</strong>
+                <strong>
+                  {sportProfiles[data.sport ?? "basketball"].name} ·{" "}
+                  {data.divisions.length} divisions
+                </strong>
+                <p>
+                  {(data.sportRules ?? defaultSportRules(data.sport)).winPoints}{" "}
+                  points per win ·{" "}
+                  {
+                    (data.sportRules ?? defaultSportRules(data.sport))
+                      .drawPoints
+                  }{" "}
+                  per draw ·{" "}
+                  {
+                    (data.sportRules ?? defaultSportRules(data.sport))
+                      .overtimeLossPoints
+                  }{" "}
+                  per OT/SO loss
+                </p>
                 <p>Age cutoff: {formatLeagueDate(data.cutoff, "Needed")}</p>
                 <ul>
                   {data.divisions.map((division, i) => (
@@ -876,7 +934,10 @@ export function OrganizerSetup({
                     ))}
                   </ul>
                 ) : (
-                  <p>Add courts later in Courts & gyms.</p>
+                  <p>
+                    Add facilities later in{" "}
+                    {sportProfiles[data.sport ?? "basketball"].facilities}.
+                  </p>
                 )}
                 <p>
                   Confirmed availability still required. Nothing scheduled or
